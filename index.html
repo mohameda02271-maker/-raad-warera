@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAAD // رَعـد v1.7 — War Era Live Player Lookup & Tactical Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            obsidian: '#08090D',
+            carbon: '#11131A',
+            steel: '#1A1E29',
+            crimson: '#DC2626',
+            gold: '#F59E0B',
+            emerald: '#10B981',
+            applebg: '#F5F5F7'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; transition: background-color 0.25s, color 0.25s; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    input[type="range"] { accent-color: #DC2626; }
+    .dark ::-webkit-scrollbar { width: 5px; height: 5px; }
+    .dark ::-webkit-scrollbar-track { background: #08090D; }
+    .dark ::-webkit-scrollbar-thumb { background: #272B3A; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-obsidian text-slate-100 antialiased selection:bg-crimson selection:text-white">
+
+  <!-- TOP COMMAND BAR -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-obsidian/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-crimson to-amber-500 flex items-center justify-center shadow-lg shadow-crimson/20 shrink-0">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-base sm:text-lg text-white">RAAD // رَعـد</span>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald/20 text-emerald border border-emerald/40 font-bold" id="api-live-badge">v1.7 RELAY LIVE</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block" id="server-clock-bar">Cloudflare Relay → api6.warera.io/trpc • Ready</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <button onclick="syncLiveMarketAndConfig()" id="market-sync-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-emerald/40 bg-emerald/15 hover:bg-emerald/25 text-emerald transition">
+          🔄 Live Market
+        </button>
+        <button onclick="copyDiscordReport()" id="copy-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 transition">
+          📋 Copy Build
+        </button>
+        <button onclick="toggleLang()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 bg-steel/70 hover:bg-steel text-slate-200 transition">
+          عربي
+        </button>
+        <button onclick="toggleTheme()" id="theme-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 bg-steel/70 hover:bg-steel text-amber-400 transition">
+          ☀️
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+
+    <!-- COMMANDER LIVE SEARCH & DIRECT CONTROLS -->
+    <section class="rounded-2xl border border-amber-500/35 bg-gradient-to-r from-carbon via-steel/90 to-carbon p-4 sm:p-5 shadow-xl space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-crimson flex items-center justify-center font-extrabold text-lg text-white shadow-md shrink-0" id="cmd-avatar">CM</div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-base sm:text-lg font-extrabold text-white" id="cmd-name">Commander</h2>
+              <span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30" id="cmd-level">LV. 1</span>
+              <span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-crimson/20 text-red-300 border border-crimson/30" id="cmd-prestige">PRESTIGE 0</span>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald/20 text-emerald border border-emerald/30 font-bold" id="cmd-source-badge">READY</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5" id="cmd-meta">Country: Global • Companies: 0/13 • Rank Damage Bonus: +0.5%</p>
+          </div>
+        </div>
+
+        <!-- LIVE SEARCH BAR CONNECTED TO CLOUDFLARE RELAY -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 max-w-xl">
+          <input id="player-input" type="text" oninput="debouncedLiveSearch()" onkeydown="if(event.key==='Enter') syncPlayer()" placeholder="Type any War Era username (e.g. Ayyubi_Warrior2)..." class="flex-1 px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-crimson" />
+          <button onclick="syncPlayer()" id="sync-btn" class="px-3.5 py-2 rounded-xl bg-crimson hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider transition shrink-0">
+            Fetch Player
+          </button>
+        </div>
+      </div>
+
+      <!-- DIRECT EDITABLE FIELDS -->
+      <div class="pt-3 border-t border-slate-700/70 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Commander Name</label>
+          <input id="qe-name" type="text" value="Commander" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs font-semibold text-white focus:border-amber-400 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Level (1 – 50)</label>
+          <input id="qe-lv" type="number" min="1" max="50" value="1" oninput="applyDirectControls('qe')" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-amber-500/50 text-xs font-mono font-bold text-white focus:border-amber-400 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Prestige (0 – 25)</label>
+          <input id="qe-pr" type="number" min="0" max="25" value="0" oninput="applyDirectControls('qe')" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs font-mono font-bold text-white focus:border-amber-400 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Factories (0 – 13)</label>
+          <input id="qe-comp" type="number" min="0" max="13" value="0" oninput="applyDirectControls('qe')" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs font-mono font-bold text-white focus:border-amber-400 focus:outline-none">
+        </div>
+        <div class="col-span-2 sm:col-span-1">
+          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Country / Tag</label>
+          <input id="qe-country" type="text" value="Global" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none">
+        </div>
+      </div>
+
+      <div id="sync-status" class="text-[11px] font-mono text-emerald hidden"></div>
+
+      <!-- MATCHING ACCOUNTS RESULTS LIST -->
+      <div id="search-results-box" class="hidden pt-2 border-t border-slate-800 space-y-2">
+        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <span id="search-results-count">Found 0 matching commanders</span>
+          <span>Tap any account to load stats</span>
+        </div>
+        <div id="search-results-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1"></div>
+      </div>
+    </section>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="grid grid-cols-2 sm:flex sm:overflow-x-auto gap-2">
+      <button onclick="switchTab('combat')" id="tab-combat" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-crimson text-white shadow-md">
+        ⚔️ Combat & Live P&L
+      </button>
+      <button onclick="switchTab('market')" id="tab-market" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
+        📈 Live Market & Tx
+      </button>
+      <button onclick="switchTab('optimizer')" id="tab-optimizer" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
+        🎯 Build Optimizer
+      </button>
+      <button onclick="switchTab('energy')" id="tab-energy" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
+        ⚡ Daily Energy Split
+      </button>
+      <button onclick="switchTab('merc')" id="tab-merc" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
+        🎖️ MU & Merc War Room
+      </button>
+      <button onclick="switchTab('eco')" id="tab-eco" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
+        🏭 v0.27 Eco & Gear ROI
+      </button>
+    </nav>
+
+    <!-- TAB 1: COMBAT + FACTORY + v0.27 LOOT P&L -->
+    <div id="view-combat" class="space-y-5">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Normal / Crit Hit</div>
+          <div class="text-lg sm:text-2xl font-extrabold text-white tabular mt-1"><span id="kpi-normal">0</span> <span class="text-xs font-mono text-amber-400">/ <span id="kpi-crit">0</span></span></div>
+          <div class="text-[11px] text-slate-400 mt-1" id="kpi-hit-meta">Crit: 0% • Mult: 1.00x</div>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400" id="kpi-mode-label">8H Sustained Damage</div>
+          <div class="text-lg sm:text-2xl font-extrabold text-amber-400 tabular mt-1" id="kpi-total-dmg">0</div>
+          <div class="text-[11px] text-slate-400 mt-1" id="kpi-hits-count">74 Hits</div>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Factory + v0.27 Loot EV</div>
+          <div class="text-lg sm:text-2xl font-extrabold text-emerald tabular mt-1" id="kpi-gross-rev">+0.00 €</div>
+          <div class="text-[11px] text-slate-400 mt-1" id="kpi-rev-split">Factory + Loot</div>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Net Daily Cashflow</div>
+          <div class="text-lg sm:text-2xl font-extrabold text-emerald tabular mt-1" id="kpi-net-pnl">+0.00 €</div>
+          <div class="text-[11px] font-bold mt-1 text-emerald" id="kpi-verdict">PROFITABLE</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- LEFT: ARMORY & SKILLS -->
+        <div class="lg:col-span-7 space-y-5">
+          <div class="rounded-2xl border border-slate-800 bg-carbon p-4 sm:p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">T1–T6 Visual Tactical Armory</h3>
+              <div class="flex items-center gap-1 bg-obsidian p-1 rounded-xl border border-slate-800">
+                <button onclick="setCombatMode('8h')" id="mode-8h" class="px-3 py-1 rounded-lg text-xs font-bold bg-crimson text-white">8H Sustained</button>
+                <button onclick="setCombatMode('burst')" id="mode-burst" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white">E-Burst Dump</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="armory-grid"></div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-carbon p-4 sm:p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Combat Skills & Modifiers</h3>
+              <span class="text-xs font-mono text-amber-400" id="skill-cap-badge">Skill Cap: Lv.10</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Player Level (Max 50)</span><span class="font-mono font-bold text-white" id="val-level">1</span></div>
+                <input id="inp-level" type="range" min="1" max="50" value="1" oninput="syncSliderToDirect('lv')" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Prestige Tier (0–25)</span><span class="font-mono font-bold text-amber-400" id="val-prestige">0</span></div>
+                <input id="inp-prestige" type="range" min="0" max="25" value="0" oninput="syncSliderToDirect('pr')" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Attack Skill</span><span class="font-mono font-bold text-white" id="val-atk">5</span></div>
+                <input id="inp-atk" type="range" min="0" max="20" value="5" oninput="recalcAll()" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Precision Skill</span><span class="font-mono font-bold text-white" id="val-prec">5</span></div>
+                <input id="inp-prec" type="range" min="0" max="20" value="5" oninput="recalcAll()" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Critical Chance Skill</span><span class="font-mono font-bold text-white" id="val-critc">4</span></div>
+                <input id="inp-critc" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Critical Damage Skill</span><span class="font-mono font-bold text-white" id="val-critd">4</span></div>
+                <input id="inp-critd" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800">
+              <div>
+                <label class="block text-[10px] uppercase text-slate-400 mb-1">Ammo Type</label>
+                <select id="inp-ammo" onchange="recalcAll()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs text-white">
+                  <option value="0">Standard (0%)</option>
+                  <option value="0.15" selected>AP Rounds (+15%)</option>
+                  <option value="0.30">HE Explosive (+30%)</option>
+                </select>
+              </div>
+              <label class="flex items-center gap-2 p-2 rounded-lg bg-obsidian border border-slate-800 cursor-pointer">
+                <input id="chk-ally" type="checkbox" checked onchange="recalcAll()" class="accent-crimson">
+                <span class="text-xs text-slate-200">Ally (+20%)</span>
+              </label>
+              <label class="flex items-center gap-2 p-2 rounded-lg bg-obsidian border border-slate-800 cursor-pointer">
+                <input id="chk-md" type="checkbox" onchange="recalcAll()" class="accent-crimson">
+                <span class="text-xs text-slate-200">Mutual Def (+10%)</span>
+              </label>
+              <label class="flex items-center gap-2 p-2 rounded-lg bg-obsidian border border-slate-800 cursor-pointer">
+                <input id="chk-pill" type="checkbox" checked onchange="recalcAll()" class="accent-crimson">
+                <span class="text-xs text-amber-300 font-semibold">Energy Pill (×1.6)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: FACTORY & v0.27 LOOT CASHFLOW -->
+        <div class="lg:col-span-5 space-y-5">
+          <div class="rounded-2xl border border-slate-800 bg-carbon p-4 sm:p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Factory + v0.27 Loot Cashflow</h3>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald/15 text-emerald" id="price-source-tag">SYNCING PRICES...</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Active Factories (0–13)</label>
+                <input id="inp-factories" type="number" min="0" max="13" value="0" oninput="syncSliderToDirect('comp')" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Avg Net Profit / Factory (€)</label>
+                <input id="inp-factory-profit" type="number" min="0" step="5" value="55" oninput="recalcAll()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">v0.27 Case Strategy</label>
+                <select id="inp-case-strat" onchange="recalcAll()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs text-white">
+                  <option value="sell">Sell Unopened Case (Safe)</option>
+                  <option value="open_sell" selected>Open & Sell Drops (EV)</option>
+                  <option value="scrap">Open & Scrap Parts</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Merc Bounty / 1K DMG (€)</label>
+                <input id="inp-bounty" type="number" min="0" step="0.25" value="0.50" oninput="recalcAll()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-obsidian border border-slate-800 p-4 space-y-2 text-xs font-mono">
+              <div class="flex justify-between text-slate-300">
+                <span>+ Daily Factory Net Income</span>
+                <span class="text-emerald font-bold" id="led-factory">+0.00 €</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>+ v0.27 Battle Loot Drop EV</span>
+                <span class="text-emerald font-bold" id="led-loot">+0.00 €</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>+ Mercenary Contract Bounty</span>
+                <span class="text-emerald font-bold" id="led-bounty">+0.00 €</span>
+              </div>
+              <div class="border-t border-slate-800 my-1"></div>
+              <div class="flex justify-between text-slate-400">
+                <span>- Ammo & Food Consumption</span>
+                <span class="text-red-400" id="led-consumables">-0.00 €</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>- Gear Wear & Energy Pill Cost</span>
+                <span class="text-red-400" id="led-wear">-0.00 €</span>
+              </div>
+              <div class="border-t border-slate-700 pt-2 flex justify-between text-sm font-extrabold">
+                <span class="text-white">NET DAILY CASHFLOW</span>
+                <span id="led-total" class="text-emerald">+0.00 €</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-steel/40 border border-slate-800 p-3.5">
+              <div class="flex items-center justify-between text-xs mb-2">
+                <span class="font-bold text-slate-200">v0.27 Expected Loot Drops</span>
+                <span class="font-mono text-amber-400" id="loot-cases-est">~0.00 Cases / Session</span>
+              </div>
+              <div class="grid grid-cols-5 gap-1.5 text-center text-[10px] font-mono">
+                <div class="p-1.5 rounded bg-obsidian border border-slate-800"><div class="text-slate-400">Common</div><div class="text-white font-bold">54%</div></div>
+                <div class="p-1.5 rounded bg-obsidian border border-emerald/30"><div class="text-emerald">Uncom</div><div class="text-white font-bold">26%</div></div>
+                <div class="p-1.5 rounded bg-obsidian border border-blue-500/30"><div class="text-blue-400">Rare</div><div class="text-white font-bold">13%</div></div>
+                <div class="p-1.5 rounded bg-obsidian border border-purple-500/30"><div class="text-purple-400">Epic</div><div class="text-white font-bold">5.5%</div></div>
+                <div class="p-1.5 rounded bg-obsidian border border-amber-500/40"><div class="text-amber-400">Mythic</div><div class="text-white font-bold">1.5%</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: LIVE MARKET TELEMETRY & TRANSACTIONS -->
+    <div id="view-market" class="hidden space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-extrabold text-white">itemTrading.getPrices // Live Market Feed</h3>
+              <p class="text-xs text-slate-400">Synced live via Cloudflare Relay from api6.warera.io.</p>
+            </div>
+            <button onclick="syncLiveMarketAndConfig()" class="px-3 py-1.5 rounded-lg bg-emerald text-slate-950 font-extrabold text-xs">Refresh</button>
+          </div>
+          <div id="live-prices-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-mono"></div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
+          <div>
+            <h3 class="text-base font-extrabold text-white">transaction.getPaginatedTransactions</h3>
+            <p class="text-xs text-slate-400">Live market transaction stream + Offer lookup (`itemOffer.getById`).</p>
+          </div>
+          <div class="flex gap-2">
+            <input id="offer-id-input" type="text" placeholder="Paste Item Offer ID (itemOffer.getById)..." class="flex-1 px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs text-white font-mono">
+            <button onclick="lookupOfferById()" class="px-3.5 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">Inspect Offer</button>
+          </div>
+          <div id="offer-lookup-result" class="hidden rounded-xl bg-obsidian border border-amber-500/30 p-3 text-xs font-mono text-amber-200"></div>
+          <div id="live-tx-feed" class="rounded-xl bg-obsidian border border-slate-800 p-3.5 text-xs font-mono space-y-2 max-h-64 overflow-y-auto text-slate-300">
+            Loading live market transactions...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SMART BUILD OPTIMIZER -->
+    <div id="view-optimizer" class="hidden space-y-5">
+      <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-extrabold text-white">Smart Build & Cashflow Optimizer</h3>
+            <p class="text-xs text-slate-400">Simulates all 18 T1–T6 Weapon + Ammo setups using your exact Level, Prestige, Skills & Factory income.</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="runOptimizer('zero_loss')" class="px-4 py-2 rounded-xl bg-emerald hover:bg-emerald-500 text-slate-950 text-xs font-extrabold uppercase tracking-wider transition">
+              Zero-Loss Best Build
+            </button>
+            <button onclick="runOptimizer('max_dmg')" class="px-4 py-2 rounded-xl bg-crimson hover:bg-red-500 text-white text-xs font-extrabold uppercase tracking-wider transition">
+              Max Damage Build
+            </button>
+          </div>
+        </div>
+        <div id="optimizer-result" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs text-slate-300">
+          Select an optimization goal above to calculate the best loadout for your exact profile.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: DAILY ENERGY & SELF-WORK SPLITTER -->
+    <div id="view-energy" class="hidden space-y-5">
+      <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="text-base font-extrabold text-white">Daily Energy & Self-Work Splitter</h3>
+            <p class="text-xs text-slate-400">Balance daily energy between working in your own factories vs. fighting in battles.</p>
+          </div>
+          <span class="text-xs font-mono text-amber-400" id="energy-alloc-badge">Combat: 70% • Self-Work: 30%</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Energy Allocated to Combat (%)</span><span class="font-mono font-bold text-crimson" id="val-combat-pct">70%</span></div>
+            <input id="inp-combat-pct" type="range" min="0" max="100" step="10" value="70" oninput="calcEnergySplit()" class="w-full">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">Daily Worker Wage Saved by Self-Work (€)</label>
+            <input id="inp-wage-saved" type="number" step="5" value="85" oninput="calcEnergySplit()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+          </div>
+        </div>
+
+        <div id="energy-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono space-y-2 text-slate-200"></div>
+      </div>
+    </div>
+
+    <!-- TAB 5: MU & MERCENARY WAR ROOM -->
+    <div id="view-merc" class="hidden space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
+          <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Mercenary Net Profit per 1,000 DMG</h3>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Offered Contract Rate (€ per 1K DMG)</label>
+            <input id="inp-merc-rate" type="number" step="0.1" value="3.50" oninput="calcMerc()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+          </div>
+          <div id="merc-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono space-y-1.5"></div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">MU Battle Operations Planner</h3>
+            <a id="mu-direct-link" href="https://app.warera.io/mu/69f562f5747ceee9f38d631d" target="_blank" rel="noopener" class="text-[11px] font-mono text-amber-400 hover:underline">Open MU ↗</a>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Military Unit (MU) ID</label>
+              <input id="inp-mu-id" type="text" value="69f562f5747ceee9f38d631d" oninput="updateMuLink()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Target MU Damage (Millions)</label>
+              <input id="inp-mu-target" type="number" step="5" value="50" oninput="calcMerc()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+            </div>
+          </div>
+          <div id="mu-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono space-y-1.5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: v0.27 ECO, LV.50 ROADMAP & GEAR ROI -->
+    <div id="view-eco" class="hidden space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
+          <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Level 50 & Prestige Pacing Estimator</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Current XP % in Level</label>
+              <input id="inp-xp-pct" type="number" min="0" max="99" value="50" oninput="calcRoadmap()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Daily Damage Pace</label>
+              <input id="inp-daily-pace" type="number" step="10000" value="250000" oninput="calcRoadmap()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+            </div>
+          </div>
+          <div id="roadmap-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono text-slate-200"></div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
+          <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Gear Upgrade Break-Even & Scrap Analyzer</h3>
+          <div class="grid grid-cols-3 gap-2.5">
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Upgrade Cost (€)</label>
+              <input id="inp-upg-cost" type="number" value="1200" oninput="calcGearROI()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Sell Value (€)</label>
+              <input id="inp-sell-val" type="number" value="480" oninput="calcGearROI()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Scrap Value (€)</label>
+              <input id="inp-scrap-val" type="number" value="515" oninput="calcGearROI()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs font-mono text-white">
+            </div>
+          </div>
+          <div id="gear-roi-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono text-slate-200"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER SIGNATURE -->
+  <footer class="border-t border-slate-800/80 mt-10 py-5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+      <div>RAAD // رَعـد v1.7 — Live War Era API Relay & Tactical Calculator</div>
+      <div>
+        Engineered by <a href="https://app.warera.io/user/Ayyubi_Warrior2" target="_blank" rel="noopener" class="font-mono font-bold text-amber-400 hover:underline">Ayyubi_Warrior2</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // YOUR LIVE CLOUDFLARE RELAY WORKER
+    const RELAY_WORKER_URL = 'https://muddy-frog-fa31.modyeldaba99.workers.dev';
+
+    const WEAPONS = [
+      { tier: 1, name: 'T1 Tactical Pistol', dmg: 45, wear: 0.45, color: '#94A3B8', svg: '<path d="M4 10h13l2 3h-5v5h-3v-5H6l-2 4H2l2-7z"/>' },
+      { tier: 2, name: 'T2 SMG Vector', dmg: 85, wear: 0.85, color: '#10B981', svg: '<path d="M3 9h14l2 2v3h-4v5h-3v-5H9v4H6v-4H3V9zm15 1h3v2h-3v-2z"/>' },
+      { tier: 3, name: 'T3 Assault Rifle', dmg: 140, wear: 1.40, color: '#3B82F6', svg: '<path d="M2 11h16l3-1v3l-3 1h-4l1 5h-3l-1-5H7l-2 4H2l1-5-1-2z"/>' },
+      { tier: 4, name: 'T4 Precision Sniper', dmg: 220, wear: 2.35, color: '#A855F7', svg: '<path d="M1 12h18l4-1v2l-4 1h-6l1 4h-3l-1-4H5l-2 4H1l1-4-1-2zm7-4h7v2H8V8z"/>' },
+      { tier: 5, name: 'T5 Heavy LMG', dmg: 330, wear: 3.80, color: '#F59E0B', svg: '<path d="M2 10h17l3 1v3l-3 1h-5v5H9v-5H5l-2 4H1l1-9zm6-3h6v2H8V7z"/>' },
+      { tier: 6, name: 'T6 Rocket Launcher', dmg: 480, wear: 6.10, color: '#EF4444', svg: '<path d="M1 9h19l3-2v8l-3-2H1V9zm7 4h4v6H8v-6z"/>' }
+    ];
+
+    const ARMOR_SLOTS = [
+      { id: 'helmet', label: 'Helmet', tiers: ['T1 Cap', 'T2 Kevlar', 'T3 Tactical', 'T4 Ballistic', 'T5 Exo-Helm', 'T6 Titan Visor'], bonus: [2, 5, 9, 14, 20, 28] },
+      { id: 'vest', label: 'Body Armor', tiers: ['T1 Light Vest', 'T2 Plate Carrier', 'T3 Heavy Vest', 'T4 Ceramic Rig', 'T5 Exo-Suit', 'T6 Juggernaut'], bonus: [4, 9, 15, 22, 30, 40] },
+      { id: 'gloves', label: 'Gloves (Crit)', tiers: ['T1 Grip', 'T2 Tac-Gloves', 'T3 Marksman', 'T4 Sniper Gloves', 'T5 Cyber-Grip', 'T6 Mythic Gauntlet'], bonus: [5, 10, 18, 28, 40, 55] }
+    ];
+
+    let state = {
+      weaponTier: 3,
+      armor: { helmet: 3, vest: 3, gloves: 3 },
+      mode: '8h',
+      dark: true,
+      lang: 'en',
+      lastCalc: {},
+      searchTimer: null,
+      searchMatches: [],
+      market: {
+        ammoStd: 0.45,
+        ammoAP: 1.35,
+        ammoHE: 2.60,
+        food: 0.85,
+        pill: 45.0,
+        caseBase: 46.0,
+        liveSynced: false,
+        rawPrices: {}
+      }
+    };
+
+    // RELAY CALLER: POST to Cloudflare Worker -> api6.warera.io/trpc/<proc>?batch=1
+    async function callWarEraRelay(procedure, inputObj = {}) {
+      const relayEndpoint = `${RELAY_WORKER_URL}/?proc=${encodeURIComponent(procedure)}`;
+      const bodyStr = JSON.stringify({ "0": inputObj });
+
+      try {
+        const res = await fetch(relayEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: bodyStr,
+          signal: AbortSignal.timeout(7000)
+        });
+        if (!res.ok) return null;
+        const payload = await res.json();
+        const firstItem = Array.isArray(payload) ? payload[0] : payload;
+        const extracted = firstItem?.result?.data?.json ?? firstItem?.result?.data ?? firstItem;
+        if (extracted !== undefined && extracted !== null && !firstItem?.error) {
+          return extracted;
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function applyDirectControls(source = 'qe') {
+      const name = document.getElementById('qe-name').value.trim() || 'Commander';
+      const lv = Math.min(50, Math.max(1, parseInt(document.getElementById('qe-lv').value, 10) || 1));
+      const pr = Math.min(25, Math.max(0, parseInt(document.getElementById('qe-pr').value, 10) || 0));
+      const comp = Math.min(13, Math.max(0, parseInt(document.getElementById('qe-comp').value, 10) || 0));
+      const country = document.getElementById('qe-country').value.trim() || 'Global';
+
+      document.getElementById('inp-level').value = lv;
+      document.getElementById('inp-prestige').value = pr;
+      document.getElementById('inp-factories').value = comp;
+
+      updateHeaderDisplay(name, lv, pr, comp, country, false);
+      saveLocalProfile(name, lv, pr, comp, country);
+      recalcAll();
+    }
+
+    function syncSliderToDirect(field) {
+      if (field === 'lv') {
+        document.getElementById('qe-lv').value = document.getElementById('inp-level').value;
+      } else if (field === 'pr') {
+        document.getElementById('qe-pr').value = document.getElementById('inp-prestige').value;
+      } else if (field === 'comp') {
+        document.getElementById('qe-comp').value = document.getElementById('inp-factories').value;
+      }
+      applyDirectControls('slider');
+    }
+
+    function updateHeaderDisplay(name, lv, pr, comp, country, verified) {
+      document.getElementById('cmd-name').textContent = name;
+      document.getElementById('cmd-avatar').textContent = name.slice(0, 2).toUpperCase();
+      document.getElementById('cmd-level').textContent = `LV. ${lv}${lv >= 50 ? ' (MAX)' : ''}`;
+      document.getElementById('cmd-prestige').textContent = `PRESTIGE ${pr}`;
+      document.getElementById('cmd-source-badge').textContent = verified ? 'LIVE SYNCED' : 'ACTIVE PROFILE';
+      document.getElementById('cmd-meta').textContent = `Country: ${country} • Companies: ${comp}/13 • Rank Damage Bonus: +${(lv * 0.5 + pr * 5).toFixed(1)}%`;
+    }
+
+    function saveLocalProfile(name, lv, pr, comp, country) {
+      try {
+        localStorage.setItem('raad_warera_profile_v17', JSON.stringify({ name, lv, pr, comp, country }));
+      } catch (e) {}
+    }
+
+    // LIVE MARKET & CONFIG SYNC VIA RELAY
+    async function syncLiveMarketAndConfig() {
+      const btn = document.getElementById('market-sync-btn');
+      btn.textContent = '⏳ Syncing...';
+
+      const [prices, dates, txs] = await Promise.all([
+        callWarEraRelay('itemTrading.getPrices', {}),
+        callWarEraRelay('gameConfig.getDates', {}),
+        callWarEraRelay('transaction.getPaginatedTransactions', { limit: 10 })
+      ]);
+
+      let syncedCount = 0;
+      if (prices && typeof prices === 'object') {
+        state.market.rawPrices = prices;
+        state.market.liveSynced = true;
+        syncedCount++;
+        if (prices.ammo || prices.lightAmmo) state.market.ammoStd = Number(prices.lightAmmo || prices.ammo) || state.market.ammoStd;
+        if (prices.heavyAmmo || prices.apAmmo) state.market.ammoAP = Number(prices.apAmmo || prices.heavyAmmo) || state.market.ammoAP;
+        if (prices.heAmmo || prices.explosiveAmmo) state.market.ammoHE = Number(prices.heAmmo || prices.explosiveAmmo) || state.market.ammoHE;
+        if (prices.bread || prices.steak || prices.food) state.market.food = Number(prices.bread || prices.food || prices.steak) || state.market.food;
+        if (prices.energyPill || prices.pill) state.market.pill = Number(prices.energyPill || prices.pill) || state.market.pill;
+        if (prices.case || prices.lootBox || prices.mysteryBox) state.market.caseBase = Number(prices.case || prices.lootBox || prices.mysteryBox) || state.market.caseBase;
+      }
+
+      if (dates) {
+        syncedCount++;
+        const dayNum = dates?.currentDay || dates?.day || 'Live';
+        document.getElementById('server-clock-bar').textContent = `Cloudflare Relay Connected • Game Day: ${dayNum}`;
+      }
+
+      renderMarketFeed(prices, txs);
+      btn.textContent = syncedCount > 0 ? '✅ Market Live' : '🔄 Live Market';
+      document.getElementById('price-source-tag').textContent = state.market.liveSynced ? 'LIVE API6 PRICES' : 'CALIBRATED PRICES';
+      recalcAll();
+    }
+
+    function renderMarketFeed(prices, txs) {
+      const grid = document.getElementById('live-prices-grid');
+      const entries = (prices && typeof prices === 'object') ? Object.entries(prices).slice(0, 12) : [];
+      if (entries.length > 0) {
+        grid.innerHTML = entries.map(([k, v]) => `
+          <div class="p-2.5 rounded-xl bg-obsidian border border-slate-800">
+            <div class="text-[10px] uppercase text-slate-400 truncate">${k}</div>
+            <div class="text-sm font-bold text-emerald mt-0.5">${typeof v === 'number' ? v.toFixed(2) + ' €' : JSON.stringify(v)}</div>
+          </div>
+        `).join('');
+      } else {
+        grid.innerHTML = `
+          <div class="col-span-full p-3 rounded-xl bg-obsidian border border-slate-800 text-slate-400">
+            Calibrated v0.27 prices active (Std Ammo: ${state.market.ammoStd}€, AP: ${state.market.ammoAP}€, Food: ${state.market.food}€).
+          </div>
+        `;
+      }
+
+      const txBox = document.getElementById('live-tx-feed');
+      const list = Array.isArray(txs) ? txs : (txs?.items || txs?.transactions || []);
+      if (list.length > 0) {
+        txBox.innerHTML = list.map(t => `
+          <div class="p-2 rounded-lg bg-carbon border border-slate-800/80 flex justify-between items-center gap-2">
+            <span class="text-slate-300 truncate">${t.itemType || t.type || 'Market Tx'} ×${t.quantity || 1}</span>
+            <span class="text-amber-400 font-bold shrink-0">${(t.price || t.totalPrice || 0)} €</span>
+          </div>
+        `).join('');
+      } else {
+        txBox.innerHTML = `<div class="text-slate-400">No recent transactions returned.</div>`;
+      }
+    }
+
+    async function lookupOfferById() {
+      const offerId = document.getElementById('offer-id-input').value.trim();
+      if (!offerId) return;
+      const box = document.getElementById('offer-lookup-result');
+      box.classList.remove('hidden');
+      box.textContent = `Fetching offer "${offerId}" via relay...`;
+      const data = await callWarEraRelay('itemOffer.getById', { offerId });
+      box.textContent = data ? JSON.stringify(data) : `Offer ID not found.`;
+    }
+
+    // LIVE PLAYER SEARCH VIA CLOUDFLARE RELAY -> search.searchAnything
+    function debouncedLiveSearch() {
+      clearTimeout(state.searchTimer);
+      const val = document.getElementById('player-input').value.trim();
+      if (val.length < 2) {
+        document.getElementById('search-results-box').classList.add('hidden');
+        document.getElementById('sync-status').classList.add('hidden');
+        return;
+      }
+      state.searchTimer = setTimeout(() => syncPlayer(true), 320);
+    }
+
+    function normalizeUserCandidates(rawPayload, prefixQuery) {
+      const q = prefixQuery.toLowerCase();
+      const map = new Map();
+
+      function walk(node) {
+        if (!node) return;
+        if (Array.isArray(node)) {
+          node.forEach(walk);
+          return;
+        }
+        if (typeof node === 'object') {
+          const u = node.user || node;
+          const uname = u.username || u.name;
+          const uid = u._id || u.id || u.userId;
+          if (uname && typeof uname === 'string' && uname.toLowerCase().includes(q)) {
+            const key = uid || uname.toLowerCase();
+            if (!map.has(key)) {
+              map.set(key, {
+                id: uid || '',
+                name: uname,
+                lv: u.level || 1,
+                prestige: u.prestige || 0,
+                country: u.country?.name || u.country || 'Global',
+                companies: u.companiesCount ?? u.companies?.length ?? 0
+              });
+            }
+          }
+          Object.values(node).forEach(val => {
+            if (val && typeof val === 'object') walk(val);
+          });
+        }
+      }
+
+      walk(rawPayload);
+      return Array.from(map.values()).sort((a, b) => {
+        const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+        const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+        return aStarts - bStarts;
+      });
+    }
+
+    async function syncPlayer(isLiveTyping = false) {
+      const raw = document.getElementById('player-input').value.trim();
+      if (!raw) return;
+
+      const status = document.getElementById('sync-status');
+      const resultsBox = document.getElementById('search-results-box');
+      const resultsList = document.getElementById('search-results-list');
+
+      status.classList.remove('hidden');
+      status.className = 'text-[11px] font-mono text-amber-300';
+      status.textContent = `Searching War Era database for "${raw}"...`;
+
+      const searchRes = await callWarEraRelay('search.searchAnything', { searchText: raw });
+      const matches = normalizeUserCandidates(searchRes, raw);
+      state.searchMatches = matches;
+
+      if (matches.length > 0) {
+        status.classList.add('hidden');
+        resultsBox.classList.remove('hidden');
+        document.getElementById('search-results-count').textContent = `Found ${matches.length} matching commander(s) for "${raw}"`;
+
+        resultsList.innerHTML = matches.map((acc, idx) => `
+          <button onclick="selectSearchCandidate(${idx})" class="text-left p-3 rounded-xl bg-obsidian hover:bg-steel/70 border border-slate-700/80 hover:border-emerald/60 transition flex items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-crimson to-amber-500 flex items-center justify-center font-extrabold text-xs text-white shrink-0">
+                ${acc.name.slice(0, 2).toUpperCase()}
+              </div>
+              <div class="min-w-0">
+                <div class="text-xs font-extrabold text-white truncate">${acc.name}</div>
+                <div class="text-[10px] font-mono text-slate-400 truncate">Lv.${acc.lv} • P${acc.prestige} • ${acc.country}</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-1 rounded bg-emerald/15 text-emerald font-bold shrink-0">Load</span>
+          </button>
+        `).join('');
+
+        // Auto-load exact match if user pressed Enter/Fetch button
+        if (!isLiveTyping && matches.length === 1) {
+          selectSearchCandidate(0);
+        }
+        return;
+      }
+
+      resultsBox.classList.add('hidden');
+      status.className = 'text-[11px] font-mono text-slate-400';
+      status.textContent = `No exact match found for "${raw}". You can also enter your stats directly in the boxes above.`;
+    }
+
+    async function selectSearchCandidate(idx) {
+      const candidate = state.searchMatches[idx];
+      if (!candidate) return;
+
+      const status = document.getElementById('sync-status');
+      status.classList.remove('hidden');
+      status.className = 'text-[11px] font-mono text-amber-300';
+      status.textContent = `Loading full profile for ${candidate.name}...`;
+
+      let fullData = null;
+      if (candidate.id) {
+        fullData = await callWarEraRelay('user.getUserLite', { userId: candidate.id });
+      }
+
+      document.getElementById('search-results-box').classList.add('hidden');
+
+      const u = fullData || candidate;
+      const name = u.username || u.name || candidate.name;
+      const lv = Math.min(50, Math.max(1, u.level || candidate.lv || 1));
+      const pr = u.prestige ?? candidate.prestige ?? 0;
+      const comp = u.companiesCount ?? candidate.companies ?? 0;
+      const country = u.country?.name || u.country || candidate.country || 'Global';
+
+      document.getElementById('qe-name').value = name;
+      document.getElementById('qe-lv').value = lv;
+      document.getElementById('qe-pr').value = pr;
+      document.getElementById('qe-comp').value = comp;
+      document.getElementById('qe-country').value = country;
+
+      applyDirectControls();
+      updateHeaderDisplay(name, lv, pr, comp, country, true);
+
+      status.className = 'text-[11px] font-mono text-emerald';
+      status.textContent = `✅ Loaded live stats for ${name} (Lv.${lv} | Prestige ${pr} | Factories ${comp})`;
+    }
+
+    // UNIFIED COMBAT & CASHFLOW SCENARIO
+    function computeCombatScenario(overrideWeaponTier = null, overrideAmmoVal = null) {
+      const wTier = overrideWeaponTier || state.weaponTier;
+      const w = WEAPONS[wTier - 1];
+      const level = +document.getElementById('inp-level').value;
+      const prestige = +document.getElementById('inp-prestige').value;
+      const atk = +document.getElementById('inp-atk').value;
+      const prec = +document.getElementById('inp-prec').value;
+      const critc = +document.getElementById('inp-critc').value;
+      const critd = +document.getElementById('inp-critd').value;
+
+      const gloveCritBonus = ARMOR_SLOTS[2].bonus[state.armor.gloves - 1] / 100;
+      const ammoBonus = overrideAmmoVal !== null ? overrideAmmoVal : +document.getElementById('inp-ammo').value;
+      const allyBonus = document.getElementById('chk-ally').checked ? 0.20 : 0;
+      const mdBonus = document.getElementById('chk-md').checked ? 0.10 : 0;
+      const pillMult = document.getElementById('chk-pill').checked ? 1.60 : 1.00;
+
+      const baseAtk = 100 + (atk * 22) + w.dmg;
+      const rankBonus = (level * 0.005) + (prestige * 0.05);
+      const precOvercap = Math.max(0, (prec - 8) * 0.025);
+      const totalAddMult = 1 + rankBonus + precOvercap + ammoBonus + allyBonus + mdBonus;
+
+      const normalHit = Math.round(baseAtk * totalAddMult * pillMult);
+      const critChance = Math.min(0.85, 0.10 + critc * 0.035);
+      const critMult = 1.0 + (critd * 0.15) + gloveCritBonus;
+      const critHit = Math.round(normalHit * critMult);
+      const avgHit = (normalHit * (1 - critChance)) + (critHit * critChance);
+
+      const hits = state.mode === '8h' ? 74 : 42;
+      const totalDmg = Math.round(avgHit * hits);
+
+      const factories = +document.getElementById('inp-factories').value || 0;
+      const factoryAvg = +document.getElementById('inp-factory-profit').value || 0;
+      const factoryIncome = factories * factoryAvg;
+
+      const strat = document.getElementById('inp-case-strat').value;
+      const baseCase = state.market.caseBase;
+      const caseVal = strat === 'sell' ? baseCase * 0.92 : (strat === 'open_sell' ? baseCase * 1.09 : baseCase);
+      const estCases = (totalDmg / 50000);
+      const lootEV = estCases * caseVal;
+
+      const bountyRate = +document.getElementById('inp-bounty').value || 0;
+      const bountyIncome = (totalDmg / 1000) * bountyRate;
+
+      const ammoCostPerHit = ammoBonus === 0 ? state.market.ammoStd : (ammoBonus === 0.15 ? state.market.ammoAP : state.market.ammoHE);
+      const foodCostPerHit = state.market.food;
+      const consumablesCost = hits * (ammoCostPerHit + foodCostPerHit);
+      const wearAndPillCost = (hits * w.wear) + (pillMult > 1 ? state.market.pill : 0);
+
+      const grossRev = factoryIncome + lootEV + bountyIncome;
+      const totalBurn = consumablesCost + wearAndPillCost;
+      const netPnL = grossRev - totalBurn;
+
+      return {
+        w, level, prestige, normalHit, critHit, critChance, critMult, avgHit, hits, totalDmg,
+        factoryIncome, estCases, lootEV, bountyIncome, consumablesCost, wearAndPillCost,
+        grossRev, totalBurn, netPnL
+      };
+    }
+
+    function renderArmory() {
+      const w = WEAPONS[state.weaponTier - 1];
+      const grid = document.getElementById('armory-grid');
+      let html = `
+        <div class="sm:col-span-2 p-3.5 rounded-xl bg-obsidian border border-slate-700/80 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center border shrink-0" style="border-color:${w.color}44; background:${w.color}15">
+              <svg class="w-8 h-8" viewBox="0 0 24 24" fill="${w.color}">${w.svg}</svg>
+            </div>
+            <div>
+              <div class="text-xs font-extrabold" style="color:${w.color}">${w.name}</div>
+              <div class="text-[11px] text-slate-400 font-mono">Base ATK: +${w.dmg} • Wear: ${w.wear.toFixed(2)}€/hit</div>
+            </div>
+          </div>
+          <select onchange="state.weaponTier=+this.value; renderArmory(); recalcAll();" class="px-3 py-1.5 rounded-lg bg-carbon border border-slate-700 text-xs font-bold text-white">
+            ${WEAPONS.map(item => `<option value="${item.tier}" ${item.tier === state.weaponTier ? 'selected' : ''}>${item.name}</option>`).join('')}
+          </select>
+        </div>
+      `;
+
+      ARMOR_SLOTS.forEach(slot => {
+        const idx = state.armor[slot.id] - 1;
+        html += `
+          <div class="p-3 rounded-xl bg-obsidian border border-slate-800 flex items-center justify-between gap-2">
+            <div>
+              <div class="text-[11px] text-slate-400">${slot.label}</div>
+              <div class="text-xs font-bold text-slate-200">${slot.tiers[idx]} <span class="text-amber-400 font-mono">(+${slot.bonus[idx]}%)</span></div>
+            </div>
+            <select onchange="state.armor['${slot.id}']=+this.value; renderArmory(); recalcAll();" class="px-2 py-1 rounded-lg bg-carbon border border-slate-700 text-xs text-white">
+              ${slot.tiers.map((t, i) => `<option value="${i+1}" ${i+1 === state.armor[slot.id] ? 'selected' : ''}>T${i+1}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      });
+      grid.innerHTML = html;
+    }
+
+    function setCombatMode(m) {
+      state.mode = m;
+      document.getElementById('mode-8h').className = m === '8h' ? 'px-3 py-1 rounded-lg text-xs font-bold bg-crimson text-white' : 'px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white';
+      document.getElementById('mode-burst').className = m === 'burst' ? 'px-3 py-1 rounded-lg text-xs font-bold bg-crimson text-white' : 'px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white';
+      recalcAll();
+    }
+
+    function recalcAll() {
+      const c = computeCombatScenario();
+      state.lastCalc = c;
+
+      document.getElementById('val-level').textContent = c.level;
+      document.getElementById('val-prestige').textContent = c.prestige;
+      document.getElementById('val-atk').textContent = document.getElementById('inp-atk').value;
+      document.getElementById('val-prec').textContent = document.getElementById('inp-prec').value;
+      document.getElementById('val-critc').textContent = document.getElementById('inp-critc').value;
+      document.getElementById('val-critd').textContent = document.getElementById('inp-critd').value;
+      document.getElementById('skill-cap-badge').textContent = `Skill Cap: Lv.${10 + Math.floor(c.prestige / 2)}`;
+
+      const coveragePct = c.totalBurn > 0 ? Math.round((c.grossRev / c.totalBurn) * 100) : 100;
+
+      document.getElementById('kpi-normal').textContent = c.normalHit.toLocaleString();
+      document.getElementById('kpi-crit').textContent = c.critHit.toLocaleString();
+      document.getElementById('kpi-hit-meta').textContent = `Crit: ${Math.round(c.critChance*100)}% • Mult: ${c.critMult.toFixed(2)}x`;
+      document.getElementById('kpi-mode-label').textContent = state.mode === '8h' ? '8H Sustained Damage' : 'E-Burst Dump Damage';
+      document.getElementById('kpi-total-dmg').textContent = c.totalDmg.toLocaleString();
+      document.getElementById('kpi-hits-count').textContent = `${c.hits} Hits • Avg ${Math.round(c.avgHit).toLocaleString()} / Hit`;
+      document.getElementById('kpi-gross-rev').textContent = `+${c.grossRev.toFixed(2)} €`;
+      document.getElementById('kpi-rev-split').textContent = `Factory: ${c.factoryIncome.toFixed(0)}€ + Loot: ${c.lootEV.toFixed(1)}€`;
+
+      const pnlEl = document.getElementById('kpi-net-pnl');
+      const verdEl = document.getElementById('kpi-verdict');
+      pnlEl.textContent = `${c.netPnL >= 0 ? '+' : ''}${c.netPnL.toFixed(2)} €`;
+      pnlEl.className = `text-lg sm:text-2xl font-extrabold tabular mt-1 ${c.netPnL >= 0 ? 'text-emerald' : 'text-red-400'}`;
+      verdEl.textContent = c.netPnL >= 0 ? `PROFITABLE (${coveragePct}% Covered)` : `CASH BLEED (${coveragePct}% Covered)`;
+      verdEl.className = `text-[11px] font-bold mt-1 ${c.netPnL >= 0 ? 'text-emerald' : 'text-red-400'}`;
+
+      document.getElementById('led-factory').textContent = `+${c.factoryIncome.toFixed(2)} €`;
+      document.getElementById('led-loot').textContent = `+${c.lootEV.toFixed(2)} €`;
+      document.getElementById('led-bounty').textContent = `+${c.bountyIncome.toFixed(2)} €`;
+      document.getElementById('led-consumables').textContent = `-${c.consumablesCost.toFixed(2)} €`;
+      document.getElementById('led-wear').textContent = `-${c.wearAndPillCost.toFixed(2)} €`;
+
+      const ledTot = document.getElementById('led-total');
+      ledTot.textContent = `${c.netPnL >= 0 ? '+' : ''}${c.netPnL.toFixed(2)} €`;
+      ledTot.className = c.netPnL >= 0 ? 'text-emerald' : 'text-red-400';
+      document.getElementById('loot-cases-est').textContent = `~${c.estCases.toFixed(2)} Cases / Session`;
+
+      calcEnergySplit();
+      calcRoadmap();
+      calcMerc();
+      calcGearROI();
+    }
+
+    function runOptimizer(goal) {
+      const ammos = [
+        { name: 'Standard Ammo (0%)', val: 0 },
+        { name: 'AP Rounds (+15%)', val: 0.15 },
+        { name: 'HE Explosive (+30%)', val: 0.30 }
+      ];
+      let best = null;
+      WEAPONS.forEach(w => {
+        ammos.forEach(a => {
+          const sim = computeCombatScenario(w.tier, a.val);
+          if (goal === 'zero_loss' && sim.netPnL < 0) return;
+          if (!best || sim.totalDmg > best.sim.totalDmg) {
+            best = { w, a, sim };
+          }
+        });
+      });
+
+      const box = document.getElementById('optimizer-result');
+      if (!best) {
+        const fallbackSim = computeCombatScenario(1, 0);
+        box.innerHTML = `<span class="text-amber-400 font-bold">Strict Zero-Loss Alert:</span> Even T1 Pistol + Standard Ammo nets <strong class="text-red-400">${fallbackSim.netPnL.toFixed(2)} €</strong> with current factory count.`;
+        return;
+      }
+      box.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="text-emerald font-extrabold text-sm">Optimal Build: ${best.w.name} + ${best.a.name}</div>
+            <div class="text-slate-400 mt-1">Session Damage: <strong class="text-white">${best.sim.totalDmg.toLocaleString()}</strong> • Net Cashflow: <strong class="${best.sim.netPnL >= 0 ? 'text-emerald' : 'text-red-400'}">${best.sim.netPnL >= 0 ? '+' : ''}${best.sim.netPnL.toFixed(2)} €</strong></div>
+          </div>
+          <button onclick="state.weaponTier=${best.w.tier}; document.getElementById('inp-ammo').value='${best.a.val}'; renderArmory(); recalcAll(); switchTab('combat');" class="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-extrabold text-xs">
+            Apply Loadout
+          </button>
+        </div>
+      `;
+    }
+
+    function calcEnergySplit() {
+      const combatPct = +document.getElementById('inp-combat-pct').value;
+      const workPct = 100 - combatPct;
+      const wageSaved = +document.getElementById('inp-wage-saved').value || 0;
+
+      document.getElementById('val-combat-pct').textContent = `${combatPct}%`;
+      document.getElementById('energy-alloc-badge').textContent = `Combat: ${combatPct}% • Self-Work: ${workPct}%`;
+
+      const c = state.lastCalc;
+      const scaledDmg = Math.round((c.totalDmg || 0) * (combatPct / 100));
+      const combatNet = ((c.lootEV + c.bountyIncome - c.totalBurn) * (combatPct / 100));
+      const workGain = wageSaved * (workPct / 100);
+      const totalCombined = (c.factoryIncome || 0) + combatNet + workGain;
+
+      document.getElementById('energy-output').innerHTML = `
+        <div>Combat Output (${combatPct}% Energy): <strong class="text-amber-400">${scaledDmg.toLocaleString()} DMG</strong> (${combatNet >= 0 ? '+' : ''}${combatNet.toFixed(2)} € battle net)</div>
+        <div>Factory Self-Work (${workPct}% Energy): <strong class="text-emerald">+${workGain.toFixed(2)} €</strong> saved in worker wages</div>
+        <div class="pt-2 border-t border-slate-800 text-sm font-extrabold text-white">Combined Daily Net Profit: <span class="${totalCombined >= 0 ? 'text-emerald' : 'text-red-400'}">${totalCombined >= 0 ? '+' : ''}${totalCombined.toFixed(2)} €</span></div>
+      `;
+    }
+
+    function calcRoadmap() {
+      const lv = +document.getElementById('inp-level').value;
+      const pct = +document.getElementById('inp-xp-pct').value || 0;
+      const pace = +document.getElementById('inp-daily-pace').value || 100000;
+      const remLevels = Math.max(0, 50 - lv);
+      const remXP = (remLevels * 450000) + ((100 - pct) / 100 * 450000);
+      const days = lv >= 50 ? 0 : Math.ceil(remXP / (pace * 1.25));
+      document.getElementById('roadmap-output').innerHTML = lv >= 50
+        ? `<span class="text-amber-400 font-bold">MAX LEVEL 50 REACHED!</span> Ready to trigger Prestige for +12 SP, +2 Skill Cap & +5% Permanent Rank DMG.`
+        : `Remaining to Lv.50: <strong class="text-white">${Math.round(remXP).toLocaleString()} XP</strong><br/>Estimated Arrival: <strong class="text-emerald">${days} Days</strong> at current pace.`;
+    }
+
+    function updateMuLink() {
+      const muId = document.getElementById('inp-mu-id').value.trim() || '69f562f5747ceee9f38d631d';
+      document.getElementById('mu-direct-link').href = `https://app.warera.io/mu/${muId}`;
+    }
+
+    function calcMerc() {
+      const rate = +document.getElementById('inp-merc-rate').value || 0;
+      const c = state.lastCalc;
+      const burnPer1K = c.totalDmg > 0 ? (c.totalBurn / (c.totalDmg / 1000)) : 2.1;
+      const net1K = rate - burnPer1K;
+      document.getElementById('merc-output').innerHTML = `
+        <div>Contract Offer: <span class="text-white">${rate.toFixed(2)} € / 1K</span></div>
+        <div>Your Exact Burn: <span class="text-red-400">-${burnPer1K.toFixed(2)} € / 1K</span></div>
+        <div class="pt-1 border-t border-slate-800 font-bold ${net1K >= 0 ? 'text-emerald' : 'text-red-400'}">
+          Net Profit / 1K DMG: ${net1K >= 0 ? '+' : ''}${net1K.toFixed(2)} € (${net1K >= 0 ? 'PROFITABLE CONTRACT' : 'LOSS — NEGOTIATE HIGHER'})
+        </div>
+      `;
+
+      const targetM = +document.getElementById('inp-mu-target').value || 50;
+      const targetDmg = targetM * 1000000;
+      const reqHits = Math.ceil(targetDmg / (c.avgHit || 1500));
+      const reqBudget = Math.round((targetDmg / 1000) * burnPer1K);
+      document.getElementById('mu-output').innerHTML = `
+        <div>Required Hits: <span class="text-white">${reqHits.toLocaleString()} Hits</span></div>
+        <div>Ammo & Food Units: <span class="text-amber-400">${reqHits.toLocaleString()} Units</span></div>
+        <div class="pt-1 border-t border-slate-800 font-bold text-emerald">Estimated MU Operation Cost: ${reqBudget.toLocaleString()} €</div>
+      `;
+    }
+
+    function calcGearROI() {
+      const cost = +document.getElementById('inp-upg-cost').value || 0;
+      const sell = +document.getElementById('inp-sell-val').value || 0;
+      const scrap = +document.getElementById('inp-scrap-val').value || 0;
+      const nextTier = Math.min(6, state.weaponTier + 1);
+      const currSim = computeCombatScenario(state.weaponTier);
+      const nextSim = computeCombatScenario(nextTier);
+      const extraLootPerHit = Math.max(0.25, ((nextSim.lootEV - currSim.lootEV) / currSim.hits));
+      const breakEvenHits = Math.ceil(cost / extraLootPerHit);
+
+      document.getElementById('gear-roi-output').innerHTML = `
+        <div>Market vs Scrap Verdict: <strong class="text-amber-400">${scrap >= sell ? `SCRAP FOR PARTS (+${scrap - sell}€ gain)` : `SELL ON MARKET (+${sell - scrap}€ gain)`}</strong></div>
+        <div class="mt-1">Upgrade Break-Even (T${state.weaponTier} → T${nextTier}): <strong class="text-emerald">${breakEvenHits.toLocaleString()} Hits</strong> (~${Math.max(1, Math.round(breakEvenHits / currSim.hits))} sessions) via extra v0.27 Loot EV.</div>
+      `;
+    }
+
+    function switchTab(tab) {
+      ['combat', 'market', 'optimizer', 'energy', 'merc', 'eco'].forEach(t => {
+        document.getElementById('view-' + t).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('tab-' + t);
+        btn.className = t === tab
+          ? 'tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-crimson text-white shadow-md'
+          : 'tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800';
+      });
+    }
+
+    function copyDiscordReport() {
+      const c = state.lastCalc;
+      const name = document.getElementById('qe-name').value.trim() || 'Commander';
+      const report = [
+        `⚡ **RAAD // رَعـد — War Era Tactical Report**`,
+        `👤 **Commander:** ${name} (Lv.${c.level} | P${c.prestige})`,
+        `🔫 **Loadout:** ${c.w.name} | Normal: ${c.normalHit.toLocaleString()} | Crit: ${c.critHit.toLocaleString()}`,
+        `💥 **${state.mode === '8h' ? '8H Sustained' : 'E-Burst'} DMG:** ${c.totalDmg.toLocaleString()} (${c.hits} hits)`,
+        `💰 **Net Daily Cashflow:** ${c.netPnL >= 0 ? '+' : ''}${c.netPnL.toFixed(2)} € (Factories + v0.27 Loot EV)`
+      ].join('\n');
+
+      navigator.clipboard?.writeText(report);
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = '📋 Copy Build'; }, 1800);
+    }
+
+    function toggleTheme() {
+      state.dark = !state.dark;
+      document.documentElement.classList.toggle('dark', state.dark);
+      document.body.className = state.dark
+        ? 'bg-obsidian text-slate-100 antialiased selection:bg-crimson selection:text-white'
+        : 'bg-applebg text-slate-900 antialiased selection:bg-crimson selection:text-white';
+      document.getElementById('theme-btn').textContent = state.dark ? '☀️' : '🌙';
+    }
+
+    function toggleLang() {
+      state.lang = state.lang === 'en' ? 'ar' : 'en';
+      document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+    }
+
+    // Boot Sequence — Clean Neutral Defaults for Any Visitor
+    renderArmory();
+    try {
+      const saved = JSON.parse(localStorage.getItem('raad_warera_profile_v17') || 'null');
+      if (saved) {
+        document.getElementById('qe-name').value = saved.name || 'Commander';
+        document.getElementById('qe-lv').value = saved.lv || 1;
+        document.getElementById('qe-pr').value = saved.pr || 0;
+        document.getElementById('qe-comp').value = saved.comp ?? 0;
+        document.getElementById('qe-country').value = saved.country || 'Global';
+      }
+    } catch (e) {}
+    applyDirectControls();
+    syncLiveMarketAndConfig();
+  </script>
+</body>
+</html>
