@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RAAD // رَعـد v1.7 — War Era Live Player Lookup & Tactical Calculator</title>
+  <title>RAAD // رَعـد v1.8 — War Era Live Player Lookup & Tactical Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -51,9 +51,9 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="font-extrabold tracking-tight text-base sm:text-lg text-white">RAAD // رَعـد</span>
-            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald/20 text-emerald border border-emerald/40 font-bold" id="api-live-badge">v1.7 RELAY LIVE</span>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald/20 text-emerald border border-emerald/40 font-bold" id="api-live-badge">v1.8 API2 LIVE</span>
           </div>
-          <p class="text-[11px] text-slate-400 hidden sm:block" id="server-clock-bar">Cloudflare Relay → api6.warera.io/trpc • Ready</p>
+          <p class="text-[11px] text-slate-400 hidden sm:block" id="server-clock-bar">WarEra API2 + Gateway Relay • Ready</p>
         </div>
       </div>
 
@@ -92,9 +92,9 @@
           </div>
         </div>
 
-        <!-- LIVE SEARCH BAR CONNECTED TO CLOUDFLARE RELAY -->
+        <!-- LIVE SEARCH BAR -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 max-w-xl">
-          <input id="player-input" type="text" oninput="debouncedLiveSearch()" onkeydown="if(event.key==='Enter') syncPlayer()" placeholder="Type any War Era username (e.g. Ayyubi_Warrior2)..." class="flex-1 px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-crimson" />
+          <input id="player-input" type="text" onkeydown="if(event.key==='Enter') syncPlayer()" placeholder="Type any War Era username (e.g. Ayyubi_Warrior2)..." class="flex-1 px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-crimson" />
           <button onclick="syncPlayer()" id="sync-btn" class="px-3.5 py-2 rounded-xl bg-crimson hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider transition shrink-0">
             Fetch Player
           </button>
@@ -340,7 +340,7 @@
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-base font-extrabold text-white">itemTrading.getPrices // Live Market Feed</h3>
-              <p class="text-xs text-slate-400">Synced live via Cloudflare Relay from api6.warera.io.</p>
+              <p class="text-xs text-slate-400">Synced live via WarEra API2 & Cloudflare Relay.</p>
             </div>
             <button onclick="syncLiveMarketAndConfig()" class="px-3 py-1.5 rounded-lg bg-emerald text-slate-950 font-extrabold text-xs">Refresh</button>
           </div>
@@ -489,7 +489,7 @@
   <!-- FOOTER SIGNATURE -->
   <footer class="border-t border-slate-800/80 mt-10 py-5">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-      <div>RAAD // رَعـد v1.7 — Live War Era API Relay & Tactical Calculator</div>
+      <div>RAAD // رَعـد v1.8 — Live War Era API2 Relay & Tactical Calculator</div>
       <div>
         Engineered by <a href="https://app.warera.io/user/Ayyubi_Warrior2" target="_blank" rel="noopener" class="font-mono font-bold text-amber-400 hover:underline">Ayyubi_Warrior2</a>
       </div>
@@ -497,8 +497,11 @@
   </footer>
 
   <script>
-    // YOUR LIVE CLOUDFLARE RELAY WORKER
     const RELAY_WORKER_URL = 'https://muddy-frog-fa31.modyeldaba99.workers.dev';
+    const DIRECT_GATEWAYS = [
+      'https://gateway.warerastats.io/trpc',
+      'https://api2.warera.io/trpc'
+    ];
 
     const WEAPONS = [
       { tier: 1, name: 'T1 Tactical Pistol', dmg: 45, wear: 0.45, color: '#94A3B8', svg: '<path d="M4 10h13l2 3h-5v5h-3v-5H6l-2 4H2l2-7z"/>' },
@@ -522,7 +525,6 @@
       dark: true,
       lang: 'en',
       lastCalc: {},
-      searchTimer: null,
       searchMatches: [],
       market: {
         ammoStd: 0.45,
@@ -536,26 +538,36 @@
       }
     };
 
-    // RELAY CALLER: POST to Cloudflare Worker -> api6.warera.io/trpc/<proc>?batch=1
-    async function callWarEraRelay(procedure, inputObj = {}) {
-      const relayEndpoint = `${RELAY_WORKER_URL}/?proc=${encodeURIComponent(procedure)}`;
-      const bodyStr = JSON.stringify({ "0": inputObj });
+    // SMART GET CALLER: Uses Cloudflare GET Relay + Direct Gateway Fallback
+    async function callWarEraAPI(procedure, inputObj = {}) {
+      const hasInput = inputObj && Object.keys(inputObj).length > 0;
+      const encodedInput = hasInput ? encodeURIComponent(JSON.stringify(inputObj)) : '';
 
-      try {
-        const res = await fetch(relayEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: bodyStr,
-          signal: AbortSignal.timeout(7000)
-        });
-        if (!res.ok) return null;
-        const payload = await res.json();
-        const firstItem = Array.isArray(payload) ? payload[0] : payload;
-        const extracted = firstItem?.result?.data?.json ?? firstItem?.result?.data ?? firstItem;
-        if (extracted !== undefined && extracted !== null && !firstItem?.error) {
-          return extracted;
-        }
-      } catch (e) {}
+      const urlsToTry = [
+        hasInput
+          ? `${RELAY_WORKER_URL}/?proc=${encodeURIComponent(procedure)}&input=${encodedInput}`
+          : `${RELAY_WORKER_URL}/?proc=${encodeURIComponent(procedure)}`,
+        ...DIRECT_GATEWAYS.map(base =>
+          hasInput ? `${base}/${procedure}?input=${encodedInput}` : `${base}/${procedure}`
+        )
+      ];
+
+      for (const endpoint of urlsToTry) {
+        try {
+          const res = await fetch(endpoint, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(6500)
+          });
+          if (!res.ok) continue;
+          const payload = await res.json();
+          const firstItem = Array.isArray(payload) ? payload[0] : payload;
+          const extracted = firstItem?.result?.data?.json ?? firstItem?.result?.data ?? firstItem;
+          if (extracted !== undefined && extracted !== null && !firstItem?.error) {
+            return extracted;
+          }
+        } catch (e) {}
+      }
       return null;
     }
 
@@ -576,13 +588,9 @@
     }
 
     function syncSliderToDirect(field) {
-      if (field === 'lv') {
-        document.getElementById('qe-lv').value = document.getElementById('inp-level').value;
-      } else if (field === 'pr') {
-        document.getElementById('qe-pr').value = document.getElementById('inp-prestige').value;
-      } else if (field === 'comp') {
-        document.getElementById('qe-comp').value = document.getElementById('inp-factories').value;
-      }
+      if (field === 'lv') document.getElementById('qe-lv').value = document.getElementById('inp-level').value;
+      else if (field === 'pr') document.getElementById('qe-pr').value = document.getElementById('inp-prestige').value;
+      else if (field === 'comp') document.getElementById('qe-comp').value = document.getElementById('inp-factories').value;
       applyDirectControls('slider');
     }
 
@@ -597,19 +605,18 @@
 
     function saveLocalProfile(name, lv, pr, comp, country) {
       try {
-        localStorage.setItem('raad_warera_profile_v17', JSON.stringify({ name, lv, pr, comp, country }));
+        localStorage.setItem('raad_warera_profile_v18', JSON.stringify({ name, lv, pr, comp, country }));
       } catch (e) {}
     }
 
-    // LIVE MARKET & CONFIG SYNC VIA RELAY
     async function syncLiveMarketAndConfig() {
       const btn = document.getElementById('market-sync-btn');
       btn.textContent = '⏳ Syncing...';
 
       const [prices, dates, txs] = await Promise.all([
-        callWarEraRelay('itemTrading.getPrices', {}),
-        callWarEraRelay('gameConfig.getDates', {}),
-        callWarEraRelay('transaction.getPaginatedTransactions', { limit: 10 })
+        callWarEraAPI('itemTrading.getPrices', {}),
+        callWarEraAPI('gameConfig.getDates', {}),
+        callWarEraAPI('transaction.getPaginatedTransactions', { limit: 10 })
       ]);
 
       let syncedCount = 0;
@@ -628,12 +635,12 @@
       if (dates) {
         syncedCount++;
         const dayNum = dates?.currentDay || dates?.day || 'Live';
-        document.getElementById('server-clock-bar').textContent = `Cloudflare Relay Connected • Game Day: ${dayNum}`;
+        document.getElementById('server-clock-bar').textContent = `WarEra API2 Connected • Game Day: ${dayNum}`;
       }
 
       renderMarketFeed(prices, txs);
       btn.textContent = syncedCount > 0 ? '✅ Market Live' : '🔄 Live Market';
-      document.getElementById('price-source-tag').textContent = state.market.liveSynced ? 'LIVE API6 PRICES' : 'CALIBRATED PRICES';
+      document.getElementById('price-source-tag').textContent = state.market.liveSynced ? 'LIVE API2 PRICES' : 'CALIBRATED PRICES';
       recalcAll();
     }
 
@@ -674,65 +681,88 @@
       if (!offerId) return;
       const box = document.getElementById('offer-lookup-result');
       box.classList.remove('hidden');
-      box.textContent = `Fetching offer "${offerId}" via relay...`;
-      const data = await callWarEraRelay('itemOffer.getById', { offerId });
+      box.textContent = `Fetching offer "${offerId}"...`;
+      const data = await callWarEraAPI('itemOffer.getById', { offerId });
       box.textContent = data ? JSON.stringify(data) : `Offer ID not found.`;
     }
 
-    // LIVE PLAYER SEARCH VIA CLOUDFLARE RELAY -> search.searchAnything
-    function debouncedLiveSearch() {
-      clearTimeout(state.searchTimer);
-      const val = document.getElementById('player-input').value.trim();
-      if (val.length < 2) {
-        document.getElementById('search-results-box').classList.add('hidden');
-        document.getElementById('sync-status').classList.add('hidden');
-        return;
-      }
-      state.searchTimer = setTimeout(() => syncPlayer(true), 320);
-    }
-
-    function normalizeUserCandidates(rawPayload, prefixQuery) {
-      const q = prefixQuery.toLowerCase();
-      const map = new Map();
+    // HANDLES BOTH OBJECT RESULTS AND ID-ONLY ARRAYS FROM search.searchAnything
+    async function resolveUsersFromSearch(searchRes, query) {
+      const q = query.toLowerCase();
+      const candidates = [];
+      const userIdsToHydrate = new Set();
 
       function walk(node) {
         if (!node) return;
+        if (typeof node === 'string') {
+          if (/^[a-f0-9]{24}$/i.test(node)) userIdsToHydrate.add(node);
+          return;
+        }
         if (Array.isArray(node)) {
           node.forEach(walk);
           return;
         }
         if (typeof node === 'object') {
+          if (Array.isArray(node.userIds)) {
+            node.userIds.forEach(id => { if (typeof id === 'string') userIdsToHydrate.add(id); });
+          }
           const u = node.user || node;
           const uname = u.username || u.name;
           const uid = u._id || u.id || u.userId;
-          if (uname && typeof uname === 'string' && uname.toLowerCase().includes(q)) {
-            const key = uid || uname.toLowerCase();
-            if (!map.has(key)) {
-              map.set(key, {
-                id: uid || '',
-                name: uname,
-                lv: u.level || 1,
-                prestige: u.prestige || 0,
-                country: u.country?.name || u.country || 'Global',
-                companies: u.companiesCount ?? u.companies?.length ?? 0
-              });
-            }
+          if (uname && typeof uname === 'string') {
+            candidates.push({
+              id: uid || '',
+              name: uname,
+              lv: u.level || u.rankings?.level || 1,
+              prestige: u.prestige || 0,
+              country: u.country?.name || u.countryCode || u.country || 'Global',
+              companies: u.companiesCount ?? u.companies?.length ?? 0
+            });
+          } else if (uid && typeof uid === 'string' && /^[a-f0-9]{24}$/i.test(uid)) {
+            userIdsToHydrate.add(uid);
           }
           Object.values(node).forEach(val => {
-            if (val && typeof val === 'object') walk(val);
+            if (val && (typeof val === 'object' || Array.isArray(val))) walk(val);
           });
         }
       }
 
-      walk(rawPayload);
-      return Array.from(map.values()).sort((a, b) => {
-        const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
-        const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
-        return aStarts - bStarts;
+      walk(searchRes);
+
+      // If searchAnything returned userIds without full user objects, hydrate them via user.getUserLite
+      if (candidates.length === 0 && userIdsToHydrate.size > 0) {
+        const ids = Array.from(userIdsToHydrate).slice(0, 8);
+        const hydrated = await Promise.all(
+          ids.map(id => callWarEraAPI('user.getUserLite', { userId: id }))
+        );
+        hydrated.forEach((u, idx) => {
+          if (u && (u.username || u.name)) {
+            candidates.push({
+              id: u._id || u.id || ids[idx],
+              name: u.username || u.name,
+              lv: u.level || 1,
+              prestige: u.prestige || 0,
+              country: u.country?.name || u.countryCode || u.country || 'Global',
+              companies: u.companiesCount ?? u.companies?.length ?? 0
+            });
+          }
+        });
+      }
+
+      const unique = new Map();
+      candidates.forEach(c => {
+        const key = c.id || c.name.toLowerCase();
+        if (!unique.has(key)) unique.set(key, c);
+      });
+
+      return Array.from(unique.values()).sort((a, b) => {
+        const aExact = a.name.toLowerCase() === q ? 0 : (a.name.toLowerCase().startsWith(q) ? 1 : 2);
+        const bExact = b.name.toLowerCase() === q ? 0 : (b.name.toLowerCase().startsWith(q) ? 1 : 2);
+        return aExact - bExact;
       });
     }
 
-    async function syncPlayer(isLiveTyping = false) {
+    async function syncPlayer() {
       const raw = document.getElementById('player-input').value.trim();
       if (!raw) return;
 
@@ -742,10 +772,15 @@
 
       status.classList.remove('hidden');
       status.className = 'text-[11px] font-mono text-amber-300';
-      status.textContent = `Searching War Era database for "${raw}"...`;
+      status.textContent = `Fetching "${raw}" from WarEra API2...`;
 
-      const searchRes = await callWarEraRelay('search.searchAnything', { searchText: raw });
-      const matches = normalizeUserCandidates(searchRes, raw);
+      // Try search.searchAnything first, then fallback to direct userId lookup if 24-hex ID pasted
+      let searchRes = await callWarEraAPI('search.searchAnything', { searchText: raw });
+      if (!searchRes && /^[a-f0-9]{24}$/i.test(raw)) {
+        searchRes = await callWarEraAPI('user.getUserLite', { userId: raw });
+      }
+
+      const matches = await resolveUsersFromSearch(searchRes, raw);
       state.searchMatches = matches;
 
       if (matches.length > 0) {
@@ -768,8 +803,11 @@
           </button>
         `).join('');
 
-        // Auto-load exact match if user pressed Enter/Fetch button
-        if (!isLiveTyping && matches.length === 1) {
+        // Auto-load if exact username match or single result
+        const exactIdx = matches.findIndex(m => m.name.toLowerCase() === raw.toLowerCase());
+        if (exactIdx !== -1) {
+          selectSearchCandidate(exactIdx);
+        } else if (matches.length === 1) {
           selectSearchCandidate(0);
         }
         return;
@@ -777,7 +815,7 @@
 
       resultsBox.classList.add('hidden');
       status.className = 'text-[11px] font-mono text-slate-400';
-      status.textContent = `No exact match found for "${raw}". You can also enter your stats directly in the boxes above.`;
+      status.textContent = `No player found for "${raw}". Check spelling or enter your stats directly above.`;
     }
 
     async function selectSearchCandidate(idx) {
@@ -791,7 +829,7 @@
 
       let fullData = null;
       if (candidate.id) {
-        fullData = await callWarEraRelay('user.getUserLite', { userId: candidate.id });
+        fullData = await callWarEraAPI('user.getUserLite', { userId: candidate.id });
       }
 
       document.getElementById('search-results-box').classList.add('hidden');
@@ -800,8 +838,8 @@
       const name = u.username || u.name || candidate.name;
       const lv = Math.min(50, Math.max(1, u.level || candidate.lv || 1));
       const pr = u.prestige ?? candidate.prestige ?? 0;
-      const comp = u.companiesCount ?? candidate.companies ?? 0;
-      const country = u.country?.name || u.country || candidate.country || 'Global';
+      const comp = u.companiesCount ?? u.companies?.length ?? candidate.companies ?? 0;
+      const country = u.country?.name || u.countryCode || u.country || candidate.country || 'Global';
 
       document.getElementById('qe-name').value = name;
       document.getElementById('qe-lv').value = lv;
@@ -816,7 +854,6 @@
       status.textContent = `✅ Loaded live stats for ${name} (Lv.${lv} | Prestige ${pr} | Factories ${comp})`;
     }
 
-    // UNIFIED COMBAT & CASHFLOW SCENARIO
     function computeCombatScenario(overrideWeaponTier = null, overrideAmmoVal = null) {
       const wTier = overrideWeaponTier || state.weaponTier;
       const w = WEAPONS[wTier - 1];
@@ -1122,10 +1159,9 @@
       document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
     }
 
-    // Boot Sequence — Clean Neutral Defaults for Any Visitor
     renderArmory();
     try {
-      const saved = JSON.parse(localStorage.getItem('raad_warera_profile_v17') || 'null');
+      const saved = JSON.parse(localStorage.getItem('raad_warera_profile_v18') || 'null');
       if (saved) {
         document.getElementById('qe-name').value = saved.name || 'Commander';
         document.getElementById('qe-lv').value = saved.lv || 1;
