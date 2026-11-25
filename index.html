@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAAD // رَعـد v4.8 - مركز قيادة WarEra</title>
+<title>RAAD // رَعـد v4.9 - مركز قيادة WarEra</title>
 <style>
 :root{
   --bg:#070d16;--panel:#0f1928;--panel2:#152338;--line:#22344d;
@@ -14,7 +14,7 @@
 body{
   background:radial-gradient(circle at top right,#122840 0%,var(--bg) 55%);
   color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  padding-bottom:84px;min-height:100vh;
+  padding-bottom:88px;min-height:100vh;
 }
 [dir="ltr"]{direction:ltr;text-align:left}
 [dir="rtl"]{direction:rtl;text-align:right}
@@ -188,6 +188,16 @@ nav.bottom-nav{
   border:1px solid #22354f;border-radius:10px;padding:10px;margin-bottom:12px;font-size:12.5px;
 }
 @media(max-width:740px){.econ-ledger{grid-template-columns:1fr}}
+.app-footer{
+  max-width:980px;margin:18px auto 0;padding:14px 16px;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  font-size:13px;color:var(--muted);
+}
+.app-footer a{
+  color:var(--blue);text-decoration:none;font-weight:700;word-break:break-all;
+}
+.app-footer a:hover{color:var(--green);text-decoration:underline}
 </style>
 </head>
 <body>
@@ -196,7 +206,7 @@ nav.bottom-nav{
   <div class="brand">
     <div class="logo">⚡</div>
     <div>
-      <div style="font-size:15px">RAAD // رَعـد <span class="badge">v4.8</span></div>
+      <div style="font-size:15px">RAAD // رَعـد <span class="badge">v4.9</span></div>
       <div style="font-size:11px;color:var(--muted)">غرفة القيادة الشاملة لـ WarEra</div>
     </div>
   </div>
@@ -276,7 +286,7 @@ nav.bottom-nav{
         <div style="margin-top:10px">
           <label>لصق بيانات اللاعب (JSON جاهز من API أو أداة خارجية - اختياري)</label>
           <div class="row">
-            <input id="manualJsonInput" placeholder='مثال: {"username":"yubi_Warrior2","level":25}' />
+            <input id="manualJsonInput" placeholder='مثال: {"username":"Ayyubi_Warrior2","level":25}' />
             <button class="btn btn-blue btn-sm" onclick="applyManualPlayerJson()">تطبيق JSON</button>
           </div>
         </div>
@@ -712,6 +722,19 @@ nav.bottom-nav{
       <div id="spyWatchlist" class="chips"></div>
     </div>
   </section>
+
+  <!-- FOOTER SIGNATURE -->
+  <footer class="app-footer">
+    <div>
+      <span>⚡ تطوير وتصميم: </span>
+      <strong style="color:var(--green)">Ayyubi_Warrior2</strong>
+    </div>
+    <div>
+      <a href="https://app.warera.io/user/6a8c8fe0ce8d67de63e1420c" target="_blank" rel="noopener noreferrer">
+        https://app.warera.io/user/6a8c8fe0ce8d67de63e1420c
+      </a>
+    </div>
+  </footer>
 </main>
 
 <nav class="bottom-nav">
@@ -808,6 +831,15 @@ const state = {
 
 const $=id=>document.getElementById(id);
 
+function normalizeAr(str){
+  return String(str || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي');
+}
+
 function navTo(name){
   document.querySelectorAll('.tab-view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(el=>{
@@ -855,7 +887,7 @@ function buildTrpcCandidateUrls(baseUrl, proc, input){
   const hasKeys = input && typeof input === 'object' && Object.keys(input).length > 0;
   const wrappedInput = encodeURIComponent(JSON.stringify({ json: input || {} }));
   const plainInput = encodeURIComponent(JSON.stringify(input || {}));
-  const urls = hasKeys
+  return hasKeys
     ? [
         cleanBase + proc + '?input=' + wrappedInput,
         cleanBase + proc + '?input=' + plainInput
@@ -865,7 +897,6 @@ function buildTrpcCandidateUrls(baseUrl, proc, input){
         cleanBase + proc + '?input=' + wrappedInput,
         cleanBase + proc + '?input=' + plainInput
       ];
-  return urls;
 }
 
 async function fetchWithTimeout(url, options={}, timeoutMs=5500){
@@ -1109,8 +1140,8 @@ async function fetchPlayer(){
       if(c){ countryObj = c; countryName = c.name || c.title || countryName || cId; }
       else if(!countryName) countryName = cId;
     }
-    if(!countryObj && countryName && cMap[countryName.toLowerCase().trim()]){
-      countryObj = cMap[countryName.toLowerCase().trim()];
+    if(!countryObj && countryName && cMap[normalizeAr(countryName)]){
+      countryObj = cMap[normalizeAr(countryName)];
     }
 
     const mId = user.mu?._id || user.mu?.id || user.militaryUnit?._id || (typeof user.mu === 'string' ? user.mu : '') || user.muId || user.militaryUnitId || '';
@@ -1226,19 +1257,19 @@ async function fetchCompanies(){
 }
 
 const COUNTRY_ISO = {
-  egypt:'eg','مصر':'eg',saudi:'sa','saudi arabia':'sa','السعودية':'sa',uae:'ae','united arab emirates':'ae','الإمارات':'ae',
-  iraq:'iq','العراق':'iq',jordan:'jo','الأردن':'jo',kuwait:'kw','الكويت':'kw',
+  egypt:'eg','مصر':'eg',saudi:'sa','saudi arabia':'sa','السعوديه':'sa',uae:'ae','united arab emirates':'ae','الامارات':'ae',
+  iraq:'iq','العراق':'iq',jordan:'jo','الاردن':'jo',kuwait:'kw','الكويت':'kw',
   qatar:'qa','قطر':'qa',morocco:'ma','المغرب':'ma',algeria:'dz','الجزائر':'dz',
   tunisia:'tn','تونس':'tn',syria:'sy','سوريا':'sy',lebanon:'lb','لبنان':'lb',
   palestine:'ps','فلسطين':'ps',yemen:'ye','اليمن':'ye',libya:'ly','ليبيا':'ly',
   sudan:'sd','السودان':'sd',oman:'om','عمان':'om',bahrain:'bh','البحرين':'bh',
-  turkey:'tr','türkiye':'tr','تركيا':'tr',usa:'us','united states':'us','united states of america':'us','امريكا':'us','أمريكا':'us',
+  turkey:'tr','türkiye':'tr','تركيا':'tr',usa:'us','united states':'us','united states of america':'us','امريكا':'us',
   uk:'gb','united kingdom':'gb','england':'gb','britain':'gb','بريطانيا':'gb',
-  germany:'de','المانيا':'de','ألمانيا':'de',france:'fr','فرنسا':'fr',italy:'it','ايطاليا':'it','إيطاليا':'it',
-  spain:'es','اسبانيا':'es','إسبانيا':'es',russia:'ru','russian federation':'ru','روسيا':'ru',
+  germany:'de','المانيا':'de',france:'fr','فرنسا':'fr',italy:'it','ايطاليا':'it',
+  spain:'es','اسبانيا':'es',russia:'ru','russian federation':'ru','روسيا':'ru',
   china:'cn','الصين':'cn',japan:'jp','اليابان':'jp',southkorea:'kr','south korea':'kr','korea':'kr','كوريا':'kr',
-  brazil:'br','البرازيل':'br',argentina:'ar','الأرجنتين':'ar',india:'in','الهند':'in',
-  poland:'pl','بولندا':'pl',serbia:'rs','صربيا':'rs',romania:'ro','رومانيا':'ro',ukraine:'ua','اوكرانيا':'ua','أوكرانيا':'ua'
+  brazil:'br','البرازيل':'br',argentina:'ar','الارجنتين':'ar',india:'in','الهند':'in',
+  poland:'pl','بولندا':'pl',serbia:'rs','صربيا':'rs',romania:'ro','رومانيا':'ro',ukraine:'ua','اوكرانيا':'ua'
 };
 
 let cachedCountries = null;
@@ -1277,11 +1308,11 @@ async function getCountriesMap(forceFresh=false){
           if(!c || typeof c !== 'object') return;
           const id = c._id || c.id || c.countryId;
           if(id) freshMap[String(id)] = c;
-          if(c.name) freshMap[String(c.name).toLowerCase().trim()] = c;
-          if(c.title) freshMap[String(c.title).toLowerCase().trim()] = c;
-          if(c.code) freshMap[String(c.code).toLowerCase().trim()] = c;
-          if(c.iso) freshMap[String(c.iso).toLowerCase().trim()] = c;
-          if(c.slug) freshMap[String(c.slug).toLowerCase().trim()] = c;
+          if(c.name) freshMap[normalizeAr(c.name)] = c;
+          if(c.title) freshMap[normalizeAr(c.title)] = c;
+          if(c.code) freshMap[normalizeAr(c.code)] = c;
+          if(c.iso) freshMap[normalizeAr(c.iso)] = c;
+          if(c.slug) freshMap[normalizeAr(c.slug)] = c;
         });
         if(Object.keys(freshMap).length) break;
       }
@@ -1301,7 +1332,7 @@ function resolveCountryFlag(obj, name){
     if(raw.startsWith('http') || raw.startsWith('data:')) return raw;
     return 'https://app.warera.io/' + raw.replace(/^\//,'');
   }
-  const cleanName = (name || '').toLowerCase().trim();
+  const cleanName = normalizeAr(name);
   const mappedObj = cachedCountries ? (cachedCountries[cleanName] || null) : null;
   const iso = (
     obj?.code || obj?.iso || obj?.iso2 || obj?.countryCode ||
@@ -1399,7 +1430,7 @@ function recalcAll(){
   const mc = $('inManualCountry')?.value.trim();
   const mm = $('inManualMu')?.value.trim();
   if(mc){
-    const cObj = cachedCountries ? cachedCountries[mc.toLowerCase().trim()] : null;
+    const cObj = cachedCountries ? cachedCountries[normalizeAr(mc)] : null;
     const fUrl = resolveCountryFlag(cObj, mc);
     const fImg = $('countryFlagImg');
     if(fUrl){
@@ -1928,7 +1959,7 @@ function deepExtractMuMembers(muObj){
   for(const roleKey of ['leader', 'leaderId', 'commander', 'commanderId', 'owner', 'ownerId', 'creator']){
     if(muObj[roleKey]) pushEntry(muObj[roleKey]);
   }
-  for(const listKey of ['officers', 'commanders', 'admins', 'members', 'memberIds', 'users', 'soldiers', 'roster', 'fighters', 'userIds', 'players']){
+  for(const listKey of ['officers', 'commanders', 'admins', 'members', 'activeMembers', 'memberIds', 'users', 'soldiers', 'roster', 'fighters', 'userIds', 'players']){
     normalizeMemberEntries(muObj[listKey]).forEach(pushEntry);
   }
   if(!collected.length){
@@ -1941,13 +1972,33 @@ function deepExtractMuMembers(muObj){
   return collected;
 }
 
+async function resolveMuCandidateList(rawArr){
+  if(!Array.isArray(rawArr) || !rawArr.length) return [];
+  const resolved = await Promise.all(rawArr.slice(0, 15).map(async item => {
+    if(item && typeof item === 'object' && (item.name || item.title || item.muName || item.tag)){
+      return item;
+    }
+    const id = typeof item === 'string' ? item : (item?._id || item?.id || item?.muId);
+    if(!id || !/^[a-f0-9]{24}$/i.test(String(id))) return typeof item === 'object' ? item : null;
+    const res = await trpcTryMany([
+      ['mu.getById', { muId: String(id) }],
+      ['mu.getMuById', { muId: String(id) }]
+    ], r => r && typeof r === 'object');
+    const obj = res?.mu || res?.militaryUnit || res;
+    return obj && typeof obj === 'object' ? obj : null;
+  }));
+  return resolved.filter(Boolean);
+}
+
 async function fetchMuFullData(q){
   let mu = null;
-  const ql = q.toLowerCase().trim();
+  const ql = normalizeAr(q);
 
   const matchMuItem = (x) => {
     if(!x || typeof x !== 'object') return false;
-    const fields = [x.name, x.title, x.muName, x.tag, x.shortName, x.acronym, x._id, x.id].filter(Boolean).map(v => String(v).toLowerCase().trim());
+    const fields = [x.name, x.title, x.muName, x.tag, x.shortName, x.acronym, x._id, x.id]
+      .filter(Boolean)
+      .map(v => normalizeAr(v));
     return fields.some(f => f === ql || f.includes(ql));
   };
 
@@ -1960,7 +2011,7 @@ async function fetchMuFullData(q){
     if(res) mu = res.mu || res.militaryUnit || res;
   }
 
-  if(!mu && state.lastKnownMuId && state.lastKnownMuName && state.lastKnownMuName.toLowerCase().includes(ql)){
+  if(!mu && state.lastKnownMuId && state.lastKnownMuName && normalizeAr(state.lastKnownMuName).includes(ql)){
     const res = await trpcTryMany([
       ['mu.getById', { muId: state.lastKnownMuId }],
       ['mu.getMuById', { muId: state.lastKnownMuId }]
@@ -1970,30 +2021,35 @@ async function fetchMuFullData(q){
 
   if(!mu){
     const searchProcs = [
+      ['search.searchAnything', { searchText: q }],
       ['search.searchMilitaryUnits', { searchText: q }],
       ['search.searchMus', { searchText: q }],
       ['mu.search', { searchText: q }],
-      ['mu.getManyPaginated', { searchText: q, limit: 20 }],
-      ['mu.getManyPaginated', { limit: 100 }],
+      ['mu.getManyPaginated', {}],
+      ['mu.getManyPaginated', { limit: 50 }],
       ['mu.getAll', {}],
       ['mu.getAllMus', {}],
-      ['mu.list', {}],
-      ['militaryUnit.getAll', {}]
+      ['mu.list', {}]
     ];
     for(const [proc, payload] of searchProcs){
       try{
         const res = await trpc(proc, payload);
-        const arr = extractListFromResponse(res?.mus || res?.militaryUnits || res);
-        const exact = arr.find(x => String(x?.name || x?.title || x?.tag || '').toLowerCase().trim() === ql);
-        const found = exact || arr.find(matchMuItem) || (arr.length === 1 && /search/i.test(proc) ? arr[0] : null);
+        const rawList = Array.isArray(res) ? res
+          : (res?.mus || res?.militaryUnits || res?.items || res?.data || extractListFromResponse(res));
+        const candidates = await resolveMuCandidateList(rawList);
+        const exact = candidates.find(x => {
+          const n = normalizeAr(x?.name || x?.title || '');
+          const t = normalizeAr(x?.tag || '');
+          return n === ql || t === ql;
+        });
+        const found = exact || candidates.find(matchMuItem) || (candidates.length === 1 && /search/i.test(proc) ? candidates[0] : null);
         if(found){
           mu = found;
           const mId = found._id || found.id || found.muId;
           if(mId){
             const fullRes = await trpcTryMany([
               ['mu.getById', { muId: mId }],
-              ['mu.getMuById', { muId: mId }],
-              ['militaryUnit.getById', { id: mId }]
+              ['mu.getMuById', { muId: mId }]
             ], r => r && typeof r === 'object');
             const full = fullRes?.mu || fullRes?.militaryUnit || fullRes;
             if(full && typeof full === 'object') mu = { ...found, ...full };
@@ -2008,8 +2064,8 @@ async function fetchMuFullData(q){
   if(!mu){
     try{
       const uRes = await trpc('search.searchUsers', { searchText: q });
-      const uArr = extractListFromResponse(uRes?.users || uRes);
-      for(const u of uArr.slice(0, 5)){
+      const uArr = Array.isArray(uRes) ? uRes : (uRes?.users || uRes?.items || []);
+      for(const u of uArr.slice(0, 6)){
         const uid = typeof u === 'string' ? u : (u._id || u.id);
         if(!uid) continue;
         const fullU = await trpc('user.getUserById', { userId: uid });
@@ -2017,8 +2073,9 @@ async function fetchMuFullData(q){
         const mId = uObj?.mu?._id || uObj?.mu?.id || (typeof uObj?.mu === 'string' ? uObj.mu : '') || uObj?.muId;
         if(mId){
           const fullMu = await trpcTryMany([['mu.getById', { muId: mId }]], r => r && (r.name || r._id));
-          if(fullMu && matchMuItem(fullMu)){
-            mu = fullMu;
+          const muCand = fullMu?.mu || fullMu;
+          if(muCand && matchMuItem(muCand)){
+            mu = muCand;
             break;
           }
         }
@@ -2036,14 +2093,16 @@ async function fetchMuFullData(q){
       ['user.getUsersByMu', { muId }],
       ['user.getByMu', { muId }],
       ['user.getByMuId', { muId }],
-      ['user.getManyPaginated', { muId, limit: 100 }],
+      ['user.getManyPaginated', { muId, limit: 50 }],
       ['mu.getMembers', { muId }],
       ['mu.getMuMembers', { muId }],
-      ['mu.getUsers', { muId }],
-      ['militaryUnit.getMembers', { id: muId }]
-    ], r => extractListFromResponse(r).length > 0);
+      ['mu.getUsers', { muId }]
+    ], r => {
+      const l = Array.isArray(r) ? r : extractListFromResponse(r);
+      return l.length > 0;
+    });
     if(mRes){
-      const arr = extractListFromResponse(mRes);
+      const arr = Array.isArray(mRes) ? mRes : extractListFromResponse(mRes);
       if(arr.length >= rawMembers.length) rawMembers = arr;
     }
   }
@@ -2053,10 +2112,14 @@ async function fetchMuFullData(q){
   if(rawMembers.length <= 1 && muId && muCountryId){
     const cUsersRes = await trpcTryMany([
       ['user.getUsersByCountry', { countryId: muCountryId }],
-      ['user.getManyPaginated', { countryId: muCountryId, limit: 100 }]
-    ], r => extractListFromResponse(r).length > 0);
+      ['user.getManyPaginated', { countryId: muCountryId, limit: 50 }]
+    ], r => {
+      const l = Array.isArray(r) ? r : extractListFromResponse(r);
+      return l.length > 0;
+    });
     if(cUsersRes){
-      const cUsers = extractListFromResponse(cUsersRes).filter(u => {
+      const cUsers = (Array.isArray(cUsersRes) ? cUsersRes : extractListFromResponse(cUsersRes)).filter(u => {
+        if(!u || typeof u !== 'object') return false;
         const uMu = u?.mu?._id || u?.mu?.id || (typeof u?.mu === 'string' ? u.mu : '') || u?.muId || '';
         return String(uMu) === String(muId);
       });
@@ -2370,24 +2433,37 @@ async function runCountryIntel(){
   if(!q) return;
   $('spyStatus').textContent = '🌍 جاري سحب بيانات الدولة والأقاليم والحروب من السيرفر...';
   try{
-    const ql = q.toLowerCase().trim();
+    const ql = normalizeAr(q);
     const mappedIso = COUNTRY_ISO[ql] || '';
     const cMap = await getCountriesMap(true);
     let country = cMap[ql]
       || (mappedIso ? cMap[mappedIso] : null)
       || Object.values(cMap).find(c => {
-        const fields = [c?.name, c?.title, c?.code, c?.iso, c?.slug].filter(Boolean).map(v => String(v).toLowerCase().trim());
+        const fields = [c?.name, c?.title, c?.code, c?.iso, c?.slug].filter(Boolean).map(v => normalizeAr(v));
         return fields.some(f => f === ql || f.includes(ql) || (mappedIso && f === mappedIso));
       });
 
     if(!country && !/^[a-f0-9]{24}$/i.test(q)){
       const sRes = await trpcTryMany([
+        ['search.searchAnything', { searchText: q }],
         ['search.searchCountries', { searchText: q }],
         ['country.search', { searchText: q }]
-      ], r => extractListFromResponse(r).length > 0);
+      ], r => {
+        const arr = Array.isArray(r) ? r : (r?.countries || extractListFromResponse(r));
+        return arr.length > 0;
+      });
       if(sRes){
-        const sArr = extractListFromResponse(sRes);
-        country = sArr.find(c => String(c?.name || c?.title || '').toLowerCase().includes(ql)) || sArr[0];
+        const rawArr = Array.isArray(sRes) ? sRes : (sRes?.countries || extractListFromResponse(sRes));
+        for(const item of rawArr.slice(0, 8)){
+          if(item && typeof item === 'object' && (item.name || item.title)){
+            const f = normalizeAr(item.name || item.title);
+            if(f === ql || f.includes(ql)){ country = item; break; }
+          }else if(typeof item === 'string' && /^[a-f0-9]{24}$/i.test(item)){
+            const cObj = await trpcTryMany([['country.getCountryById', { countryId: item }]], r => r && (r.name || r.title));
+            const cand = cObj?.country || cObj;
+            if(cand && normalizeAr(cand.name || cand.title).includes(ql)){ country = cand; break; }
+          }
+        }
       }
     }
 
@@ -2414,7 +2490,7 @@ async function runCountryIntel(){
     const resolveCountryLabel = (val) => {
       if(!val) return '';
       if(typeof val === 'string'){
-        const hit = cMap[val.toLowerCase().trim()] || cMap[val];
+        const hit = cMap[normalizeAr(val)] || cMap[val];
         return hit?.name || val;
       }
       if(typeof val === 'object'){
@@ -2448,22 +2524,24 @@ async function runCountryIntel(){
     const allianceName = resolveCountryLabel(allianceRaw) || 'مستقل / بدون حلف';
     $('cIntelAlliance').textContent = `🤝 الحلف: ${allianceName}`;
 
-    // Fetch regions for this country
+    // Fetch regions for this country (supports both array responses and region.getRegionsObject dictionary)
     let regionsArr = Array.isArray(country.regions) ? country.regions : [];
     if(!regionsArr.length && cId){
       const rRes = await trpcTryMany([
+        ['region.getRegionsObject', {}],
         ['region.getRegionsByCountryId', { countryId: cId }],
         ['region.getByCountryId', { countryId: cId }],
         ['region.getAllRegions', {}],
         ['region.getRegions', {}]
-      ], r => extractListFromResponse(r).length > 0);
+      ], r => r && typeof r === 'object' && Object.keys(r).length > 0);
       if(rRes){
-        const allRegs = extractListFromResponse(rRes);
+        const allRegs = Array.isArray(rRes) ? rRes
+          : (extractListFromResponse(rRes).length ? extractListFromResponse(rRes) : Object.values(rRes).filter(v => v && typeof v === 'object'));
         const owned = allRegs.filter(r => {
           const ownerId = r?.country?._id || r?.country?.id || (typeof r?.country === 'string' ? r.country : '') || r?.countryId || r?.owner?._id || (typeof r?.owner === 'string' ? r.owner : '') || r?.ownerCountryId || '';
           return String(ownerId) === String(cId);
         });
-        regionsArr = owned.length ? owned : (allRegs.length && !allRegs[0]?.country && !allRegs[0]?.countryId ? allRegs : []);
+        regionsArr = owned.length ? owned : [];
       }
     }
 
@@ -2506,10 +2584,9 @@ async function runCountryIntel(){
     $('cIntelWars').textContent = warPopText;
     $('cIntelWarPopSub').textContent = `حروب نشطة: ${warsCount}${warPopRatio}`;
 
-    // Safe numeric extraction for treasury, gold, and economy (handles both numbers and nested objects!)
-    const moneyNum = extractNumericMetric(country.money ?? country.treasury ?? country.bank ?? country.balance ?? country.funds, ['money','usd','cash','balance','amount','value']);
-    const goldNum = extractNumericMetric(country.gold ?? country.goldTreasury ?? country.treasury?.gold, ['gold','amount','value']);
-    const ecoNum = extractNumericMetric(country.economy ?? country.gdp ?? country.economyPoints ?? country.economicIndex ?? country.development, ['economy','gdp','points','value','total']);
+    const moneyNum = extractNumericMetric(country.money ?? country.treasury ?? country.bank ?? country.balance ?? country.funds ?? country.resources?.money, ['money','usd','cash','balance','amount','value']);
+    const goldNum = extractNumericMetric(country.gold ?? country.goldTreasury ?? country.treasury?.gold ?? country.resources?.gold, ['gold','amount','value']);
+    const ecoNum = extractNumericMetric(country.economy ?? country.gdp ?? country.economyPoints ?? country.economicIndex ?? country.development ?? country.rankings?.economyScore, ['economy','gdp','points','value','total']);
 
     const ecoHeadline = moneyNum !== null
       ? `$${moneyNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
@@ -2542,7 +2619,7 @@ async function runCountryIntel(){
     `).join('');
 
     const regionNamesLine = regionsArr.length
-      ? `<div style="margin-top:6px">• <b>الأقاليم (${regionsArr.length}):</b> ${regionsArr.slice(0, 12).map(r => r.name || r.title || r._id).filter(Boolean).join('، ')}</div>`
+      ? `<div style="margin-top:6px">• <b>الأقاليم (${regionsArr.length}):</b> ${regionsArr.slice(0, 14).map(r => r.name || r.title || r._id).filter(Boolean).join('، ')}</div>`
       : '';
     const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>أسماء الحلفاء:</b> ${allyNames.join('، ')}</div>` : '';
     const rawKeysPreview = Object.entries(country)
@@ -2833,9 +2910,9 @@ async function runAllianceIntel(){
     const cMap = await getCountriesMap();
     const allCountries = Object.values(cMap);
     const matchAlliance = (q) => {
-      const ql = q.toLowerCase();
+      const ql = normalizeAr(q);
       const hits = allCountries.filter(c =>
-        (c.alliance || c.allianceName || c.pact || c.name || '').toString().toLowerCase().includes(ql)
+        normalizeAr(c.alliance || c.allianceName || c.pact || c.name || '').includes(ql)
       );
       if(hits.length){
         const pop = hits.reduce((s,c)=> s + (+(c.citizensCount || c.population || c.usersCount || 100)), 0);
