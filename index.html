@@ -1,1386 +1,1975 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
+```html
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RAAD // رَعـد v2.0 — War Era Official Engine & Tactical Calculator</title>
+  <title>RAAD // رَعـد v4.1 — مركز قيادة WarEra</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            obsidian: '#08090D',
-            carbon: '#11131A',
-            steel: '#1A1E29',
-            crimson: '#DC2626',
-            gold: '#F59E0B',
-            emerald: '#10B981',
-            applebg: '#F5F5F7'
+            obsidian: '#0a111c',
+            panel: '#111e2e',
+            panelLight: '#16263b',
+            line: '#24364d',
+            emeraldHud: '#3de0a0',
+            goldHud: '#f5b942',
+            cyanHud: '#60a5fa'
           },
           fontFamily: {
-            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+            ar: ['Cairo', 'sans-serif'],
+            en: ['Inter', 'sans-serif']
           }
         }
       }
     };
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', system-ui, sans-serif; transition: background-color 0.25s, color 0.25s; }
-    .tabular { font-variant-numeric: tabular-nums; }
-    input[type="range"] { accent-color: #DC2626; }
-    .dark ::-webkit-scrollbar { width: 5px; height: 5px; }
-    .dark ::-webkit-scrollbar-track { background: #08090D; }
-    .dark ::-webkit-scrollbar-thumb { background: #272B3A; border-radius: 3px; }
+    body {
+      background: radial-gradient(circle at 85% 0%, rgba(21, 58, 74, 0.45), transparent 50%), #0a111c;
+      color: #edf4fd;
+      font-family: 'Cairo', 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    html[dir="ltr"] body {
+      font-family: 'Inter', 'Cairo', sans-serif;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
+    }
+    .tab-btn.active {
+      color: #3de0a0;
+    }
+    .tab-btn.active .tab-bar {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+    .hud-card {
+      background: linear-gradient(155deg, rgba(19, 35, 54, 0.92), rgba(13, 23, 38, 0.95));
+      border: 1px solid #24364d;
+    }
+    .chat-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .chat-scroll::-webkit-scrollbar-thumb {
+      background: #24364d;
+      border-radius: 999px;
+    }
   </style>
 </head>
-<body class="bg-obsidian text-slate-100 antialiased selection:bg-crimson selection:text-white">
+<body class="min-h-screen pb-24 md:pb-10 selection:bg-emerald-400/30 selection:text-emerald-200">
 
   <!-- TOP COMMAND BAR -->
-  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-obsidian/90 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-crimson to-amber-500 flex items-center justify-center shadow-lg shadow-crimson/20 shrink-0">
-          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+  <header class="sticky top-0 z-40 bg-[#0a111c]/90 backdrop-blur-md border-b border-line">
+    <div class="max-w-6xl mx-auto px-3 sm:px-5 h-16 flex items-center justify-between gap-2">
+      <!-- Brand -->
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-emeraldHud text-obsidian font-extrabold text-xl flex items-center justify-center shadow-lg shadow-emerald-400/20">
+          ⚡
         </div>
         <div>
-          <div class="flex items-center gap-2">
-            <span class="font-extrabold tracking-tight text-base sm:text-lg text-white">RAAD // رَعـد</span>
-            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald/20 text-emerald border border-emerald/40 font-bold" id="api-live-badge">v2.0 OFFICIAL MATH</span>
+          <div class="flex items-center gap-1.5">
+            <span class="font-extrabold text-base sm:text-lg tracking-tight text-white">RAAD // رَعـد</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emeraldHud/15 text-emeraldHud border border-emeraldHud/30">v4.1</span>
           </div>
-          <p class="text-[11px] text-slate-400 hidden sm:block" id="server-clock-bar">WarEra API2 + GameConfig Sync • Ready</p>
+          <p class="text-[11px] text-slate-400 hidden sm:block" data-i18n="brandSub">مركز القيادة التكتيكي والاقتصادي لـ WarEra</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5 sm:gap-2">
-        <button onclick="syncLiveMarketAndConfig()" id="market-sync-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-emerald/40 bg-emerald/15 hover:bg-emerald/25 text-emerald transition">
-          🔄 Sync API2
+      <!-- Desktop 5-Tab Navigation -->
+      <nav class="hidden md:flex items-center gap-1 bg-panel/90 p-1 rounded-2xl border border-line" aria-label="التنقل الرئيسي">
+        <button type="button" data-nav="home" class="tab-btn active px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <span>🎯</span><span data-i18n="navHome">الرئيسية</span>
         </button>
-        <button onclick="copyDiscordReport()" id="copy-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 transition">
-          📋 Copy Build
+        <button type="button" data-nav="combat" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <span>⚔️</span><span data-i18n="navCombat">القتال</span>
         </button>
-        <button onclick="toggleLang()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 bg-steel/70 hover:bg-steel text-slate-200 transition">
-          عربي
+        <button type="button" data-nav="build" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <span>🧬</span><span data-i18n="navBuild">التجميعة</span>
         </button>
-        <button onclick="toggleTheme()" id="theme-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 bg-steel/70 hover:bg-steel text-amber-400 transition">
-          ☀️
+        <button type="button" data-nav="market" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <span>📈</span><span data-i18n="navMarket">السوق</span>
+        </button>
+        <button type="button" data-nav="ai" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <span>🧠</span><span data-i18n="navAi">المستشار الذكي</span>
+        </button>
+      </nav>
+
+      <!-- Controls: API Keys Modal & Language Toggle -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" id="open-settings-btn" class="px-2.5 py-2 rounded-xl bg-panel hover:bg-panelLight border border-line text-xs font-bold text-slate-200 transition flex items-center gap-1.5">
+          <span>🔑</span>
+          <span class="hidden sm:inline" data-i18n="btnKeys">مفاتيح الربط</span>
+        </button>
+        <button type="button" id="lang-toggle-btn" class="px-3 py-2 rounded-xl bg-emeraldHud/15 hover:bg-emeraldHud/25 border border-emeraldHud/35 text-xs font-extrabold text-emeraldHud transition">
+          EN
         </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+  <!-- LIVE PLAYER HUD STRIP -->
+  <div class="max-w-6xl mx-auto px-3 sm:px-5 pt-3">
+    <div class="hud-card rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-emeraldHud animate-pulse"></span>
+        <span class="font-extrabold text-white" id="hud-username" data-i18n="noPlayerLoaded">لم يتم تحميل لاعب بعد</span>
+        <span id="hud-level-badge" class="hidden px-2 py-0.5 rounded-lg bg-slate-800 text-goldHud font-bold" dir="ltr">Lv.0</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 sm:gap-5 text-slate-300" dir="ltr">
+        <div>❤️ <strong id="hud-hp" class="text-emeraldHud">-- / --</strong></div>
+        <div>🍖 <strong id="hud-hunger" class="text-goldHud">-- / --</strong></div>
+        <div>🛡️ <strong id="hud-armor" class="text-cyanHud">0 (0%)</strong></div>
+        <div class="text-slate-400">⏱️ <span id="hud-regen">--:--</span></div>
+      </div>
+    </div>
+  </div>
 
-    <!-- COMMANDER LIVE SEARCH & DIRECT CONTROLS -->
-    <section class="rounded-2xl border border-amber-500/35 bg-gradient-to-r from-carbon via-steel/90 to-carbon p-4 sm:p-5 shadow-xl space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-crimson flex items-center justify-center font-extrabold text-lg text-white shadow-md shrink-0" id="cmd-avatar">CM</div>
+  <!-- MAIN CONTENT WORKSPACE -->
+  <main class="max-w-6xl mx-auto px-3 sm:px-5 pt-4 space-y-5">
+
+    <!-- =================================================================== -->
+    <!-- TAB 1: HOME (الرئيسية - رادار الجاهزية وجلب الحساب)                -->
+    <!-- =================================================================== -->
+    <section id="tab-home" class="tab-panel space-y-5">
+      <!-- Live Player Lookup Card -->
+      <div class="hud-card rounded-2xl p-4 sm:p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <h2 class="text-base sm:text-lg font-extrabold text-white" id="cmd-name">Commander</h2>
-              <span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30" id="cmd-level">LV. 1</span>
-              <span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-crimson/20 text-red-300 border border-crimson/30" id="cmd-prestige">PRESTIGE 0</span>
-              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald/20 text-emerald border border-emerald/30 font-bold" id="cmd-source-badge">READY</span>
-            </div>
-            <p class="text-xs text-slate-400 mt-0.5" id="cmd-meta">Country: Global • Companies: 0/13 • Max HP: 100 • Max Hunger: 100</p>
+            <h1 class="text-lg sm:text-xl font-extrabold text-white" data-i18n="homeTitle">غرفة القيادة والاستطلاع الحي</h1>
+            <p class="text-xs text-slate-400 mt-0.5" data-i18n="homeSub">ابحث باسمك في WarEra لجلب بياناتك الحقيقية ومهاراتك ومصانعك فوراً بدون كلمة مرور</p>
+          </div>
+          <button type="button" id="refresh-live-btn" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-line text-xs font-bold text-emeraldHud transition">
+            🔄 <span data-i18n="btnSync">تحديث البيانات</span>
+          </button>
+        </div>
+
+        <form id="player-lookup-form" class="flex flex-col sm:flex-row gap-2.5">
+          <input
+            type="text"
+            id="player-search-input"
+            autocomplete="off"
+            required
+            class="flex-1 bg-obsidian border border-line focus:border-emeraldHud rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none"
+            placeholder="اكتب اسم اللاعب أو ID أو رابط الملف الشخصي..."
+            data-i18n-placeholder="searchPlaceholder"
+          />
+          <button type="submit" id="player-search-btn" class="px-6 py-3 rounded-xl bg-emeraldHud hover:brightness-110 text-obsidian font-extrabold text-sm transition shrink-0 shadow-lg shadow-emerald-400/15" data-i18n="btnLoadPlayer">
+            جلب البيانات الحية
+          </button>
+        </form>
+
+        <p id="lookup-status" class="text-xs text-slate-400" data-i18n="lookupHint">يعمل مباشرة بالبيانات العامة، ويمكنك إضافة مفتاح WarEra الاختياري لرفع سرعة الجلب وجلب المصانع.</p>
+        <div id="player-matches" class="grid grid-cols-1 sm:grid-cols-2 gap-2 empty:hidden"></div>
+      </div>
+
+      <!-- Readiness Radar & Strategic KPIs -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="hud-card rounded-2xl p-4">
+          <div class="text-xs text-slate-400" data-i18n="kpiReadiness">مؤشر الجاهزية القتالية</div>
+          <div id="kpi-readiness-val" class="text-2xl sm:text-3xl font-extrabold text-emeraldHud mt-1" dir="ltr">0%</div>
+          <div id="kpi-readiness-note" class="text-[11px] text-slate-400 mt-1" data-i18n="kpiReadinessNote">بانتظار تحميل الحساب</div>
+        </div>
+
+        <div class="hud-card rounded-2xl p-4">
+          <div class="text-xs text-slate-400" data-i18n="kpiAvgHit">متوسط ضرر الضربة</div>
+          <div id="kpi-hit-val" class="text-2xl sm:text-3xl font-extrabold text-white mt-1" dir="ltr">0</div>
+          <div id="kpi-hit-note" class="text-[11px] text-emeraldHud mt-1" data-i18n="kpiHitNote">شامل الكريت والبونصات</div>
+        </div>
+
+        <div class="hud-card rounded-2xl p-4">
+          <div class="text-xs text-slate-400" data-i18n="kpiSafeHits">ضربات متاحة الآن (H&H)</div>
+          <div id="kpi-safehits-val" class="text-2xl sm:text-3xl font-extrabold text-cyanHud mt-1" dir="ltr">0</div>
+          <div id="kpi-safehits-note" class="text-[11px] text-slate-400 mt-1" data-i18n="kpiSafeHitsNote">بدون إهدار صحة المعركة</div>
+        </div>
+
+        <div class="hud-card rounded-2xl p-4">
+          <div class="text-xs text-slate-400" data-i18n="kpiFactoryProfit">صافي ربح المصانع/يوم</div>
+          <div id="kpi-factory-val" class="text-2xl sm:text-3xl font-extrabold text-goldHud mt-1" dir="ltr">0.00</div>
+          <div id="kpi-factory-note" class="text-[11px] text-slate-400 mt-1" data-i18n="kpiFactoryNote">PP + المحرك الآلي AE</div>
+        </div>
+      </div>
+
+      <!-- Alliance Strategic Bonuses & Quick Navigation -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-3">
+          <h2 class="font-extrabold text-sm sm:text-base text-white flex items-center gap-2">
+            <span>🏛️</span>
+            <span data-i18n="allianceBoxTitle">موارد الحلف الاستراتيجية والبونصات</span>
+          </h2>
+          <div id="alliance-bonuses-display" class="text-xs text-slate-300 space-y-1.5">
+            <p class="text-slate-400" data-i18n="allianceBoxEmpty">عند تحميل حساب مرتبط بحلف، ستظهر هنا مستويات الموارد الاستراتيجية وبونصاتها تلقائياً.</p>
           </div>
         </div>
 
-        <!-- LIVE SEARCH BAR -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 max-w-xl">
-          <input id="player-input" type="text" onkeydown="if(event.key==='Enter') syncPlayer()" placeholder="Type any War Era username (e.g. Ayyubi_Warrior2)..." class="flex-1 px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-crimson" />
-          <button onclick="syncPlayer()" id="sync-btn" class="px-3.5 py-2 rounded-xl bg-crimson hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider transition shrink-0">
-            Fetch Player
-          </button>
+        <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-3">
+          <h2 class="font-extrabold text-sm sm:text-base text-white flex items-center gap-2">
+            <span>🧭</span>
+            <span data-i18n="quickActionsTitle">اختصارات القيادة السريعة</span>
+          </h2>
+          <div class="grid grid-cols-2 gap-2.5 text-xs">
+            <button type="button" data-nav="combat" class="p-3 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-start transition">
+              <div class="font-extrabold text-emeraldHud">⚔️ <span data-i18n="qaCombat">حاسبة الضرر و H&H</span></div>
+              <div class="text-[11px] text-slate-400 mt-0.5" data-i18n="qaCombatSub">البونصات الخمسة وتوقيت الأكل</div>
+            </button>
+            <button type="button" data-nav="build" class="p-3 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-start transition">
+              <div class="font-extrabold text-cyanHud">🧬 <span data-i18n="qaBuild">مولّد التجميعة والمصانع</span></div>
+              <div class="text-[11px] text-slate-400 mt-0.5" data-i18n="qaBuildSub">توزيع تلقائي بضغطة زر</div>
+            </button>
+            <button type="button" data-nav="market" class="p-3 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-start transition">
+              <div class="font-extrabold text-goldHud">📈 <span data-i18n="qaMarket">قناص أسلحة السوق</span></div>
+              <div class="text-[11px] text-slate-400 mt-0.5" data-i18n="qaMarketSub">مقارنة الأرقام المتغيرة لكل قطعة</div>
+            </button>
+            <button type="button" data-nav="ai" class="p-3 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-start transition">
+              <div class="font-extrabold text-purple-400">🧠 <span data-i18n="qaAi">المستشار الذكي</span></div>
+              <div class="text-[11px] text-slate-400 mt-0.5" data-i18n="qaAiSub">تحليل فوري لحسابك وقراراتك</div>
+            </button>
+          </div>
         </div>
-      </div>
-
-      <!-- DIRECT EDITABLE FIELDS -->
-      <div class="pt-3 border-t border-slate-700/70 grid grid-cols-2 sm:grid-cols-6 gap-2.5">
-        <div>
-          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Commander Name</label>
-          <input id="qe-name" type="text" value="Commander" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs font-semibold text-white focus:border-amber-400 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Level (1 – 50)</label>
-          <input id="qe-lv" type="number" min="1" max="50" value="1" oninput="applyDirectControls('qe')" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-amber-500/50 text-xs font-mono font-bold text-white focus:border-amber-400 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Prestige (0 – 25)</label>
-          <input id="qe-pr" type="number" min="0" max="25" value="0" oninput="applyDirectControls('qe')" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs font-mono font-bold text-white focus:border-amber-400 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Factories (0 – 13)</label>
-          <input id="qe-comp" type="number" min="0" max="13" value="0" oninput="applyDirectControls('qe')" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs font-mono font-bold text-white focus:border-amber-400 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-[10px] uppercase font-bold text-emerald mb-1">Max Health (HP)</label>
-          <input id="qe-maxhp" type="number" min="50" max="500" value="100" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-emerald/40 text-xs font-mono font-bold text-white focus:border-emerald focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-[10px] uppercase font-bold text-emerald mb-1">Max Hunger</label>
-          <input id="qe-maxhunger" type="number" min="1" max="300" value="100" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-emerald/40 text-xs font-mono font-bold text-white focus:border-emerald focus:outline-none">
-        </div>
-      </div>
-
-      <div id="sync-status" class="text-[11px] font-mono text-emerald hidden"></div>
-
-      <!-- MATCHING ACCOUNTS RESULTS LIST -->
-      <div id="search-results-box" class="hidden pt-2 border-t border-slate-800 space-y-2">
-        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
-          <span id="search-results-count">Found 0 matching commanders</span>
-          <span>Tap any account to load live stats</span>
-        </div>
-        <div id="search-results-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1"></div>
       </div>
     </section>
 
-    <!-- NAVIGATION TABS -->
-    <nav class="grid grid-cols-2 sm:flex sm:overflow-x-auto gap-2">
-      <button onclick="switchTab('combat')" id="tab-combat" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-crimson text-white shadow-md">
-        ⚔️ Combat & Live P&L
-      </button>
-      <button onclick="switchTab('market')" id="tab-market" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
-        📈 Live Market & Tx
-      </button>
-      <button onclick="switchTab('optimizer')" id="tab-optimizer" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
-        🎯 Build Optimizer
-      </button>
-      <button onclick="switchTab('energy')" id="tab-energy" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
-        ⚡ Daily Energy Split
-      </button>
-      <button onclick="switchTab('merc')" id="tab-merc" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
-        🎖️ MU & Merc War Room
-      </button>
-      <button onclick="switchTab('eco')" id="tab-eco" class="tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800">
-        🏭 v0.27 Eco & Gear ROI
-      </button>
-    </nav>
+    <!-- =================================================================== -->
+    <!-- TAB 2: COMBAT & H&H PLANNER (القتال وحاسبة الصحة والجوع)           -->
+    <!-- =================================================================== -->
+    <section id="tab-combat" class="tab-panel hidden space-y-5">
 
-    <!-- TAB 1: COMBAT + FACTORY + v0.27 LOOT P&L -->
-    <div id="view-combat" class="space-y-5">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
-          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Normal / Crit / Miss</div>
-          <div class="text-lg sm:text-2xl font-extrabold text-white tabular mt-1"><span id="kpi-normal">0</span> <span class="text-xs font-mono text-amber-400">/ <span id="kpi-crit">0</span></span></div>
-          <div class="text-[11px] text-slate-400 mt-1" id="kpi-hit-meta">Prec: 0% • Crit: 0% • Miss: 0.5x</div>
-        </div>
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
-          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400" id="kpi-mode-label">8H Sustained Damage</div>
-          <div class="text-lg sm:text-2xl font-extrabold text-amber-400 tabular mt-1" id="kpi-total-dmg">0</div>
-          <div class="text-[11px] text-slate-400 mt-1" id="kpi-hits-count">0 Hits • HP Loss/Hit: 10.0</div>
-        </div>
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
-          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Factory + v0.27 Loot EV</div>
-          <div class="text-lg sm:text-2xl font-extrabold text-emerald tabular mt-1" id="kpi-gross-rev">+0.00 €</div>
-          <div class="text-[11px] text-slate-400 mt-1" id="kpi-rev-split">Factory + Loot</div>
-        </div>
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
-          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Net Daily Cashflow</div>
-          <div class="text-lg sm:text-2xl font-extrabold text-emerald tabular mt-1" id="kpi-net-pnl">+0.00 €</div>
-          <div class="text-[11px] font-bold mt-1 text-emerald" id="kpi-verdict">PROFITABLE</div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <!-- LEFT: ARMORY & SKILLS -->
-        <div class="lg:col-span-7 space-y-5">
-          <div class="rounded-2xl border border-slate-800 bg-carbon p-4 sm:p-5 space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">T1–T6 Official Tactical Armory</h3>
-              <div class="flex items-center gap-1 bg-obsidian p-1 rounded-xl border border-slate-800">
-                <button onclick="setCombatMode('8h')" id="mode-8h" class="px-3 py-1 rounded-lg text-xs font-bold bg-crimson text-white">8H Sustained (+10%/h)</button>
-                <button onclick="setCombatMode('burst')" id="mode-burst" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white">Instant E-Burst</button>
-              </div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="armory-grid"></div>
+      <!-- 1. OFFICIAL 5 BONUSES + MERCENARY -->
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="font-extrabold text-base text-white" data-i18n="bonusesTitle">1. البونصات الرسمية للمعركة</h2>
+            <p class="text-xs text-slate-400" data-i18n="bonusesSub">فعّل البونصات النشطة في معركتك الحالية أو عدّل نسبة تطوير الحلف</p>
           </div>
-
-          <div class="rounded-2xl border border-slate-800 bg-carbon p-4 sm:p-5 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Official Combat Skills (Soft Cap & Overflow)</h3>
-              <span class="text-xs font-mono text-amber-400" id="softcap-badge">Armor/Dodge SoftCap: 40</span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Attack Skill Level</span><span class="font-mono font-bold text-white" id="val-atk">5</span></div>
-                <input id="inp-atk" type="range" min="0" max="20" value="5" oninput="recalcAll()" class="w-full">
-              </div>
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Precision Skill (Hit% / >100%→ATK)</span><span class="font-mono font-bold text-white" id="val-prec">5</span></div>
-                <input id="inp-prec" type="range" min="0" max="20" value="5" oninput="recalcAll()" class="w-full">
-              </div>
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Crit Chance (>100%→CritDMG)</span><span class="font-mono font-bold text-white" id="val-critc">4</span></div>
-                <input id="inp-critc" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
-              </div>
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Critical Damage Skill</span><span class="font-mono font-bold text-white" id="val-critd">4</span></div>
-                <input id="inp-critd" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
-              </div>
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Armor Skill (Reduces 10 HP Cost)</span><span class="font-mono font-bold text-emerald" id="val-armor">4</span></div>
-                <input id="inp-armor" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
-              </div>
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Dodge Skill (Saves HP & Armor Wear)</span><span class="font-mono font-bold text-emerald" id="val-dodge">4</span></div>
-                <input id="inp-dodge" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800">
-              <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Official Ammo Tier</label>
-                <select id="inp-ammo" onchange="recalcAll()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs text-white">
-                  <option value="none">No Ammo (0%)</option>
-                  <option value="lightAmmo">Light Ammo (+10%)</option>
-                  <option value="ammo" selected>Ammo (+20%)</option>
-                  <option value="heavyAmmo">Heavy Ammo (+40%)</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Food Rations</label>
-                <select id="inp-food" onchange="recalcAll()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs text-white">
-                  <option value="none">No Food (0%)</option>
-                  <option value="bread">Bread (+10% HP)</option>
-                  <option value="steak">Steak (+15% HP)</option>
-                  <option value="cookedFish" selected>Cooked Fish (+20% HP)</option>
-                </select>
-              </div>
-              <label class="flex items-center gap-2 p-2 rounded-lg bg-obsidian border border-slate-800 cursor-pointer">
-                <input id="chk-ally" type="checkbox" checked onchange="recalcAll()" class="accent-crimson">
-                <span class="text-xs text-slate-200">Battle Bonus (+20%)</span>
-              </label>
-              <label class="flex items-center gap-2 p-2 rounded-lg bg-obsidian border border-slate-800 cursor-pointer">
-                <input id="chk-pill" type="checkbox" checked onchange="recalcAll()" class="accent-crimson">
-                <span class="text-xs text-amber-300 font-semibold">Energy Pill (+60%)</span>
-              </label>
-            </div>
+          <div class="px-3 py-1.5 rounded-xl bg-emeraldHud/15 border border-emeraldHud/30 text-xs font-extrabold text-emeraldHud" dir="ltr">
+            Total Bonus: +<span id="combat-total-bonus-pct">0</span>%
           </div>
         </div>
 
-        <!-- RIGHT: FACTORY & v0.27 LOOT CASHFLOW -->
-        <div class="lg:col-span-5 space-y-5">
-          <div class="rounded-2xl border border-slate-800 bg-carbon p-4 sm:p-5 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Factory + v0.27 Loot Cashflow</h3>
-              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald/15 text-emerald" id="price-source-tag">SYNCING PRICES...</span>
-            </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
+          <!-- MU Order +15% -->
+          <label class="flex items-center justify-between p-3 rounded-xl bg-obsidian border border-line cursor-pointer hover:border-emeraldHud/50 transition">
+            <span class="flex items-center gap-2 font-bold text-slate-200">
+              <input type="checkbox" id="bonus-mu-order" class="combat-trigger w-4 h-4 accent-[#3de0a0] rounded" />
+              <span data-i18n="bonusMuOrder">أمر الوحدة (MU Order)</span>
+            </span>
+            <span class="font-extrabold text-emeraldHud" dir="ltr">+15%</span>
+          </label>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Active Factories (0–13)</label>
-                <input id="inp-factories" type="number" min="0" max="13" value="0" oninput="syncSliderToDirect('comp')" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
-              </div>
-              <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Avg Net Profit / Factory (€)</label>
-                <input id="inp-factory-profit" type="number" min="0" step="5" value="55" oninput="recalcAll()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
-              </div>
-              <div>
-                <label class="block text-[11px] text-slate-400 mb-1">v0.27 Case Strategy</label>
-                <select id="inp-case-strat" onchange="recalcAll()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs text-white">
-                  <option value="sell">Sell Unopened Case (Safe)</option>
-                  <option value="open_sell" selected>Open & Sell Drops (EV)</option>
-                  <option value="scrap">Open & Scrap Parts</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Merc Bounty / 1K DMG (€)</label>
-                <input id="inp-bounty" type="number" min="0" step="0.25" value="0.50" oninput="recalcAll()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
-              </div>
-            </div>
+          <!-- MU HQ +20% -->
+          <label class="flex items-center justify-between p-3 rounded-xl bg-obsidian border border-line cursor-pointer hover:border-emeraldHud/50 transition">
+            <span class="flex items-center gap-2 font-bold text-slate-200">
+              <input type="checkbox" id="bonus-mu-hq" class="combat-trigger w-4 h-4 accent-[#3de0a0] rounded" />
+              <span data-i18n="bonusMuHq">مقر الوحدة (MU HQ)</span>
+            </span>
+            <span class="font-extrabold text-emeraldHud" dir="ltr">+20%</span>
+          </label>
 
-            <div class="rounded-xl bg-obsidian border border-slate-800 p-4 space-y-2 text-xs font-mono">
-              <div class="flex justify-between text-slate-300">
-                <span>+ Daily Factory Net Income</span>
-                <span class="text-emerald font-bold" id="led-factory">+0.00 €</span>
-              </div>
-              <div class="flex justify-between text-slate-300">
-                <span>+ v0.27 Battle Loot Drop EV</span>
-                <span class="text-emerald font-bold" id="led-loot">+0.00 €</span>
-              </div>
-              <div class="flex justify-between text-slate-300">
-                <span>+ Mercenary Contract Bounty</span>
-                <span class="text-emerald font-bold" id="led-bounty">+0.00 €</span>
-              </div>
-              <div class="border-t border-slate-800 my-1"></div>
-              <div class="flex justify-between text-slate-400">
-                <span>- Ammo & Food Consumption</span>
-                <span class="text-red-400" id="led-consumables">-0.00 €</span>
-              </div>
-              <div class="flex justify-between text-slate-400">
-                <span>- Weapon (1.0x) & Armor (1-Dodge) Wear + Pill</span>
-                <span class="text-red-400" id="led-wear">-0.00 €</span>
-              </div>
-              <div class="border-t border-slate-700 pt-2 flex justify-between text-sm font-extrabold">
-                <span class="text-white">NET DAILY CASHFLOW</span>
-                <span id="led-total" class="text-emerald">+0.00 €</span>
-              </div>
+          <!-- Alliance +20% (Adjustable by dev) -->
+          <div class="flex items-center justify-between p-3 rounded-xl bg-obsidian border border-line">
+            <label class="flex items-center gap-2 font-bold text-slate-200 cursor-pointer">
+              <input type="checkbox" id="bonus-alliance" class="combat-trigger w-4 h-4 accent-[#3de0a0] rounded" />
+              <span data-i18n="bonusAlliance">بونص الحلف</span>
+            </label>
+            <div class="flex items-center gap-1" dir="ltr">
+              <span class="text-slate-400">+</span>
+              <input type="number" id="bonus-alliance-val" value="20" min="0" max="200" step="1" class="combat-trigger w-14 bg-panel border border-line rounded-lg px-1.5 py-1 text-center font-extrabold text-emeraldHud" />
+              <span class="text-slate-400">%</span>
             </div>
+          </div>
 
-            <div class="rounded-xl bg-steel/40 border border-slate-800 p-3.5 space-y-1.5">
-              <div class="flex items-center justify-between text-xs">
-                <span class="font-bold text-slate-200">Effective Health & Stamina Pool</span>
-                <span class="font-mono text-emerald" id="hp-pool-est">0 HP Pool</span>
-              </div>
-              <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                <span id="armor-dodge-summary">Armor: 0% • Dodge: 0%</span>
-                <span id="loot-cases-est" class="text-amber-400">~0.00 Cases</span>
-              </div>
+          <!-- MPP Defense +10% -->
+          <label class="flex items-center justify-between p-3 rounded-xl bg-obsidian border border-line cursor-pointer hover:border-emeraldHud/50 transition">
+            <span class="flex items-center gap-2 font-bold text-slate-200">
+              <input type="checkbox" id="bonus-mpp" class="combat-trigger w-4 h-4 accent-[#3de0a0] rounded" />
+              <span data-i18n="bonusMpp">اتفاقية الدفاع (MPP)</span>
+            </span>
+            <span class="font-extrabold text-emeraldHud" dir="ltr">+10%</span>
+          </label>
+
+          <!-- Homeland Defense +20% -->
+          <label class="flex items-center justify-between p-3 rounded-xl bg-obsidian border border-line cursor-pointer hover:border-emeraldHud/50 transition">
+            <span class="flex items-center gap-2 font-bold text-slate-200">
+              <input type="checkbox" id="bonus-homeland" class="combat-trigger w-4 h-4 accent-[#3de0a0] rounded" />
+              <span data-i18n="bonusHomeland">الدفاع عن الوطن</span>
+            </span>
+            <span class="font-extrabold text-emeraldHud" dir="ltr">+20%</span>
+          </label>
+
+          <!-- Mercenary Bonus (Editable) -->
+          <div class="flex items-center justify-between p-3 rounded-xl bg-obsidian border border-line">
+            <label class="flex items-center gap-2 font-bold text-slate-200 cursor-pointer">
+              <input type="checkbox" id="bonus-merc" class="combat-trigger w-4 h-4 accent-[#f5b942] rounded" />
+              <span data-i18n="bonusMerc">بونص المرتزقة</span>
+            </label>
+            <div class="flex items-center gap-1" dir="ltr">
+              <span class="text-slate-400">+</span>
+              <input type="number" id="bonus-merc-val" value="10" min="0" max="200" step="1" class="combat-trigger w-14 bg-panel border border-line rounded-lg px-1.5 py-1 text-center font-extrabold text-goldHud" />
+              <span class="text-slate-400">%</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- TAB 2: LIVE MARKET TELEMETRY & TRANSACTIONS -->
-    <div id="view-market" class="hidden space-y-5">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
-          <div class="flex items-center justify-between">
+      <!-- 2. DAMAGE & AMMO CALCULATOR -->
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <h2 class="font-extrabold text-base text-white" data-i18n="dmgCalcTitle">2. حاسبة الضرر والعتاد الفعلي</h2>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblWeaponAtk">هجوم السلاح (ATK)</label>
+            <input type="number" id="c-weapon-atk" value="0" min="0" step="1" class="combat-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-white" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblWeaponCrit">نسبة كريت السلاح %</label>
+            <input type="number" id="c-weapon-crit" value="0" min="0" max="100" step="0.5" class="combat-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-goldHud" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblAmmo">نوع الذخيرة</label>
+            <select id="c-ammo" class="combat-trigger w-full bg-obsidian border border-line rounded-xl px-2.5 py-2.5 font-bold text-white">
+              <option value="0" data-i18n="ammoNone">بدون ذخيرة (0%)</option>
+              <option value="10" data-i18n="ammoLight">ذخيرة خفيفة (+10%)</option>
+              <option value="20" selected data-i18n="ammoStd">ذخيرة قياسية (+20%)</option>
+              <option value="40" data-i18n="ammoHeavy">ذخيرة ثقيلة (+40%)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblHitsCount">عدد الضربات</label>
+            <input type="number" id="c-hits" value="10" min="1" max="500" class="combat-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-white" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblAmmoCost">سعر الذخيرة/ضربة</label>
+            <input type="number" id="c-ammo-cost" value="0.12" min="0" step="0.01" class="combat-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-slate-200" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblWeaponWear">تكلفة اهتلاك السلاح/ضربة</label>
+            <input type="number" id="c-wear-cost" value="0.15" min="0" step="0.01" class="combat-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-slate-200" dir="ltr" />
+          </div>
+        </div>
+
+        <!-- Damage Results Banner -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+          <div class="p-3.5 rounded-xl bg-obsidian border border-line">
+            <div class="text-[11px] text-slate-400" data-i18n="resNormalHit">الضربة العادية</div>
+            <div id="res-normal-hit" class="text-xl font-extrabold text-white mt-1" dir="ltr">0</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-obsidian border border-line">
+            <div class="text-[11px] text-slate-400" data-i18n="resCritHit">الضربة الحرجة (Crit)</div>
+            <div id="res-crit-hit" class="text-xl font-extrabold text-goldHud mt-1" dir="ltr">0</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-emeraldHud/10 border border-emeraldHud/35">
+            <div class="text-[11px] text-emeraldHud font-bold" data-i18n="resAvgHit">متوسط الضربة الفعلي</div>
+            <div id="res-avg-hit" class="text-xl font-extrabold text-emeraldHud mt-1" dir="ltr">0</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-cyanHud/10 border border-cyanHud/35">
+            <div class="text-[11px] text-cyanHud font-bold" data-i18n="resTotalBattle">إجمالي ضرر المعركة</div>
+            <div id="res-total-dmg" class="text-xl font-extrabold text-cyanHud mt-1" dir="ltr">0</div>
+            <div id="res-dmg-per-gold" class="text-[11px] text-slate-300 mt-0.5" dir="ltr">0 DMG / $1</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. H&H BATTLE DROP-IN PLANNER (FROM OFFICIAL HH-CALCULATOR FORMULAS) -->
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4 border-t-2 border-t-emeraldHud">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="font-extrabold text-base text-white" data-i18n="hhTitle">3. مخطط الصحة والجوع للمعركة (H&amp;H Planner)</h2>
+            <p class="text-xs text-slate-400" data-i18n="hhSub">يحسب بالمعادلة الرسمية متى تتوقف عن الضرب الآن لتدخل المعركة القادمة بصحة وجوع 100%</p>
+          </div>
+          <span id="hh-armor-pill" class="px-3 py-1 rounded-full bg-obsidian border border-line text-xs font-bold text-cyanHud" dir="ltr">
+            0 Armor • 0% Red. • 10 HP/hit
+          </span>
+        </div>
+
+        <!-- Armor & Current Bars Inputs -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblPantsArmor">درع البنطال (Pants)</label>
+            <input type="number" id="hh-pants" value="0" min="0" step="1" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2 font-bold text-white" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblChestArmor">درع الصدر (Chest)</label>
+            <input type="number" id="hh-chest" value="0" min="0" step="1" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2 font-bold text-white" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblCurHp">صحتك الحالية (HP)</label>
+            <input type="number" id="hh-cur-hp" value="100" min="0" step="0.1" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2 font-bold text-emeraldHud" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblMaxHp">أقصى صحة (Max HP)</label>
+            <input type="number" id="hh-max-hp" value="100" min="10" step="1" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2 font-bold text-white" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblCurHunger">شبعك الحالي (Hunger)</label>
+            <input type="number" id="hh-cur-hunger" value="4" min="0" step="0.1" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2 font-bold text-goldHud" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblMaxHunger">أقصى شبع (Max Hunger)</label>
+            <input type="number" id="hh-max-hunger" value="4" min="1" step="1" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2 font-bold text-white" dir="ltr" />
+          </div>
+        </div>
+
+        <!-- Target Time & Food Choice -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-2 border-t border-line">
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblTargetDate">تاريخ المعركة القادمة</label>
+            <input type="date" id="hh-target-date" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-white" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblTargetHour">ساعة المعركة (بتوقيتك المحلي)</label>
+            <select id="hh-target-hour" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-white" dir="ltr"></select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblFoodChoice">خطة الطعام للاستشفاء</label>
+            <select id="hh-food-type" class="hh-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-goldHud">
+              <option value="none" data-i18n="foodNone">بدون طعام (استشفاء طبيعي فقط)</option>
+              <option value="bread" data-i18n="foodBread">خبز — Bread (+10% HP)</option>
+              <option value="steak" selected data-i18n="foodSteak">ستيك — Steak (+15% HP)</option>
+              <option value="cookedFish" data-i18n="foodFish">سمك مطهو — Cooked Fish (+20% HP)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- H&H Output Box -->
+        <div id="hh-result-box" class="p-4 rounded-2xl bg-obsidian border border-line space-y-3">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <h3 class="text-base font-extrabold text-white">itemTrading.getPrices // Live Market Feed</h3>
-              <p class="text-xs text-slate-400">Synced live via WarEra API2 & Cloudflare Relay.</p>
+              <span class="text-xs text-slate-400 block" data-i18n="hhStopLabel">توقف عن الضرب عندما تصل صحتك إلى:</span>
+              <span id="hh-stop-hp" class="text-3xl font-extrabold text-emeraldHud" dir="ltr">0</span>
+              <span class="text-xs text-slate-400" dir="ltr"> / <span id="hh-stop-max">100</span> HP</span>
             </div>
-            <button onclick="syncLiveMarketAndConfig()" class="px-3 py-1.5 rounded-lg bg-emerald text-slate-950 font-extrabold text-xs">Refresh</button>
+            <div class="text-end">
+              <div id="hh-action-badge" class="inline-block px-3 py-1 rounded-xl bg-emeraldHud/15 text-emeraldHud font-extrabold text-xs">
+                0 ضربات متاحة الآن
+              </div>
+              <div id="hh-food-portions" class="text-xs text-goldHud font-bold mt-1"></div>
+            </div>
           </div>
-          <div id="live-prices-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-mono"></div>
-        </div>
 
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
-          <div>
-            <h3 class="text-base font-extrabold text-white">transaction.getPaginatedTransactions</h3>
-            <p class="text-xs text-slate-400">Live market transaction stream + Offer lookup (`itemOffer.getById`).</p>
+          <!-- Visual Health Reserve Bar -->
+          <div class="w-full h-4 bg-slate-800 rounded-lg overflow-hidden flex" dir="ltr">
+            <div id="hh-bar-reserve" class="bg-emerald-700 h-full transition-all" style="width: 50%"></div>
+            <div id="hh-bar-spendable" class="bg-emeraldHud h-full transition-all" style="width: 50%"></div>
           </div>
-          <div class="flex gap-2">
-            <input id="offer-id-input" type="text" placeholder="Paste Item Offer ID (itemOffer.getById)..." class="flex-1 px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs text-white font-mono">
-            <button onclick="lookupOfferById()" class="px-3.5 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">Inspect Offer</button>
+          <div class="flex justify-between text-[11px] text-slate-400">
+            <span data-i18n="hhLegendReserve">🟩 احتياطي محجوز للمعركة</span>
+            <span data-i18n="hhLegendSpend">🟢 متاح للضرب الآن</span>
           </div>
-          <div id="offer-lookup-result" class="hidden rounded-xl bg-obsidian border border-amber-500/30 p-3 text-xs font-mono text-amber-200"></div>
-          <div id="live-tx-feed" class="rounded-xl bg-obsidian border border-slate-800 p-3.5 text-xs font-mono space-y-2 max-h-64 overflow-y-auto text-slate-300">
-            Loading live market transactions...
-          </div>
+
+          <p id="hh-summary-text" class="text-xs text-slate-300 leading-relaxed pt-2 border-t border-line"></p>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- TAB 3: SMART BUILD OPTIMIZER -->
-    <div id="view-optimizer" class="hidden space-y-5">
-      <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <!-- =================================================================== -->
+    <!-- TAB 3: AUTO-BUILD & FACTORY ECONOMY (التجميعة والمصانع)             -->
+    <!-- =================================================================== -->
+    <section id="tab-build" class="tab-panel hidden space-y-5">
+
+      <!-- 1. ONE-CLICK AUTO-BUILD OPTIMIZER -->
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4 border-t-2 border-t-cyanHud">
+        <div>
+          <h2 class="font-extrabold text-base text-white" data-i18n="autoBuildTitle">1. مولّد التجميعة التلقائي (بضغطة زر)</h2>
+          <p class="text-xs text-slate-400" data-i18n="autoBuildSub">أدخل نقاط مهاراتك المتاحة واختر هدفك، وسيقوم النظام ببناء التجميعة المثالية لك فوراً</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div>
-            <h3 class="text-base font-extrabold text-white">Smart Build & Cashflow Optimizer (24 Combinations)</h3>
-            <p class="text-xs text-slate-400">Simulates all 6 Weapons × 4 Official Ammo Tiers using your exact Soft-Cap Armor, Dodge, Precision & Factory cashflow.</p>
+            <label class="block text-slate-400 mb-1" data-i18n="lblAvailableSp">إجمالي نقاط المهارات المتاحة (SP)</label>
+            <input type="number" id="ab-total-sp" value="30" min="0" max="550" class="w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-extrabold text-white" dir="ltr" />
           </div>
-          <div class="flex gap-2">
-            <button onclick="runOptimizer('zero_loss')" class="px-4 py-2 rounded-xl bg-emerald hover:bg-emerald-500 text-slate-950 text-xs font-extrabold uppercase tracking-wider transition">
-              Zero-Loss Best Build
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblBuildPreset">هدف التجميعة</label>
+            <select id="ab-goal" class="w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-white">
+              <option value="combat" data-i18n="goalCombat">⚔️ أعلى ضرر حربي صافي (Max Damage)</option>
+              <option value="hybrid" data-i18n="goalHybrid">🎁 متوازن (حربي + لوت وصناديق)</option>
+              <option value="economy" data-i18n="goalEconomy">🏭 اقتصاد ومصانع (Production & PP)</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button type="button" id="run-autobuild-btn" class="w-full py-2.5 px-4 rounded-xl bg-emeraldHud hover:brightness-110 text-obsidian font-extrabold text-sm transition shadow-lg shadow-emerald-400/15" data-i18n="btnRunAutoBuild">
+              ⚡ ابنِ التجميعة المثالية الآن
             </button>
-            <button onclick="runOptimizer('max_dmg')" class="px-4 py-2 rounded-xl bg-crimson hover:bg-red-500 text-white text-xs font-extrabold uppercase tracking-wider transition">
-              Max Damage Build
-            </button>
           </div>
         </div>
-        <div id="optimizer-result" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs text-slate-300">
-          Select an optimization goal above to calculate the best loadout for your exact profile.
+
+        <!-- Skill Allocation Grid -->
+        <div id="skills-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2"></div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-line text-xs">
+          <div class="text-slate-300">
+            <span data-i18n="lblSpentSp">النقاط الموزعة:</span>
+            <strong id="ab-spent-sp" class="text-emeraldHud" dir="ltr">0</strong>
+          </div>
+          <button type="button" id="apply-build-to-combat-btn" class="px-4 py-2 rounded-xl bg-cyanHud/20 hover:bg-cyanHud/30 border border-cyanHud/40 text-cyanHud font-extrabold transition" data-i18n="btnApplyBuild">
+            ✅ تطبيق التجميعة على حاسبة القتال
+          </button>
         </div>
       </div>
-    </div>
 
-    <!-- TAB 4: DAILY ENERGY & SELF-WORK SPLITTER -->
-    <div id="view-energy" class="hidden space-y-5">
-      <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <!-- 2. FACTORY & TAX PROFIT CALCULATOR (PP & AUTOMATED ENGINE AE) -->
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 class="text-base font-extrabold text-white">Daily Energy & Self-Work Splitter</h3>
-            <p class="text-xs text-slate-400">Balance daily energy between working in your own factories vs. fighting in battles.</p>
+            <h2 class="font-extrabold text-base text-white" data-i18n="factoryTitle">2. حاسبة المصانع والإنتاج الآلي (PP &amp; AE)</h2>
+            <p class="text-xs text-slate-400" data-i18n="factorySub">احسب صافي ربح مصنعك اليومي من العمال (PP) والمحرك الآلي (AE) بعد خصم الخام والضرائب</p>
           </div>
-          <span class="text-xs font-mono text-amber-400" id="energy-alloc-badge">Combat: 70% • Self-Work: 30%</span>
+          <span id="factory-net-badge" class="px-3 py-1.5 rounded-xl bg-goldHud/15 border border-goldHud/35 text-xs font-extrabold text-goldHud" dir="ltr">
+            Net: +0.00 / day
+          </span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
           <div>
-            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Energy Allocated to Combat (%)</span><span class="font-mono font-bold text-crimson" id="val-combat-pct">70%</span></div>
-            <input id="inp-combat-pct" type="range" min="0" max="100" step="10" value="70" oninput="calcEnergySplit()" class="w-full">
+            <label class="block text-slate-400 mb-1" data-i18n="lblFacProduct">السلعة المنتجة</label>
+            <select id="fac-good" class="fac-trigger w-full bg-obsidian border border-line rounded-xl px-2.5 py-2.5 font-bold text-white">
+              <option value="steel">⚙️ Steel (فولاذ)</option>
+              <option value="ammo">🔸 Ammo (ذخيرة)</option>
+              <option value="steak">🥩 Steak (ستيك)</option>
+              <option value="cookedFish">🐟 Cooked Fish (سمك)</option>
+              <option value="bread">🍞 Bread (خبز)</option>
+              <option value="concrete">🧱 Concrete (خرسانة)</option>
+            </select>
           </div>
           <div>
-            <label class="block text-xs text-slate-300 mb-1">Daily Worker Wage Saved by Self-Work (€)</label>
-            <input id="inp-wage-saved" type="number" step="5" value="85" oninput="calcEnergySplit()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+            <label class="block text-slate-400 mb-1" data-i18n="lblFacSellPrice">سعر بيع الوحدة</label>
+            <input type="number" id="fac-sell-price" value="1.45" min="0" step="0.01" class="fac-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-emeraldHud" dir="ltr" />
           </div>
-        </div>
-
-        <div id="energy-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono space-y-2 text-slate-200"></div>
-      </div>
-    </div>
-
-    <!-- TAB 5: MU & MERCENARY WAR ROOM -->
-    <div id="view-merc" class="hidden space-y-5">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
-          <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Mercenary Net Profit per 1,000 DMG</h3>
           <div>
-            <label class="block text-[11px] text-slate-400 mb-1">Offered Contract Rate (€ per 1K DMG)</label>
-            <input id="inp-merc-rate" type="number" step="0.1" value="3.50" oninput="calcMerc()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
+            <label class="block text-slate-400 mb-1" data-i18n="lblFacRawCost">تكلفة الخام/وحدة</label>
+            <input type="number" id="fac-raw-cost" value="0.65" min="0" step="0.01" class="fac-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-slate-200" dir="ltr" />
           </div>
-          <div id="merc-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono space-y-1.5"></div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblFacPpDaily">إنتاج نقاط العمل (PP/يوم)</label>
+            <input type="number" id="fac-pp-units" value="24" min="0" step="1" class="fac-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-white" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblFacAeDaily">إنتاج المحرك الآلي (AE/يوم)</label>
+            <input type="number" id="fac-ae-units" value="12" min="0" step="1" class="fac-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-cyanHud" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblFacTax">ضريبة الدولة + بونص الإقليم %</label>
+            <div class="grid grid-cols-2 gap-1.5" dir="ltr">
+              <input type="number" id="fac-tax" value="10" min="0" max="100" title="Tax %" class="fac-trigger w-full bg-obsidian border border-line rounded-xl px-2 py-2.5 text-center font-bold text-rose-400" />
+              <input type="number" id="fac-region" value="15" min="0" max="200" title="Region Bonus %" class="fac-trigger w-full bg-obsidian border border-line rounded-xl px-2 py-2.5 text-center font-bold text-emeraldHud" />
+            </div>
+          </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">MU Battle Operations Planner</h3>
-            <a id="mu-direct-link" href="https://app.warera.io/mu/69f562f5747ceee9f38d631d" target="_blank" rel="noopener" class="text-[11px] font-mono text-amber-400 hover:underline">Open MU ↗</a>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div class="p-3.5 rounded-xl bg-obsidian border border-line">
+            <div class="text-[11px] text-slate-400" data-i18n="facOutUnits">إجمالي الوحدات المنتجة يومياً</div>
+            <div id="fac-res-units" class="text-xl font-extrabold text-white mt-1" dir="ltr">0</div>
           </div>
-          <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Military Unit (MU) ID</label>
-              <input id="inp-mu-id" type="text" value="69f562f5747ceee9f38d631d" oninput="updateMuLink()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs font-mono text-white">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Target MU Damage (Millions)</label>
-              <input id="inp-mu-target" type="number" step="5" value="50" oninput="calcMerc()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
-            </div>
+          <div class="p-3.5 rounded-xl bg-obsidian border border-line">
+            <div class="text-[11px] text-slate-400" data-i18n="facOutTax">الضرائب المدفوعة للدولة</div>
+            <div id="fac-res-tax" class="text-xl font-extrabold text-rose-400 mt-1" dir="ltr">0.00</div>
           </div>
-          <div id="mu-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono space-y-1.5"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 6: v0.27 ECO, LV.50 ROADMAP & GEAR ROI -->
-    <div id="view-eco" class="hidden space-y-5">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
-          <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Level 50 & Prestige Pacing Estimator</h3>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Current XP % in Level</label>
-              <input id="inp-xp-pct" type="number" min="0" max="99" value="50" oninput="calcRoadmap()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Daily Damage Pace</label>
-              <input id="inp-daily-pace" type="number" step="10000" value="250000" oninput="calcRoadmap()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-sm font-mono text-white">
-            </div>
+          <div class="p-3.5 rounded-xl bg-goldHud/10 border border-goldHud/35">
+            <div class="text-[11px] text-goldHud font-bold" data-i18n="facOutNet">صافي الربح اليومي الحقيقي</div>
+            <div id="fac-res-net" class="text-xl font-extrabold text-goldHud mt-1" dir="ltr">+0.00</div>
           </div>
-          <div id="roadmap-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono text-slate-200"></div>
-        </div>
-
-        <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
-          <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Gear Upgrade Break-Even & Scrap Analyzer</h3>
-          <div class="grid grid-cols-3 gap-2.5">
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Upgrade Cost (€)</label>
-              <input id="inp-upg-cost" type="number" value="1200" oninput="calcGearROI()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs font-mono text-white">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Sell Value (€)</label>
-              <input id="inp-sell-val" type="number" value="480" oninput="calcGearROI()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs font-mono text-white">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Scrap Value (€)</label>
-              <input id="inp-scrap-val" type="number" value="515" oninput="calcGearROI()" class="w-full px-3 py-2 rounded-xl bg-obsidian border border-slate-700 text-xs font-mono text-white">
-            </div>
-          </div>
-          <div id="gear-roi-output" class="rounded-xl bg-obsidian border border-slate-800 p-4 text-xs font-mono text-slate-200"></div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 4: MARKET RNG WEAPON COMPARATOR & BUDGET OPTIMIZER (السوق)       -->
+    <!-- =================================================================== -->
+    <section id="tab-market" class="tab-panel hidden space-y-5">
+
+      <!-- 1. RNG WEAPON OFFER COMPARATOR -->
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4 border-t-2 border-t-goldHud">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="font-extrabold text-base text-white" data-i18n="rngTitle">1. قناص ومقارن أسلحة السوق (الأرقام المتغيرة لكل قطعة)</h2>
+            <p class="text-xs text-slate-400" data-i18n="rngSub">قارن بين قطع السوق بأرقام الهجوم والكريت الفعلية لكل قطعة لتحديد أعلى صفقة كفاءة (DMG per Gold)</p>
+          </div>
+          <button type="button" id="add-offer-btn" class="px-3.5 py-2 rounded-xl bg-goldHud hover:brightness-110 text-obsidian font-extrabold text-xs transition">
+            + <span data-i18n="btnAddOffer">إضافة عرض للمقارنة</span>
+          </button>
+        </div>
+
+        <div id="weapon-offers-list" class="space-y-3"></div>
+      </div>
+
+      <!-- 2. BATTLE BUDGET LOADOUT OPTIMIZER -->
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div>
+          <h2 class="font-extrabold text-base text-white" data-i18n="budgetTitle">2. مُحسِّن ميزانية المعركة (Battle Budget Optimizer)</h2>
+          <p class="text-xs text-slate-400" data-i18n="budgetSub">أدخل ميزانيتك المتاحة ليحسب النظام عدد الضربات والذخيرة والأكل الممكن شراؤها وأقصى ضرر ستحققه</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblBudgetGold">ميزانية المعركة المتاحة (ذهب)</label>
+            <input type="number" id="bud-gold" value="50" min="1" step="1" class="bud-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-extrabold text-goldHud" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblBudgetFoodPrice">سعر قطعة الأكل في السوق</label>
+            <input type="number" id="bud-food-price" value="0.35" min="0" step="0.01" class="bud-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-white" dir="ltr" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1" data-i18n="lblBudgetAmmoPrice">سعر طلقة الذخيرة في السوق</label>
+            <input type="number" id="bud-ammo-price" value="0.14" min="0" step="0.01" class="bud-trigger w-full bg-obsidian border border-line rounded-xl px-3 py-2.5 font-bold text-white" dir="ltr" />
+          </div>
+        </div>
+
+        <div id="budget-plan-output" class="p-4 rounded-2xl bg-obsidian border border-line grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div>
+            <div class="text-slate-400" data-i18n="budOutHits">الضربات الممولة بالميزانية</div>
+            <div id="bud-res-hits" class="text-xl font-extrabold text-emeraldHud mt-1" dir="ltr">0 Hits</div>
+          </div>
+          <div>
+            <div class="text-slate-400" data-i18n="budOutSupplies">التوزيع المقترح للإمدادات</div>
+            <div id="bud-res-supplies" class="text-sm font-bold text-white mt-1">--</div>
+          </div>
+          <div>
+            <div class="text-slate-400" data-i18n="budOutDmg">إجمالي الضرر المتوقع</div>
+            <div id="bud-res-dmg" class="text-xl font-extrabold text-goldHud mt-1" dir="ltr">0 DMG</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 5: HYBRID AI TACTICAL ADVISOR (المستشار الذكي)                  -->
+    <!-- =================================================================== -->
+    <section id="tab-ai" class="tab-panel hidden space-y-4">
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4 border-t-2 border-t-purple-400">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="font-extrabold text-base text-white flex items-center gap-2">
+              <span>🧠</span>
+              <span data-i18n="aiTitle">المستشار التكتيكي الذكي (RAAD Tactical AI)</span>
+            </h2>
+            <p class="text-xs text-slate-400" data-i18n="aiSub">يعمل فوراً بدون أي مفتاح API بناءً على أرقام حسابك الحية ومعادلات اللعبة، ويدعم Gemini اختيارياً</p>
+          </div>
+          <span id="ai-mode-badge" class="px-3 py-1 rounded-full bg-emeraldHud/15 text-emeraldHud border border-emeraldHud/30 text-xs font-bold" data-i18n="aiModeBuiltIn">
+            المحرك المدمج نشط (مجاني 100%)
+          </span>
+        </div>
+
+        <!-- Quick One-Tap Tactical Prompts -->
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button type="button" data-ai-prompt="build" class="px-3 py-2 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-emeraldHud font-bold transition" data-i18n="aiPromptBuild">
+            🧬 ما أفضل تجميعة لي الآن؟
+          </button>
+          <button type="button" data-ai-prompt="hh" class="px-3 py-2 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-cyanHud font-bold transition" data-i18n="aiPromptHh">
+            ❤️ متى أتوقف عن الضرب للمعركة؟
+          </button>
+          <button type="button" data-ai-prompt="market" class="px-3 py-2 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-goldHud font-bold transition" data-i18n="aiPromptMarket">
+            🎯 أي سلاح أشتري من السوق؟
+          </button>
+          <button type="button" data-ai-prompt="roi" class="px-3 py-2 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-purple-300 font-bold transition" data-i18n="aiPromptRoi">
+            🏭 أطور مصنعي أم أشتري سلاحاً؟
+          </button>
+        </div>
+
+        <!-- Chat History Box -->
+        <div id="ai-chat-box" class="chat-scroll h-72 sm:h-80 overflow-y-auto p-3.5 rounded-2xl bg-obsidian border border-line space-y-3 text-xs sm:text-sm">
+          <div class="p-3 rounded-xl bg-panel border border-line text-slate-200 leading-relaxed" data-i18n="aiWelcome">
+            أهلاً بك يا قائد في غرفة المستشار الذكي لـ RAAD. يمكنك الضغط على أحد الأزرار بالأعلى أو كتابة أي سؤال عن تجميعتك، توقيت المعركة، عروض السوق، أو أرباح مصانعك وسأحلل أرقام حسابك الحية فوراً.
+          </div>
+        </div>
+
+        <!-- User Prompt Input -->
+        <form id="ai-chat-form" class="flex gap-2">
+          <input
+            type="text"
+            id="ai-user-input"
+            autocomplete="off"
+            required
+            class="flex-1 bg-obsidian border border-line focus:border-emeraldHud rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none"
+            placeholder="اسأل المستشار الذكي عن المعركة أو السوق أو المصانع..."
+            data-i18n-placeholder="aiInputPlaceholder"
+          />
+          <button type="submit" id="ai-send-btn" class="px-5 py-3 rounded-xl bg-emeraldHud hover:brightness-110 text-obsidian font-extrabold text-xs sm:text-sm transition shrink-0" data-i18n="btnSend">
+            إرسال
+          </button>
+        </form>
+      </div>
+    </section>
 
   </main>
 
-  <!-- FOOTER SIGNATURE -->
-  <footer class="border-t border-slate-800/80 mt-10 py-5">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-      <div>RAAD // رَعـد v2.0 — Official WarEra Math Engine & Live API2 Relay</div>
-      <div>
-        Engineered by <a href="https://app.warera.io/user/Ayyubi_Warrior2" target="_blank" rel="noopener" class="font-mono font-bold text-amber-400 hover:underline">Ayyubi_Warrior2</a>
+  <!-- MOBILE 5-TAB BOTTOM NAVIGATION BAR (ZERO CLIPPING) -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0a111c]/95 backdrop-blur-md border-t border-line" aria-label="شريط التنقل السفلي">
+    <div class="grid grid-cols-5 h-16">
+      <button type="button" data-nav="home" class="tab-btn active relative flex flex-col items-center justify-center gap-0.5 text-slate-400 transition">
+        <span class="tab-bar opacity-0 scale-x-0 transition-all absolute top-0 inset-x-2 h-0.5 bg-emeraldHud rounded-full"></span>
+        <span class="text-base leading-none">🎯</span>
+        <span class="text-[11px] font-bold" data-i18n="navHome">الرئيسية</span>
+      </button>
+
+      <button type="button" data-nav="combat" class="tab-btn relative flex flex-col items-center justify-center gap-0.5 text-slate-400 transition">
+        <span class="tab-bar opacity-0 scale-x-0 transition-all absolute top-0 inset-x-2 h-0.5 bg-emeraldHud rounded-full"></span>
+        <span class="text-base leading-none">⚔️</span>
+        <span class="text-[11px] font-bold" data-i18n="navCombat">القتال</span>
+      </button>
+
+      <button type="button" data-nav="build" class="tab-btn relative flex flex-col items-center justify-center gap-0.5 text-slate-400 transition">
+        <span class="tab-bar opacity-0 scale-x-0 transition-all absolute top-0 inset-x-2 h-0.5 bg-emeraldHud rounded-full"></span>
+        <span class="text-base leading-none">🧬</span>
+        <span class="text-[11px] font-bold" data-i18n="navBuild">التجميعة</span>
+      </button>
+
+      <button type="button" data-nav="market" class="tab-btn relative flex flex-col items-center justify-center gap-0.5 text-slate-400 transition">
+        <span class="tab-bar opacity-0 scale-x-0 transition-all absolute top-0 inset-x-2 h-0.5 bg-emeraldHud rounded-full"></span>
+        <span class="text-base leading-none">📈</span>
+        <span class="text-[11px] font-bold" data-i18n="navMarket">السوق</span>
+      </button>
+
+      <button type="button" data-nav="ai" class="tab-btn relative flex flex-col items-center justify-center gap-0.5 text-slate-400 transition">
+        <span class="tab-bar opacity-0 scale-x-0 transition-all absolute top-0 inset-x-2 h-0.5 bg-emeraldHud rounded-full"></span>
+        <span class="text-base leading-none">🧠</span>
+        <span class="text-[11px] font-bold" data-i18n="navAi">المستشار</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- OPTIONAL API KEYS & 30-SECOND GUIDE MODAL -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="hud-card rounded-2xl max-w-lg w-full p-5 space-y-4 border border-line max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-line pb-3">
+        <h3 class="font-extrabold text-base text-white" data-i18n="modalTitle">🔑 مفاتيح الربط (اختياري تماماً)</h3>
+        <button type="button" id="close-settings-btn" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-bold">✕</button>
+      </div>
+
+      <!-- WarEra API Key -->
+      <div class="space-y-1.5 text-xs">
+        <label class="font-bold text-emeraldHud block" data-i18n="lblWareraKey">1. مفتاح WarEra API (لرفع حد الطلبات وجلب المصانع)</label>
+        <input type="password" id="input-warera-key" placeholder="we_live_..." class="w-full bg-obsidian border border-line rounded-xl px-3.5 py-2.5 text-white font-mono" dir="ltr" />
+      </div>
+
+      <!-- Gemini API Key + 2-Step Easy Guide -->
+      <div class="space-y-2 text-xs pt-2 border-t border-line">
+        <label class="font-bold text-purple-300 block" data-i18n="lblGeminiKey">2. مفتاح Google Gemini API (للمحادثة المفتوحة المتقدمة)</label>
+        <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full bg-obsidian border border-line rounded-xl px-3.5 py-2.5 text-white font-mono" dir="ltr" />
+
+        <div class="p-3 rounded-xl bg-obsidian border border-line space-y-1.5 text-[11px] text-slate-300">
+          <div class="font-extrabold text-goldHud" data-i18n="geminiGuideTitle">💡 لا تعرف كيف تحصل على مفتاح جوجل المجاني في 30 ثانية؟</div>
+          <p data-i18n="geminiGuideStep1">1. افتح رابط Google AI Studio الرسمي: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-cyanHud underline font-bold">aistudio.google.com/apikey</a></p>
+          <p data-i18n="geminiGuideStep2">2. اضغط على زر "Create API Key" وانسخ المفتاح هنا (مجاني بالكامل، وحتى بدونه يعمل المستشار المدمج بكفاءة كاملة).</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" id="clear-keys-btn" class="px-4 py-2 rounded-xl bg-rose-500/15 text-rose-300 font-bold text-xs" data-i18n="btnClearKeys">مسح المفاتيح</button>
+        <button type="button" id="save-keys-btn" class="px-5 py-2 rounded-xl bg-emeraldHud text-obsidian font-extrabold text-xs" data-i18n="btnSaveKeys">حفظ الإعدادات</button>
       </div>
     </div>
-  </footer>
+  </div>
 
   <script>
-    const RELAY_WORKER_URL = 'https://muddy-frog-fa31.modyeldaba99.workers.dev';
-    const DIRECT_GATEWAYS = [
-      'https://api2.warera.io/trpc',
-      'https://gateway.warerastats.io/trpc'
-    ];
-
-    // OFFICIAL WARERA SERVER CONSTANTS (Verified from WarEra GameConfig & Formula)
-    const OFFICIAL_CONSTANTS = {
-      AMMO_BONUS_PCT: {
-        none: 0,
-        lightAmmo: 10,
-        ammo: 20,
-        heavyAmmo: 40
+    // =========================================================================
+    // 1. TRANSLATION DICTIONARY (ARABIC RTL & ENGLISH LTR)
+    // =========================================================================
+    const DICT = {
+      ar: {
+        brandSub: 'مركز القيادة التكتيكي والاقتصادي لـ WarEra',
+        navHome: 'الرئيسية',
+        navCombat: 'القتال',
+        navBuild: 'التجميعة',
+        navMarket: 'السوق',
+        navAi: 'المستشار الذكي',
+        btnKeys: 'مفاتيح الربط',
+        noPlayerLoaded: 'لم يتم تحميل لاعب بعد',
+        homeTitle: 'غرفة القيادة والاستطلاع الحي',
+        homeSub: 'ابحث باسمك في WarEra لجلب بياناتك الحقيقية ومهاراتك ومصانعك فوراً بدون كلمة مرور',
+        btnSync: 'تحديث البيانات',
+        searchPlaceholder: 'اكتب اسم اللاعب أو ID أو رابط الملف الشخصي...',
+        btnLoadPlayer: 'جلب البيانات الحية',
+        lookupHint: 'يعمل مباشرة بالبيانات العامة، ويمكنك إضافة مفتاح WarEra الاختياري لرفع سرعة الجلب وجلب المصانع.',
+        kpiReadiness: 'مؤشر الجاهزية القتالية',
+        kpiReadinessNote: 'بانتظار تحميل الحساب',
+        kpiAvgHit: 'متوسط ضرر الضربة',
+        kpiHitNote: 'شامل الكريت والبونصات',
+        kpiSafeHits: 'ضربات متاحة الآن (H&H)',
+        kpiSafeHitsNote: 'بدون إهدار صحة المعركة',
+        kpiFactoryProfit: 'صافي ربح المصانع/يوم',
+        kpiFactoryNote: 'PP + المحرك الآلي AE',
+        allianceBoxTitle: 'موارد الحلف الاستراتيجية والبونصات',
+        allianceBoxEmpty: 'عند تحميل حساب مرتبط بحلف، ستظهر هنا مستويات الموارد الاستراتيجية وبونصاتها تلقائياً.',
+        quickActionsTitle: 'اختصارات القيادة السريعة',
+        qaCombat: 'حاسبة الضرر و H&H',
+        qaCombatSub: 'البونصات الخمسة وتوقيت الأكل',
+        qaBuild: 'مولّد التجميعة والمصانع',
+        qaBuildSub: 'توزيع تلقائي بضغطة زر',
+        qaMarket: 'قناص أسلحة السوق',
+        qaMarketSub: 'مقارنة الأرقام المتغيرة لكل قطعة',
+        qaAi: 'المستشار الذكي',
+        qaAiSub: 'تحليل فوري لحسابك وقراراتك',
+        bonusesTitle: '1. البونصات الرسمية للمعركة',
+        bonusesSub: 'فعّل البونصات النشطة في معركتك الحالية أو عدّل نسبة تطوير الحلف',
+        bonusMuOrder: 'أمر الوحدة (MU Order)',
+        bonusMuHq: 'مقر الوحدة (MU HQ)',
+        bonusAlliance: 'بونص الحلف',
+        bonusMpp: 'اتفاقية الدفاع (MPP)',
+        bonusHomeland: 'الدفاع عن الوطن',
+        bonusMerc: 'بونص المرتزقة',
+        dmgCalcTitle: '2. حاسبة الضرر والعتاد الفعلي',
+        lblWeaponAtk: 'هجوم السلاح (ATK)',
+        lblWeaponCrit: 'نسبة كريت السلاح %',
+        lblAmmo: 'نوع الذخيرة',
+        ammoNone: 'بدون ذخيرة (0%)',
+        ammoLight: 'ذخيرة خفيفة (+10%)',
+        ammoStd: 'ذخيرة قياسية (+20%)',
+        ammoHeavy: 'ذخيرة ثقيلة (+40%)',
+        lblHitsCount: 'عدد الضربات',
+        lblAmmoCost: 'سعر الذخيرة/ضربة',
+        lblWeaponWear: 'تكلفة اهتلاك السلاح/ضربة',
+        resNormalHit: 'الضربة العادية',
+        resCritHit: 'الضربة الحرجة (Crit)',
+        resAvgHit: 'متوسط الضربة الفعلي',
+        resTotalBattle: 'إجمالي ضرر المعركة',
+        hhTitle: '3. مخطط الصحة والجوع للمعركة (H&H Planner)',
+        hhSub: 'يحسب بالمعادلة الرسمية متى تتوقف عن الضرب الآن لتدخل المعركة القادمة بصحة وجوع 100%',
+        lblPantsArmor: 'درع البنطال (Pants)',
+        lblChestArmor: 'درع الصدر (Chest)',
+        lblCurHp: 'صحتك الحالية (HP)',
+        lblMaxHp: 'أقصى صحة (Max HP)',
+        lblCurHunger: 'شبعك الحالي (Hunger)',
+        lblMaxHunger: 'أقصى شبع (Max Hunger)',
+        lblTargetDate: 'تاريخ المعركة القادمة',
+        lblTargetHour: 'ساعة المعركة (بتوقيتك المحلي)',
+        lblFoodChoice: 'خطة الطعام للاستشفاء',
+        foodNone: 'بدون طعام (استشفاء طبيعي فقط)',
+        foodBread: 'خبز — Bread (+10% HP)',
+        foodSteak: 'ستيك — Steak (+15% HP)',
+        foodFish: 'سمك مطهو — Cooked Fish (+20% HP)',
+        hhStopLabel: 'توقف عن الضرب عندما تصل صحتك إلى:',
+        hhLegendReserve: '🟩 احتياطي محجوز للمعركة',
+        hhLegendSpend: '🟢 متاح للضرب الآن',
+        autoBuildTitle: '1. مولّد التجميعة التلقائي (بضغطة زر)',
+        autoBuildSub: 'أدخل نقاط مهاراتك المتاحة واختر هدفك، وسيقوم النظام ببناء التجميعة المثالية لك فوراً',
+        lblAvailableSp: 'إجمالي نقاط المهارات المتاحة (SP)',
+        lblBuildPreset: 'هدف التجميعة',
+        goalCombat: '⚔️ أعلى ضرر حربي صافي (Max Damage)',
+        goalHybrid: '🎁 متوازن (حربي + لوت وصناديق)',
+        goalEconomy: '🏭 اقتصاد ومصانع (Production & PP)',
+        btnRunAutoBuild: '⚡ ابنِ التجميعة المثالية الآن',
+        lblSpentSp: 'النقاط الموزعة:',
+        btnApplyBuild: '✅ تطبيق التجميعة على حاسبة القتال',
+        factoryTitle: '2. حاسبة المصانع والإنتاج الآلي (PP & AE)',
+        factorySub: 'احسب صافي ربح مصنعك اليومي من العمال (PP) والمحرك الآلي (AE) بعد خصم الخام والضرائب',
+        lblFacProduct: 'السلعة المنتجة',
+        lblFacSellPrice: 'سعر بيع الوحدة',
+        lblFacRawCost: 'تكلفة الخام/وحدة',
+        lblFacPpDaily: 'إنتاج نقاط العمل (PP/يوم)',
+        lblFacAeDaily: 'إنتاج المحرك الآلي (AE/يوم)',
+        lblFacTax: 'ضريبة الدولة + بونص الإقليم %',
+        facOutUnits: 'إجمالي الوحدات المنتجة يومياً',
+        facOutTax: 'الضرائب المدفوعة للدولة',
+        facOutNet: 'صافي الربح اليومي الحقيقي',
+        rngTitle: '1. قناص ومقارن أسلحة السوق (الأرقام المتغيرة لكل قطعة)',
+        rngSub: 'قارن بين قطع السوق بأرقام الهجوم والكريت الفعلية لكل قطعة لتحديد أعلى صفقة كفاءة (DMG per Gold)',
+        btnAddOffer: 'إضافة عرض للمقارنة',
+        budgetTitle: '2. مُحسِّن ميزانية المعركة (Battle Budget Optimizer)',
+        budgetSub: 'أدخل ميزانيتك المتاحة ليحسب النظام عدد الضربات والذخيرة والأكل الممكن شراؤها وأقصى ضرر ستحققه',
+        lblBudgetGold: 'ميزانية المعركة المتاحة (ذهب)',
+        lblBudgetFoodPrice: 'سعر قطعة الأكل في السوق',
+        lblBudgetAmmoPrice: 'سعر طلقة الذخيرة في السوق',
+        budOutHits: 'الضربات الممولة بالميزانية',
+        budOutSupplies: 'التوزيع المقترح للإمدادات',
+        budOutDmg: 'إجمالي الضرر المتوقع',
+        aiTitle: 'المستشار التكتيكي الذكي (RAAD Tactical AI)',
+        aiSub: 'يعمل فوراً بدون أي مفتاح API بناءً على أرقام حسابك الحية ومعادلات اللعبة، ويدعم Gemini اختيارياً',
+        aiModeBuiltIn: 'المحرك المدمج نشط (مجاني 100%)',
+        aiPromptBuild: '🧬 ما أفضل تجميعة لي الآن؟',
+        aiPromptHh: '❤️ متى أتوقف عن الضرب للمعركة؟',
+        aiPromptMarket: '🎯 أي سلاح أشتري من السوق؟',
+        aiPromptRoi: '🏭 أطور مصنعي أم أشتري سلاحاً؟',
+        aiWelcome: 'أهلاً بك يا قائد في غرفة المستشار الذكي لـ RAAD. يمكنك الضغط على أحد الأزرار بالأعلى أو كتابة أي سؤال عن تجميعتك، توقيت المعركة، عروض السوق، أو أرباح مصانعك وسأحلل أرقام حسابك الحية فوراً.',
+        aiInputPlaceholder: 'اسأل المستشار الذكي عن المعركة أو السوق أو المصانع...',
+        btnSend: 'إرسال',
+        modalTitle: '🔑 مفاتيح الربط (اختياري تماماً)',
+        lblWareraKey: '1. مفتاح WarEra API (لرفع حد الطلبات وجلب المصانع)',
+        lblGeminiKey: '2. مفتاح Google Gemini API (للمحادثة المفتوحة المتقدمة)',
+        geminiGuideTitle: '💡 لا تعرف كيف تحصل على مفتاح جوجل المجاني في 30 ثانية؟',
+        geminiGuideStep1: '1. افتح رابط Google AI Studio الرسمي: aistudio.google.com/apikey',
+        geminiGuideStep2: '2. اضغط على زر "Create API Key" وانسخ المفتاح هنا (مجاني بالكامل، وحتى بدونه يعمل المستشار المدمج بكفاءة كاملة).',
+        btnClearKeys: 'مسح المفاتيح',
+        btnSaveKeys: 'حفظ الإعدادات'
       },
-      MINIMUM_BATTLE_HEALTH: 10,
-      BASE_HP_COST_PER_ATTEMPT: 10,
-      MISS_DAMAGE_MULTIPLIER: 0.5,
-      HOURLY_REGEN_RATE: 0.10 // 10% of Max Health & Hunger per hourly tick
+      en: {
+        brandSub: 'Tactical & Economic Command Center for WarEra',
+        navHome: 'Command',
+        navCombat: 'Combat',
+        navBuild: 'Build',
+        navMarket: 'Market',
+        navAi: 'Tactical AI',
+        btnKeys: 'API Keys',
+        noPlayerLoaded: 'No commander loaded yet',
+        homeTitle: 'Live Recon & Command Hub',
+        homeSub: 'Search your WarEra username to fetch real stats, skills, and factories instantly without password',
+        btnSync: 'Refresh Live',
+        searchPlaceholder: 'Enter commander name, ID, or profile URL...',
+        btnLoadPlayer: 'Fetch Live Data',
+        lookupHint: 'Works out of the box with public data. Optional WarEra API key boosts rate limits & fetches companies.',
+        kpiReadiness: 'Combat Readiness',
+        kpiReadinessNote: 'Awaiting profile sync',
+        kpiAvgHit: 'Avg Hit Damage',
+        kpiHitNote: 'Includes Crit & Bonuses',
+        kpiSafeHits: 'Safe Hits Now (H&H)',
+        kpiSafeHitsNote: 'Without risking battle HP',
+        kpiFactoryProfit: 'Net Factory Profit/Day',
+        kpiFactoryNote: 'PP + Automated Engine AE',
+        allianceBoxTitle: 'Alliance Strategic Resources & Bonuses',
+        allianceBoxEmpty: 'Load an alliance-affiliated commander to display strategic resource tiers & skill bonuses.',
+        quickActionsTitle: 'Quick Command Shortcuts',
+        qaCombat: 'Damage & H&H Planner',
+        qaCombatSub: '5 Official Bonuses & Food Timing',
+        qaBuild: 'Auto-Build & Factories',
+        qaBuildSub: 'One-click optimal skill allocation',
+        qaMarket: 'RNG Weapon Sniper',
+        qaMarketSub: 'Compare per-item rolled stats',
+        qaAi: 'Tactical AI Advisor',
+        qaAiSub: 'Instant analysis of live stats',
+        bonusesTitle: '1. Official Battle Bonuses',
+        bonusesSub: 'Toggle active battle bonuses or adjust Alliance development percentage',
+        bonusMuOrder: 'MU Order Bonus',
+        bonusMuHq: 'MU HQ Bonus',
+        bonusAlliance: 'Alliance Bonus',
+        bonusMpp: 'Defense Pact (MPP)',
+        bonusHomeland: 'Homeland Defense',
+        bonusMerc: 'Mercenary Bonus',
+        dmgCalcTitle: '2. Damage & Loadout Calculator',
+        lblWeaponAtk: 'Weapon Attack (ATK)',
+        lblWeaponCrit: 'Weapon Crit %',
+        lblAmmo: 'Ammo Tier',
+        ammoNone: 'No Ammo (0%)',
+        ammoLight: 'Light Ammo (+10%)',
+        ammoStd: 'Standard Ammo (+20%)',
+        ammoHeavy: 'Heavy Ammo (+40%)',
+        lblHitsCount: 'Number of Hits',
+        lblAmmoCost: 'Ammo Cost / Hit',
+        lblWeaponWear: 'Weapon Wear / Hit',
+        resNormalHit: 'Normal Hit',
+        resCritHit: 'Critical Hit',
+        resAvgHit: 'Effective Avg Hit',
+        resTotalBattle: 'Total Battle Damage',
+        hhTitle: '3. Health & Hunger (H&H) Battle Planner',
+        hhSub: 'Official formula calculates exact stopping HP now so Health & Hunger reach 100% by battle hour',
+        lblPantsArmor: 'Pants Armor',
+        lblChestArmor: 'Chest Armor',
+        lblCurHp: 'Current Health (HP)',
+        lblMaxHp: 'Max Health',
+        lblCurHunger: 'Current Hunger',
+        lblMaxHunger: 'Max Hunger',
+        lblTargetDate: 'Next Battle Date',
+        lblTargetHour: 'Battle Hour (Local Time)',
+        lblFoodChoice: 'Food Ration Plan',
+        foodNone: 'Without Food (Natural Regen)',
+        foodBread: 'Bread (+10% HP)',
+        foodSteak: 'Steak (+15% HP)',
+        foodFish: 'Cooked Fish (+20% HP)',
+        hhStopLabel: 'Stop shooting when your Health reaches:',
+        hhLegendReserve: '🟩 Reserved for Battle',
+        hhLegendSpend: '🟢 Safe to Shoot Now',
+        autoBuildTitle: '1. One-Click Auto-Build Optimizer',
+        autoBuildSub: 'Enter available Skill Points and goal to automatically generate your optimal build',
+        lblAvailableSp: 'Total Available Skill Points (SP)',
+        lblBuildPreset: 'Build Objective',
+        goalCombat: '⚔️ Max Battle Damage',
+        goalHybrid: '🎁 Balanced (Combat + Loot)',
+        goalEconomy: '🏭 Factory Economy (PP & AE)',
+        btnRunAutoBuild: '⚡ Build Optimal Setup Now',
+        lblSpentSp: 'Allocated SP:',
+        btnApplyBuild: '✅ Apply Build to Combat Calc',
+        factoryTitle: '2. Factory & Automated Engine (PP & AE) Calc',
+        factorySub: 'Calculate daily net profit from Workers (PP) and Automated Engine (AE) after materials & tax',
+        lblFacProduct: 'Produced Item',
+        lblFacSellPrice: 'Unit Sell Price',
+        lblFacRawCost: 'Raw Cost / Unit',
+        lblFacPpDaily: 'Worker Output (PP/day)',
+        lblFacAeDaily: 'Automated Engine (AE/day)',
+        lblFacTax: 'State Tax + Region Bonus %',
+        facOutUnits: 'Total Daily Produced Units',
+        facOutTax: 'State Tax Paid',
+        facOutNet: 'True Daily Net Profit',
+        rngTitle: '1. Market RNG Weapon Comparator',
+        rngSub: 'Compare market weapons by actual rolled Attack & Crit% to pinpoint the best DMG per Gold deal',
+        btnAddOffer: 'Add Weapon Offer',
+        budgetTitle: '2. Battle Budget Loadout Optimizer',
+        budgetSub: 'Enter available Gold budget to compute funded hits, ammo/food split, and maximum total damage',
+        lblBudgetGold: 'Available Battle Gold',
+        lblBudgetFoodPrice: 'Market Food Unit Price',
+        lblBudgetAmmoPrice: 'Market Ammo Unit Price',
+        budOutHits: 'Budget-Funded Hits',
+        budOutSupplies: 'Recommended Supply Split',
+        budOutDmg: 'Expected Total Damage',
+        aiTitle: 'RAAD Tactical AI Advisor',
+        aiSub: 'Works instantly with zero API key using your live stats & official formulas; optional Gemini support',
+        aiModeBuiltIn: 'Built-in Engine Active (100% Free)',
+        aiPromptBuild: '🧬 Best build for me right now?',
+        aiPromptHh: '❤️ When should I stop shooting?',
+        aiPromptMarket: '🎯 Which market weapon to buy?',
+        aiPromptRoi: '🏭 Upgrade factory or buy weapon?',
+        aiWelcome: 'Welcome Commander to RAAD Tactical AI. Tap a quick prompt above or ask anything about builds, H&H battle timing, market deals, or factory ROI.',
+        aiInputPlaceholder: 'Ask Tactical AI about combat, market, or factories...',
+        btnSend: 'Send',
+        modalTitle: '🔑 API Keys (100% Optional)',
+        lblWareraKey: '1. WarEra API Key (Higher rate limit & company sync)',
+        lblGeminiKey: '2. Google Gemini API Key (Advanced open chat)',
+        geminiGuideTitle: '💡 Get a free Google key in 30 seconds:',
+        geminiGuideStep1: '1. Visit Google AI Studio: aistudio.google.com/apikey',
+        geminiGuideStep2: '2. Click "Create API Key" and paste it here (completely free; built-in AI also works without any key).',
+        btnClearKeys: 'Clear Keys',
+        btnSaveKeys: 'Save Settings'
+      }
     };
 
-    const WEAPONS = [
-      { tier: 1, code: 'knife', name: 'T1 Knife', dmg: 45, wearCost: 0.40, color: '#94A3B8', svg: '<path d="M4 10h13l2 3h-5v5h-3v-5H6l-2 4H2l2-7z"/>' },
-      { tier: 2, code: 'gun', name: 'T2 Gun', dmg: 85, wearCost: 0.80, color: '#10B981', svg: '<path d="M3 9h14l2 2v3h-4v5h-3v-5H9v4H6v-4H3V9zm15 1h3v2h-3v-2z"/>' },
-      { tier: 3, code: 'rifle', name: 'T3 Rifle', dmg: 140, wearCost: 1.35, color: '#3B82F6', svg: '<path d="M2 11h16l3-1v3l-3 1h-4l1 5h-3l-1-5H7l-2 4H2l1-5-1-2z"/>' },
-      { tier: 4, code: 'sniper', name: 'T4 Sniper', dmg: 220, wearCost: 2.25, color: '#A855F7', svg: '<path d="M1 12h18l4-1v2l-4 1h-6l1 4h-3l-1-4H5l-2 4H1l1-4-1-2zm7-4h7v2H8V8z"/>' },
-      { tier: 5, code: 'tank', name: 'T5 Tank', dmg: 330, wearCost: 3.60, color: '#F59E0B', svg: '<path d="M2 10h17l3 1v3l-3 1h-5v5H9v-5H5l-2 4H1l1-9zm6-3h6v2H8V7z"/>' },
-      { tier: 6, code: 'jet', name: 'T6 Fighter Jet', dmg: 480, wearCost: 5.80, color: '#EF4444', svg: '<path d="M1 9h19l3-2v8l-3-2H1V9zm7 4h4v6H8v-6z"/>' }
+    // =========================================================================
+    // 2. OFFICIAL GAME SNAPSHOT & SKILL DEFINITIONS
+    // =========================================================================
+    const HOUR_MS = 3600000;
+    const API_BASE = 'https://api2.warera.io/trpc/';
+
+    const SKILL_CATALOG = [
+      { key: 'attack', ar: 'الهجوم (Attack)', en: 'Attack', max: 10, base: 100, perLv: 15, unit: 'ATK', cat: 'combat' },
+      { key: 'precision', ar: 'الدقة (Precision)', en: 'Precision', max: 10, base: 50, perLv: 5, unit: '%', cat: 'combat' },
+      { key: 'critChance', ar: 'فرصة الحرجة (Crit %)', en: 'Crit Chance', max: 10, base: 5, perLv: 2.5, unit: '%', cat: 'combat' },
+      { key: 'critMult', ar: 'مضاعف الحرجة (Crit DMG)', en: 'Crit Multiplier', max: 10, base: 150, perLv: 10, unit: '%', cat: 'combat' },
+      { key: 'health', ar: 'نقاط الصحة (Health)', en: 'Health', max: 10, base: 100, perLv: 10, unit: 'HP', cat: 'combat' },
+      { key: 'armor', ar: 'الدرع (Armor)', en: 'Armor', max: 10, base: 0, perLv: 6, unit: 'ARM', cat: 'combat' },
+      { key: 'lootChance', ar: 'فرصة الغنائم (Loot)', en: 'Loot Chance', max: 10, base: 0, perLv: 3, unit: '%', cat: 'loot' },
+      { key: 'production', ar: 'الإنتاجية (Production)', en: 'Production', max: 10, base: 100, perLv: 10, unit: 'PP', cat: 'economy' },
+      { key: 'management', ar: 'الإدارة (Management)', en: 'Management', max: 10, base: 0, perLv: 5, unit: '%', cat: 'economy' }
     ];
 
-    // Official Gear Mapping: Helmet->CritDmg, Chest/Pants->Armor, Boots->Dodge, Gloves->Precision
-    const ARMOR_SLOTS = [
-      { id: 'helmet', stat: 'Crit DMG', label: 'Helmet (Crit DMG)', tiers: ['T1 Cap', 'T2 Kevlar', 'T3 Tactical', 'T4 Ballistic', 'T5 Exo-Helm', 'T6 Titan'], bonus: [5, 10, 18, 28, 40, 55] },
-      { id: 'chest', stat: 'Armor', label: 'Chest + Pants (Armor)', tiers: ['T1 Light', 'T2 Plate', 'T3 Heavy', 'T4 Ceramic', 'T5 Exo-Suit', 'T6 Juggernaut'], bonus: [6, 14, 24, 36, 50, 68] },
-      { id: 'boots', stat: 'Dodge', label: 'Boots (Dodge)', tiers: ['T1 Runners', 'T2 Combat', 'T3 Stealth', 'T4 Thrusters', 'T5 Phase', 'T6 Quantum'], bonus: [4, 9, 15, 22, 30, 40] },
-      { id: 'gloves', stat: 'Precision', label: 'Gloves (Precision)', tiers: ['T1 Grip', 'T2 Tac-Gloves', 'T3 Marksman', 'T4 Sniper', 'T5 Cyber-Grip', 'T6 Mythic'], bonus: [4, 8, 14, 20, 28, 36] }
-    ];
-
-    let state = {
-      weaponTier: 3,
-      armor: { helmet: 3, chest: 3, boots: 3, gloves: 3 },
-      mode: '8h',
-      dark: true,
-      lang: 'en',
-      lastCalc: {},
-      searchMatches: [],
-      runtimeConfig: {
-        source: 'default',
-        foodRestorePct: { none: 0, bread: 10, steak: 15, cookedFish: 20 },
-        pillAttackBonusPct: 60,
-        combatRules: {
-          armorSoftCap: 40,
-          dodgeSoftCap: 40,
-          precisionOverflowValue: 4,
-          criticalChanceOverflowValue: 4
-        },
-        skillLevels: {}
+    const OFFICIAL_SNAPSHOT = {
+      skills: {
+        armor: { softCap: 40 },
+        health: { levels: Object.fromEntries(Array.from({ length: 11 }, (_, i) => [i, { value: 100 + i * 10 }])) },
+        hunger: { levels: Object.fromEntries(Array.from({ length: 11 }, (_, i) => [i, { value: 4 + i }])) }
       },
-      market: {
-        ammoLight: 0.45,
-        ammoStd: 1.10,
-        ammoHeavy: 2.35,
-        foodBread: 0.55,
-        foodSteak: 0.85,
-        foodFish: 1.25,
-        pill: 45.0,
-        caseBase: 46.0,
-        liveSynced: false,
-        rawPrices: {}
+      user: { regenDividedBy: 10 },
+      battle: { healthCost: 10 },
+      items: {
+        bread: { flatStats: { healthRegenPercent: 10 } },
+        steak: { flatStats: { healthRegenPercent: 15 } },
+        cookedFish: { flatStats: { healthRegenPercent: 20 } }
       }
     };
 
-    function clampPercent(v) {
-      return Math.min(100, Math.max(0, Number(v) || 0));
-    }
+    // =========================================================================
+    // 3. CENTRALIZED APPLICATION STATE
+    // =========================================================================
+    const state = {
+      lang: localStorage.getItem('raad_lang') || 'ar',
+      activeTab: 'home',
+      wareraKey: localStorage.getItem('raad_warera_key') || '',
+      geminiKey: localStorage.getItem('raad_gemini_key') || '',
+      gameConfig: OFFICIAL_SNAPSHOT,
+      nextRegenAt: null,
+      player: {
+        id: null,
+        username: null,
+        level: 0,
+        allianceId: null
+      },
+      skills: {
+        attack: 4,
+        precision: 4,
+        critChance: 4,
+        critMult: 4,
+        health: 3,
+        armor: 2,
+        lootChance: 2,
+        production: 3,
+        management: 2
+      },
+      weaponOffers: JSON.parse(localStorage.getItem('raad_weapon_offers') || 'null') || [
+        { id: 1, name: 'Tank (Vel)', atk: 153, crit: 28, dur: 100, price: 145.7 },
+        { id: 2, name: 'Tank (Rastko)', atk: 145, crit: 30, dur: 100, price: 145.7 },
+        { id: 3, name: 'AK Rifle (Carlos)', atk: 82, crit: 14, dur: 100, price: 13.66 }
+      ],
+      lastCombat: { normalHit: 0, critHit: 0, avgHit: 0, totalDmg: 0, dmgPerGold: 0, bonusPct: 0 },
+      lastHH: { stopHp: 0, safeHits: 0, portions: 0, hpPerHit: 10, totalArmor: 0, reductionPct: 0 },
+      lastFactory: { netDaily: 0, totalUnits: 0, taxPaid: 0 }
+    };
 
-    function applySoftCap(rawValue, softCap = 40) {
-      if (rawValue <= 0) return 0;
-      if (softCap <= 0) return rawValue;
-      return (rawValue * 100) / (rawValue + softCap);
-    }
+    const $ = (id) => document.getElementById(id);
 
-    async function callWarEraAPI(procedure, inputObj = {}) {
-      const hasInput = inputObj && Object.keys(inputObj).length > 0;
-      const encodedInput = hasInput ? encodeURIComponent(JSON.stringify(inputObj)) : '';
-
-      const urlsToTry = [
-        hasInput
-          ? `${RELAY_WORKER_URL}/?proc=${encodeURIComponent(procedure)}&input=${encodedInput}`
-          : `${RELAY_WORKER_URL}/?proc=${encodeURIComponent(procedure)}`,
-        ...DIRECT_GATEWAYS.map(base =>
-          hasInput ? `${base}/${procedure}?input=${encodedInput}` : `${base}/${procedure}`
-        )
-      ];
-
-      for (const endpoint of urlsToTry) {
-        try {
-          const res = await fetch(endpoint, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(6500)
-          });
-          if (!res.ok) continue;
-          const payload = await res.json();
-          const firstItem = Array.isArray(payload) ? payload[0] : payload;
-          const extracted = firstItem?.result?.data?.json ?? firstItem?.result?.data ?? firstItem;
-          if (extracted !== undefined && extracted !== null && !firstItem?.error) {
-            return extracted;
-          }
-        } catch (e) {}
+    // =========================================================================
+    // 4. DIRECT WARERA tRPC API CLIENT (WITH OPTIONAL API KEY)
+    // =========================================================================
+    async function trpcGet(procedure, input = {}) {
+      const url = `${API_BASE}${procedure}?input=${encodeURIComponent(JSON.stringify(input))}`;
+      const headers = { 'Accept': 'application/json' };
+      if (state.wareraKey) {
+        headers['x-api-key'] = state.wareraKey;
+        headers['Authorization'] = `Bearer ${state.wareraKey}`;
       }
-      return null;
-    }
-
-    function applyDirectControls() {
-      const name = document.getElementById('qe-name').value.trim() || 'Commander';
-      const lv = Math.min(50, Math.max(1, parseInt(document.getElementById('qe-lv').value, 10) || 1));
-      const pr = Math.min(25, Math.max(0, parseInt(document.getElementById('qe-pr').value, 10) || 0));
-      const comp = Math.min(13, Math.max(0, parseInt(document.getElementById('qe-comp').value, 10) || 0));
-      const maxHp = Math.max(50, parseInt(document.getElementById('qe-maxhp').value, 10) || 100);
-      const maxHunger = Math.max(1, parseInt(document.getElementById('qe-maxhunger').value, 10) || 100);
-
-      document.getElementById('inp-factories').value = comp;
-      updateHeaderDisplay(name, lv, pr, comp, maxHp, maxHunger, false);
-      saveLocalProfile({ name, lv, pr, comp, maxHp, maxHunger });
-      recalcAll();
-    }
-
-    function syncSliderToDirect(field) {
-      if (field === 'comp') {
-        document.getElementById('qe-comp').value = document.getElementById('inp-factories').value;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+        cache: 'no-store',
+        signal: AbortSignal.timeout(12000)
+      });
+      const json = await res.json();
+      if (!res.ok || json.error || !json.result?.data) {
+        throw new Error(json?.error?.message || 'API unavailable');
       }
-      applyDirectControls();
+      return json.result.data;
     }
 
-    function updateHeaderDisplay(name, lv, pr, comp, maxHp, maxHunger, verified) {
-      document.getElementById('cmd-name').textContent = name;
-      document.getElementById('cmd-avatar').textContent = name.slice(0, 2).toUpperCase();
-      document.getElementById('cmd-level').textContent = `LV. ${lv}${lv >= 50 ? ' (MAX)' : ''}`;
-      document.getElementById('cmd-prestige').textContent = `PRESTIGE ${pr}`;
-      document.getElementById('cmd-source-badge').textContent = verified ? 'LIVE API2 SYNCED' : 'ACTIVE PROFILE';
-      document.getElementById('cmd-meta').textContent = `Factories: ${comp}/13 • Max HP: ${maxHp} (+${(maxHp*0.1).toFixed(1)}/h) • Max Hunger: ${maxHunger} (+${(maxHunger*0.1).toFixed(1)}/h)`;
-    }
-
-    function saveLocalProfile(obj) {
-      try {
-        localStorage.setItem('raad_warera_profile_v20', JSON.stringify(obj));
-      } catch (e) {}
-    }
-
-    async function syncLiveMarketAndConfig() {
-      const btn = document.getElementById('market-sync-btn');
-      btn.textContent = '⏳ Syncing...';
-
-      const [gameCfg, prices, dates, txs] = await Promise.all([
-        callWarEraAPI('gameConfig.getGameConfig', {}),
-        callWarEraAPI('itemTrading.getPrices', {}),
-        callWarEraAPI('gameConfig.getDates', {}),
-        callWarEraAPI('transaction.getPaginatedTransactions', { limit: 10 })
+    async function syncLiveServerMeta() {
+      const [cfgRes, datesRes] = await Promise.allSettled([
+        trpcGet('gameConfig.getGameConfig'),
+        trpcGet('gameConfig.getDates')
       ]);
-
-      let syncedCount = 0;
-
-      // 1. Parse official gameConfig.getGameConfig
-      if (gameCfg && typeof gameCfg === 'object') {
-        syncedCount++;
-        const items = gameCfg.items || {};
-        const skills = gameCfg.skills || {};
-        const skillLevels = {};
-        for (const [k, sObj] of Object.entries(skills)) {
-          skillLevels[k] = {};
-          if (sObj?.levels) {
-            for (const [lvl, entry] of Object.entries(sObj.levels)) {
-              skillLevels[k][lvl] = entry.value ?? 0;
-            }
-          }
-        }
-        state.runtimeConfig = {
-          source: 'live',
-          foodRestorePct: {
-            none: 0,
-            bread: items.bread?.flatStats?.healthRegenPercent ?? items.bread?.flatStats?.healthRegen ?? 10,
-            steak: items.steak?.flatStats?.healthRegenPercent ?? items.steak?.flatStats?.healthRegen ?? 15,
-            cookedFish: items.cookedFish?.flatStats?.healthRegenPercent ?? items.cookedFish?.flatStats?.healthRegen ?? 20
-          },
-          pillAttackBonusPct: items.cocain?.flatStats?.percentAttack ?? 60,
-          combatRules: {
-            armorSoftCap: skills.armor?.softCap ?? 40,
-            dodgeSoftCap: skills.dodge?.softCap ?? 40,
-            precisionOverflowValue: skills.precision?.skillOverflowValue ?? 4,
-            criticalChanceOverflowValue: skills.criticalChance?.skillOverflowValue ?? 4
-          },
-          skillLevels
-        };
-        document.getElementById('softcap-badge').textContent = `Armor/Dodge SoftCap: ${state.runtimeConfig.combatRules.armorSoftCap} (Live)`;
+      if (cfgRes.status === 'fulfilled' && cfgRes.value) {
+        state.gameConfig = cfgRes.value;
       }
-
-      // 2. Parse live market prices
-      if (prices && typeof prices === 'object') {
-        state.market.rawPrices = prices;
-        state.market.liveSynced = true;
-        syncedCount++;
-        if (prices.lightAmmo) state.market.ammoLight = Number(prices.lightAmmo) || state.market.ammoLight;
-        if (prices.ammo) state.market.ammoStd = Number(prices.ammo) || state.market.ammoStd;
-        if (prices.heavyAmmo) state.market.ammoHeavy = Number(prices.heavyAmmo) || state.market.ammoHeavy;
-        if (prices.bread) state.market.foodBread = Number(prices.bread) || state.market.foodBread;
-        if (prices.steak) state.market.foodSteak = Number(prices.steak) || state.market.foodSteak;
-        if (prices.cookedFish) state.market.foodFish = Number(prices.cookedFish) || state.market.foodFish;
-        if (prices.cocain || prices.energyPill) state.market.pill = Number(prices.cocain || prices.energyPill) || state.market.pill;
-        if (prices.case || prices.lootBox) state.market.caseBase = Number(prices.case || prices.lootBox) || state.market.caseBase;
+      if (datesRes.status === 'fulfilled' && datesRes.value?.nextRegenAt) {
+        const parsed = Date.parse(datesRes.value.nextRegenAt);
+        if (Number.isFinite(parsed)) state.nextRegenAt = parsed;
       }
-
-      if (dates) {
-        syncedCount++;
-        const dayNum = dates?.currentDay || dates?.day || 'Live';
-        document.getElementById('server-clock-bar').textContent = `WarEra API2 Connected • Game Day: ${dayNum} • Config: ${state.runtimeConfig.source.toUpperCase()}`;
-      }
-
-      renderMarketFeed(prices, txs);
-      btn.textContent = syncedCount > 0 ? '✅ API2 Synced' : '🔄 Sync API2';
-      document.getElementById('price-source-tag').textContent = state.market.liveSynced ? 'LIVE API2 PRICES' : 'CALIBRATED PRICES';
+      updateHudRegenCountdown();
       recalcAll();
     }
 
-    function renderMarketFeed(prices, txs) {
-      const grid = document.getElementById('live-prices-grid');
-      const entries = (prices && typeof prices === 'object') ? Object.entries(prices).slice(0, 12) : [];
-      if (entries.length > 0) {
-        grid.innerHTML = entries.map(([k, v]) => `
-          <div class="p-2.5 rounded-xl bg-obsidian border border-slate-800">
-            <div class="text-[10px] uppercase text-slate-400 truncate">${k}</div>
-            <div class="text-sm font-bold text-emerald mt-0.5">${typeof v === 'number' ? v.toFixed(2) + ' €' : JSON.stringify(v)}</div>
-          </div>
-        `).join('');
-      } else {
-        grid.innerHTML = `
-          <div class="col-span-full p-3 rounded-xl bg-obsidian border border-slate-800 text-slate-400">
-            Official ammo & food rates active (Light: ${state.market.ammoLight}€, Ammo: ${state.market.ammoStd}€, Heavy: ${state.market.ammoHeavy}€, Fish: ${state.market.foodFish}€).
-          </div>
-        `;
-      }
+    async function lookupCommander(rawQuery) {
+      const q = rawQuery.trim();
+      if (!q) return;
+      const isAr = state.lang === 'ar';
+      const btn = $('player-search-btn');
+      const statusEl = $('lookup-status');
+      const matchesEl = $('player-matches');
 
-      const txBox = document.getElementById('live-tx-feed');
-      const list = Array.isArray(txs) ? txs : (txs?.items || txs?.transactions || []);
-      if (list.length > 0) {
-        txBox.innerHTML = list.map(t => `
-          <div class="p-2 rounded-lg bg-carbon border border-slate-800/80 flex justify-between items-center gap-2">
-            <span class="text-slate-300 truncate">${t.itemType || t.type || 'Market Tx'} ×${t.quantity || 1}</span>
-            <span class="text-amber-400 font-bold shrink-0">${(t.price || t.totalPrice || 0)} €</span>
-          </div>
-        `).join('');
-      } else {
-        txBox.innerHTML = `<div class="text-slate-400">No recent transactions returned.</div>`;
-      }
-    }
+      btn.disabled = true;
+      matchesEl.innerHTML = '';
+      statusEl.textContent = isAr ? 'جاري الاتصال بسيرفر WarEra وجلب البيانات...' : 'Fetching live profile from WarEra...';
+      statusEl.className = 'text-xs text-cyanHud';
 
-    async function lookupOfferById() {
-      const offerId = document.getElementById('offer-id-input').value.trim();
-      if (!offerId) return;
-      const box = document.getElementById('offer-lookup-result');
-      box.classList.remove('hidden');
-      box.textContent = `Fetching offer "${offerId}"...`;
-      const data = await callWarEraAPI('itemOffer.getById', { offerId });
-      box.textContent = data ? JSON.stringify(data) : `Offer ID not found.`;
-    }
-
-    async function resolveUsersFromSearch(searchRes, query) {
-      const q = query.toLowerCase();
-      const candidates = [];
-      const userIdsToHydrate = new Set();
-
-      function walk(node) {
-        if (!node) return;
-        if (typeof node === 'string') {
-          if (/^[a-f0-9]{24}$/i.test(node)) userIdsToHydrate.add(node);
+      try {
+        await syncLiveServerMeta();
+        const idMatch = q.match(/(?:^|\/|userId=)([a-f0-9]{24})(?:$|[/?&#])/i);
+        if (idMatch) {
+          const profile = await trpcGet('user.getUserById', { userId: idMatch[1] });
+          await applyCommanderProfile(profile);
           return;
         }
-        if (Array.isArray(node)) {
-          node.forEach(walk);
-          return;
-        }
-        if (typeof node === 'object') {
-          if (Array.isArray(node.userIds)) {
-            node.userIds.forEach(id => { if (typeof id === 'string') userIdsToHydrate.add(id); });
-          }
-          const u = node.user || node;
-          const uname = u.username || u.name;
-          const uid = u._id || u.id || u.userId;
-          if (uname && typeof uname === 'string') {
-            candidates.push({
-              id: uid || '',
-              name: uname,
-              lv: u.level || u.leveling?.level || 1,
-              prestige: u.prestige || 0,
-              country: u.country?.name || u.countryCode || u.country || 'Global',
-              companies: u.companiesCount ?? u.companies?.length ?? 0
-            });
-          } else if (uid && typeof uid === 'string' && /^[a-f0-9]{24}$/i.test(uid)) {
-            userIdsToHydrate.add(uid);
-          }
-          Object.values(node).forEach(val => {
-            if (val && (typeof val === 'object' || Array.isArray(val))) walk(val);
-          });
-        }
-      }
 
-      walk(searchRes);
+        const found = await trpcGet('search.searchUsers', { searchText: q });
+        const entries = Array.isArray(found) ? found : (found?.users || found?.items || []);
+        if (!entries.length) {
+          throw new Error(isAr ? 'لم يتم العثور على لاعب بهذا الاسم.' : 'No commander found with that name.');
+        }
 
-      if (candidates.length === 0 && userIdsToHydrate.size > 0) {
-        const ids = Array.from(userIdsToHydrate).slice(0, 6);
-        const hydrated = await Promise.all(
-          ids.map(id => callWarEraAPI('user.getUserLite', { userId: id }))
+        const profiles = await Promise.all(
+          entries.slice(0, 6).map(item => typeof item === 'string' ? trpcGet('user.getUserById', { userId: item }) : item)
         );
-        hydrated.forEach((u, idx) => {
-          if (u && (u.username || u.name)) {
-            candidates.push({
-              id: u._id || u.id || ids[idx],
-              name: u.username || u.name,
-              lv: u.level || 1,
-              prestige: u.prestige || 0,
-              country: u.country?.name || u.countryCode || u.country || 'Global',
-              companies: u.companiesCount ?? u.companies?.length ?? 0
-            });
-          }
+        const exact = profiles.filter(p => p?.username?.toLowerCase() === q.toLowerCase());
+        if (exact.length === 1) {
+          await applyCommanderProfile(exact[0]);
+          return;
+        }
+        if (profiles.length === 1) {
+          await applyCommanderProfile(profiles[0]);
+          return;
+        }
+
+        statusEl.textContent = isAr ? 'اختر حسابك من النتائج التالية:' : 'Select your account below:';
+        profiles.forEach(p => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'p-3 rounded-xl bg-obsidian hover:bg-panelLight border border-line text-start text-xs font-bold text-white flex items-center justify-between transition';
+          b.innerHTML = `<span>${p.username || p._id}</span><span class="text-emeraldHud" dir="ltr">Lv.${p.level ?? '?'}</span>`;
+          b.addEventListener('click', () => applyCommanderProfile(p));
+          matchesEl.appendChild(b);
         });
+      } catch (err) {
+        statusEl.textContent = err.message || (isAr ? 'تعذر جلب البيانات حالياً.' : 'Failed to fetch profile.');
+        statusEl.className = 'text-xs text-amber-300';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function applyCommanderProfile(p) {
+      const isAr = state.lang === 'ar';
+      state.player.id = p._id || null;
+      state.player.username = p.username || 'Commander';
+      state.player.level = p.level || 0;
+      state.player.allianceId = p.allianceId || p.alliance?._id || null;
+
+      $('player-matches').innerHTML = '';
+      $('hud-username').textContent = state.player.username;
+      $('hud-level-badge').textContent = `Lv.${state.player.level}`;
+      $('hud-level-badge').classList.remove('hidden');
+
+      // Hydrate Health & Hunger bars
+      const h = p.skills?.health;
+      const g = p.skills?.hunger;
+      if (h && Number.isFinite(h.total)) {
+        $('hh-cur-hp').value = Number((h.currentBarValue ?? h.total).toFixed(1));
+        $('hh-max-hp').value = h.total;
+      }
+      if (g && Number.isFinite(g.total)) {
+        $('hh-cur-hunger').value = Number((g.currentBarValue ?? g.total).toFixed(1));
+        $('hh-max-hunger').value = g.total;
       }
 
-      const unique = new Map();
-      candidates.forEach(c => {
-        const key = c.id || c.name.toLowerCase();
-        if (!unique.has(key)) unique.set(key, c);
+      // Hydrate Skills from Profile
+      SKILL_CATALOG.forEach(sc => {
+        const lv = p.skills?.[sc.key]?.level;
+        if (Number.isFinite(lv)) state.skills[sc.key] = lv;
       });
 
-      return Array.from(unique.values()).sort((a, b) => {
-        const aExact = a.name.toLowerCase() === q ? 0 : (a.name.toLowerCase().startsWith(q) ? 1 : 2);
-        const bExact = b.name.toLowerCase() === q ? 0 : (b.name.toLowerCase().startsWith(q) ? 1 : 2);
-        return aExact - bExact;
+      // Extract Equipped Gear Armor (Pants + Chest) if available
+      const eq = p.equipment || p.equippedItems || {};
+      const pantsArm = eq.pants?.stats?.armor ?? eq.pants?.armor ?? 0;
+      const chestArm = eq.chest?.stats?.armor ?? eq.chest?.armor ?? 0;
+      if (pantsArm > 0) $('hh-pants').value = pantsArm;
+      if (chestArm > 0) $('hh-chest').value = chestArm;
+
+      // Extract Equipped Weapon if available
+      const wep = eq.weapon || {};
+      if (wep.stats?.attack || wep.attack) {
+        $('c-weapon-atk').value = wep.stats?.attack ?? wep.attack;
+      }
+      if (wep.stats?.critChance || wep.critChance) {
+        $('c-weapon-crit').value = wep.stats?.critChance ?? wep.critChance;
+      }
+
+      $('lookup-status').textContent = isAr
+        ? `✅ تم تحميل بيانات القائد ${state.player.username} بنجاح وتحديث كافة الحاسبات.`
+        : `✅ Loaded ${state.player.username} and synced all calculators.`;
+      $('lookup-status').className = 'text-xs text-emeraldHud font-bold';
+
+      renderSkillCards();
+      recalcAll();
+
+      // Background fetch for Alliance Strategic Resource Bonuses & Companies
+      if (state.player.allianceId) {
+        try {
+          const bonuses = await trpcGet('alliance.getStrategicResourceBonuses', { allianceId: state.player.allianceId });
+          renderAllianceResources(bonuses);
+        } catch (_) {}
+      }
+      if (state.player.id) {
+        try {
+          const comps = await trpcGet('company.getCompanies', { userId: state.player.id });
+          const list = Array.isArray(comps) ? comps : (comps?.companies || []);
+          if (list.length > 0 && list[0]._id) {
+            const detail = await trpcGet('company.getById', { companyId: list[0]._id });
+            if (detail?.automatedEngineOutput) $('fac-ae-units').value = detail.automatedEngineOutput;
+          }
+        } catch (_) {}
+      }
+    }
+
+    function renderAllianceResources(data) {
+      const box = $('alliance-bonuses-display');
+      const isAr = state.lang === 'ar';
+      if (!data || typeof data !== 'object') return;
+      const entries = Object.entries(data).filter(([, v]) => v);
+      if (!entries.length) return;
+      box.innerHTML = entries.map(([key, val]) => {
+        const displayVal = typeof val === 'object' ? JSON.stringify(val) : `+${val}`;
+        return `<div class="flex items-center justify-between p-2 rounded-lg bg-obsidian border border-line">
+          <span class="font-bold text-slate-200">${key}</span>
+          <span class="font-extrabold text-emeraldHud" dir="ltr">${displayVal}</span>
+        </div>`;
+      }).join('');
+      if (isAr) {
+        box.insertAdjacentHTML('afterbegin', '<div class="text-[11px] text-emeraldHud font-bold mb-1">تم جلب موارد الحلف الحية:</div>');
+      }
+    }
+
+    // =========================================================================
+    // 5. OFFICIAL DAMAGE & H&H FORMULAS (EXACT PORT FROM HH-CALCULATOR)
+    // =========================================================================
+    function calcArmorReduction(totalArmor, softCap = 40) {
+      if (!Number.isFinite(totalArmor) || totalArmor <= 0) return 0;
+      return Math.round((100 * totalArmor) / (totalArmor + softCap));
+    }
+
+    function calcHealthPerHit(effectiveReductionPct, baseCost = 10) {
+      return Math.max(1, Math.round(baseCost * (1 - effectiveReductionPct / 100) * 10) / 10);
+    }
+
+    function calcStoppingHealth(current, minimum, cost, minimumToFight = 10) {
+      if (current < minimum || cost <= 0 || current < minimumToFight) return current;
+      const allowed = Math.floor((current - minimum + 1e-8) / cost);
+      const available = Math.floor((current - minimumToFight + 1e-8) / cost) + 1;
+      return Math.max(minimum, Math.round((current - Math.min(allowed, available) * cost) * 10) / 10);
+    }
+
+    function getTicksBetween(now, target, nextRegen) {
+      if (!Number.isFinite(target) || target <= now) return [];
+      let first = nextRegen;
+      if (first <= now) first += (Math.floor((now - first) / HOUR_MS) + 1) * HOUR_MS;
+      const count = Math.max(0, Math.floor((target - first) / HOUR_MS) + 1);
+      if (count > 24 * 60) return [];
+      return Array.from({ length: count }, (_, i) => first + i * HOUR_MS);
+    }
+
+    function simulateHH(startHp, s, ticks, foodHeal = 0) {
+      let health = startHp;
+      let hunger = s.hunger;
+      let used = 0;
+
+      if (foodHeal > 0) {
+        while (hunger >= 1 - 1e-9 && health + ticks.length * s.regen < s.maximum - 1e-8) {
+          health = Math.min(s.maximum, health + foodHeal);
+          hunger = Math.max(0, hunger - 1);
+          used++;
+        }
+      }
+
+      ticks.forEach(() => {
+        health = Math.min(s.maximum, health + s.regen);
+        hunger = Math.min(s.hungerMax, hunger + s.hungerRegen);
       });
+
+      return { health, hunger, used };
     }
 
-    async function syncPlayer() {
-      const raw = document.getElementById('player-input').value.trim();
-      if (!raw) return;
+    function computeCombatDamage(overrideAtk = null, overrideCrit = null) {
+      const skillAtk = 100 + (state.skills.attack || 0) * 15;
+      const weaponAtk = overrideAtk !== null ? overrideAtk : Number($('c-weapon-atk').value || 0);
+      const totalRawAtk = skillAtk + weaponAtk;
 
-      const status = document.getElementById('sync-status');
-      const resultsBox = document.getElementById('search-results-box');
-      const resultsList = document.getElementById('search-results-list');
+      const precision = Math.min(100, 50 + (state.skills.precision || 0) * 5) / 100;
+      const baseCrit = 5 + (state.skills.critChance || 0) * 2.5;
+      const weaponCrit = overrideCrit !== null ? overrideCrit : Number($('c-weapon-crit').value || 0);
+      const critProb = Math.min(100, baseCrit + weaponCrit) / 100;
+      const critMult = (150 + (state.skills.critMult || 0) * 10) / 100;
 
-      status.classList.remove('hidden');
-      status.className = 'text-[11px] font-mono text-amber-300';
-      status.textContent = `Searching "${raw}" in WarEra API2...`;
+      // Official 5 Bonuses + Mercenary
+      let bonusPct = 0;
+      if ($('bonus-mu-order').checked) bonusPct += 15;
+      if ($('bonus-mu-hq').checked) bonusPct += 20;
+      if ($('bonus-alliance').checked) bonusPct += Number($('bonus-alliance-val').value || 0);
+      if ($('bonus-mpp').checked) bonusPct += 10;
+      if ($('bonus-homeland').checked) bonusPct += 20;
+      if ($('bonus-merc').checked) bonusPct += Number($('bonus-merc-val').value || 0);
 
-      let searchRes = await callWarEraAPI('search.searchAnything', { searchText: raw });
-      if (!searchRes && /^[a-f0-9]{24}$/i.test(raw)) {
-        searchRes = await callWarEraAPI('user.getUserLite', { userId: raw });
+      const ammoPct = Number($('c-ammo').value || 0);
+      const totalMult = (1 + bonusPct / 100) * (1 + ammoPct / 100);
+
+      const normalHit = totalRawAtk * totalMult;
+      const critHit = normalHit * critMult;
+      const missHit = normalHit * 0.5;
+      const avgHit = precision * ((1 - critProb) * normalHit + critProb * critHit) + (1 - precision) * missHit;
+
+      const hits = Math.max(1, Number($('c-hits').value || 1));
+      const totalDmg = avgHit * hits;
+
+      const costPerHit = Number($('c-ammo-cost').value || 0) + Number($('c-wear-cost').value || 0);
+      const dmgPerGold = costPerHit > 0 ? (avgHit / costPerHit) : avgHit;
+
+      if (overrideAtk === null) {
+        state.lastCombat = { normalHit, critHit, avgHit, totalDmg, dmgPerGold, bonusPct };
+        $('combat-total-bonus-pct').textContent = bonusPct;
+        $('res-normal-hit').textContent = Math.round(normalHit).toLocaleString();
+        $('res-crit-hit').textContent = Math.round(critHit).toLocaleString();
+        $('res-avg-hit').textContent = Math.round(avgHit).toLocaleString();
+        $('res-total-dmg').textContent = Math.round(totalDmg).toLocaleString();
+        $('res-dmg-per-gold').textContent = `${Math.round(dmgPerGold).toLocaleString()} DMG / $1`;
+        $('kpi-hit-val').textContent = Math.round(avgHit).toLocaleString();
       }
 
-      const matches = await resolveUsersFromSearch(searchRes, raw);
-      state.searchMatches = matches;
-
-      if (matches.length > 0) {
-        status.classList.add('hidden');
-        resultsBox.classList.remove('hidden');
-        document.getElementById('search-results-count').textContent = `Found ${matches.length} matching commander(s) for "${raw}"`;
-
-        resultsList.innerHTML = matches.map((acc, idx) => `
-          <button onclick="selectSearchCandidate(${idx})" class="text-left p-3 rounded-xl bg-obsidian hover:bg-steel/70 border border-slate-700/80 hover:border-emerald/60 transition flex items-center justify-between gap-2.5">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-crimson to-amber-500 flex items-center justify-center font-extrabold text-xs text-white shrink-0">
-                ${acc.name.slice(0, 2).toUpperCase()}
-              </div>
-              <div class="min-w-0">
-                <div class="text-xs font-extrabold text-white truncate">${acc.name}</div>
-                <div class="text-[10px] font-mono text-slate-400 truncate">Lv.${acc.lv} • P${acc.prestige} • ${acc.country}</div>
-              </div>
-            </div>
-            <span class="text-[10px] font-mono px-2 py-1 rounded bg-emerald/15 text-emerald font-bold shrink-0">Load</span>
-          </button>
-        `).join('');
-
-        const exactIdx = matches.findIndex(m => m.name.toLowerCase() === raw.toLowerCase());
-        if (exactIdx !== -1) {
-          selectSearchCandidate(exactIdx);
-        } else if (matches.length === 1) {
-          selectSearchCandidate(0);
-        }
-        return;
-      }
-
-      resultsBox.classList.add('hidden');
-      status.className = 'text-[11px] font-mono text-slate-400';
-      status.textContent = `No player found for "${raw}". Check spelling or adjust stats directly.`;
+      return { normalHit, critHit, avgHit, totalDmg, dmgPerGold, bonusPct };
     }
 
-    async function selectSearchCandidate(idx) {
-      const candidate = state.searchMatches[idx];
-      if (!candidate) return;
+    function computeHHPlanner() {
+      const isAr = state.lang === 'ar';
+      const armorSkillLv = state.skills.armor || 0;
+      const skillArmor = armorSkillLv * 6;
+      const pants = Number($('hh-pants').value || 0);
+      const chest = Number($('hh-chest').value || 0);
+      const totalArmor = skillArmor + pants + chest;
 
-      const status = document.getElementById('sync-status');
-      status.classList.remove('hidden');
-      status.className = 'text-[11px] font-mono text-amber-300';
-      status.textContent = `Fetching full skills & equipment for ${candidate.name}...`;
+      const softCap = state.gameConfig?.skills?.armor?.softCap ?? 40;
+      const baseHealthCost = state.gameConfig?.battle?.healthCost ?? 10;
+      const reductionPct = calcArmorReduction(totalArmor, softCap);
+      const hpPerHit = calcHealthPerHit(reductionPct, baseHealthCost);
 
-      let fullUser = null;
-      let currentEquip = null;
-      if (candidate.id) {
-        [fullUser, currentEquip] = await Promise.all([
-          callWarEraAPI('user.getUserById', { userId: candidate.id }),
-          callWarEraAPI('inventory.fetchCurrentEquipment', { userId: candidate.id })
-        ]);
-        if (!fullUser) {
-          fullUser = await callWarEraAPI('user.getUserLite', { userId: candidate.id });
-        }
-      }
+      $('hh-armor-pill').textContent = `${totalArmor} Armor • ${reductionPct}% Red. • ${hpPerHit} HP/hit`;
+      $('hud-armor').textContent = `${totalArmor} (${reductionPct}%)`;
 
-      document.getElementById('search-results-box').classList.add('hidden');
+      const curHp = Number($('hh-cur-hp').value || 0);
+      const maxHp = Math.max(10, Number($('hh-max-hp').value || 100));
+      const curHunger = Number($('hh-cur-hunger').value || 0);
+      const maxHunger = Math.max(1, Number($('hh-max-hunger').value || 4));
+      const divisor = state.gameConfig?.user?.regenDividedBy ?? 10;
 
-      const u = fullUser || candidate;
-      const name = u.username || u.name || candidate.name;
-      const lv = Math.min(50, Math.max(1, u.leveling?.level || u.level || candidate.lv || 1));
-      const pr = u.prestige ?? candidate.prestige ?? 0;
-      const comp = u.skills?.companies?.total ?? u.companiesCount ?? candidate.companies ?? 0;
-      const maxHp = u.skills?.health?.total ?? 100;
-      const maxHunger = u.skills?.hunger?.total ?? 100;
+      $('hud-hp').textContent = `${curHp.toFixed(1)} / ${maxHp}`;
+      $('hud-hunger').textContent = `${curHunger.toFixed(1)} / ${maxHunger}`;
 
-      document.getElementById('qe-name').value = name;
-      document.getElementById('qe-lv').value = lv;
-      document.getElementById('qe-pr').value = pr;
-      document.getElementById('qe-comp').value = Math.min(13, comp);
-      document.getElementById('qe-maxhp').value = maxHp;
-      document.getElementById('qe-maxhunger').value = maxHunger;
+      // Readiness %
+      const readinessPct = Math.min(100, Math.round(((curHp / maxHp) * 0.7 + (curHunger / maxHunger) * 0.3) * 100));
+      $('kpi-readiness-val').textContent = `${readinessPct}%`;
+      $('kpi-readiness-note').textContent = readinessPct >= 85
+        ? (isAr ? 'جاهز للاقتحام الكامل' : 'Ready for full assault')
+        : (isAr ? 'يحتاج استشفاء أو طعام' : 'Needs regen or food');
 
-      // Sync live skill levels if returned by user.getUserById
-      if (u.skills) {
-        if (u.skills.attack?.level !== undefined) document.getElementById('inp-atk').value = Math.min(20, u.skills.attack.level);
-        if (u.skills.precision?.level !== undefined) document.getElementById('inp-prec').value = Math.min(20, u.skills.precision.level);
-        if (u.skills.criticalChance?.level !== undefined) document.getElementById('inp-critc').value = Math.min(20, u.skills.criticalChance.level);
-        if (u.skills.criticalDamages?.level !== undefined) document.getElementById('inp-critd').value = Math.min(20, u.skills.criticalDamages.level);
-        if (u.skills.armor?.level !== undefined) document.getElementById('inp-armor').value = Math.min(20, u.skills.armor.level);
-        if (u.skills.dodge?.level !== undefined) document.getElementById('inp-dodge').value = Math.min(20, u.skills.dodge.level);
-      }
+      const dateVal = $('hh-target-date').value;
+      const hourVal = $('hh-target-hour').value || '12';
+      const targetTs = Date.parse(`${dateVal}T${hourVal}:00:00`);
+      const now = Date.now();
+      const nextRegen = state.nextRegenAt ?? ((Math.floor(now / HOUR_MS) + 1) * HOUR_MS);
+      const ticks = getTicksBetween(now, targetTs, nextRegen);
 
-      // Sync equipped weapon & ammo if returned
-      if (currentEquip?.weapon?.code) {
-        const wFound = WEAPONS.find(w => w.code === currentEquip.weapon.code);
-        if (wFound) {
-          state.weaponTier = wFound.tier;
-          renderArmory();
-        }
-      }
-      if (currentEquip?.ammo && ['none', 'lightAmmo', 'ammo', 'heavyAmmo'].includes(currentEquip.ammo)) {
-        document.getElementById('inp-ammo').value = currentEquip.ammo;
-      }
+      const foodKey = $('hh-food-type').value;
+      const foodPct = foodKey === 'none'
+        ? 0
+        : (state.gameConfig?.items?.[foodKey]?.flatStats?.healthRegenPercent ?? (foodKey === 'bread' ? 10 : foodKey === 'steak' ? 15 : 20));
+      const foodHeal = (maxHp * foodPct) / 100;
 
-      applyDirectControls();
-      updateHeaderDisplay(name, lv, pr, Math.min(13, comp), maxHp, maxHunger, true);
-
-      status.className = 'text-[11px] font-mono text-emerald';
-      status.textContent = `✅ Synced live profile, skills & bars for ${name} (Lv.${lv} | Max HP: ${maxHp} | Max Hunger: ${maxHunger})`;
-    }
-
-    function getSkillStatValue(skillKey, level, fallbackPerLevel, baseZero = 0) {
-      const table = state.runtimeConfig.skillLevels?.[skillKey];
-      if (table && table[String(level)] !== undefined) {
-        return Number(table[String(level)]);
-      }
-      return baseZero + (level * fallbackPerLevel);
-    }
-
-    /**
-     * OFFICIAL WARERA COMBAT & SESSION PROJECTION ENGINE
-     * Exact match with WarEra server formulas (formula.ts + liveProjection.ts + gameConfig.ts)
-     */
-    function computeCombatScenario(overrideWeaponTier = null, overrideAmmoType = null) {
-      const wTier = overrideWeaponTier || state.weaponTier;
-      const w = WEAPONS[wTier - 1];
-      const rules = state.runtimeConfig.combatRules;
-
-      const level = +document.getElementById('qe-lv').value || 1;
-      const prestige = +document.getElementById('qe-pr').value || 0;
-      const maxHp = +document.getElementById('qe-maxhp').value || 100;
-      const maxHunger = +document.getElementById('qe-maxhunger').value || 100;
-
-      const atkLvl = +document.getElementById('inp-atk').value;
-      const precLvl = +document.getElementById('inp-prec').value;
-      const critcLvl = +document.getElementById('inp-critc').value;
-      const critdLvl = +document.getElementById('inp-critd').value;
-      const armorLvl = +document.getElementById('inp-armor').value;
-      const dodgeLvl = +document.getElementById('inp-dodge').value;
-
-      // 1. Base skill values (uses live gameConfig skill tables if available, else calibrated fallback)
-      const atkSkillVal = getSkillStatValue('attack', atkLvl, 20, 100);
-      const precSkillVal = getSkillStatValue('precision', precLvl, 5, 50);
-      const critcSkillVal = getSkillStatValue('criticalChance', critcLvl, 4, 10);
-      const critdSkillVal = getSkillStatValue('criticalDamages', critdLvl, 15, 50);
-      const armorSkillVal = getSkillStatValue('armor', armorLvl, 4, 0);
-      const dodgeSkillVal = getSkillStatValue('dodge', dodgeLvl, 4, 0);
-
-      // 2. Equipment slot bonuses (Helmet->CritDmg, Chest->Armor, Boots->Dodge, Gloves->Precision)
-      const helmCritDmg = ARMOR_SLOTS[0].bonus[state.armor.helmet - 1];
-      const chestArmor = ARMOR_SLOTS[1].bonus[state.armor.chest - 1];
-      const bootsDodge = ARMOR_SLOTS[2].bonus[state.armor.boots - 1];
-      const glovesPrec = ARMOR_SLOTS[3].bonus[state.armor.gloves - 1];
-
-      // 3. Precision & Crit Chance Cap (100%) + Official Overflow Conversion (+4 per point > 100%)
-      const precisionRaw = precSkillVal + glovesPrec;
-      const precisionPct = clampPercent(precisionRaw);
-      const precisionOverflowPts = Math.max(0, precisionRaw - 100);
-      const overflowAttackBonus = precisionOverflowPts * rules.precisionOverflowValue;
-
-      const critChanceRaw = critcSkillVal;
-      const critChancePct = clampPercent(critChanceRaw);
-      const critOverflowPts = Math.max(0, critChanceRaw - 100);
-      const overflowCritDmgBonus = critOverflowPts * rules.criticalChanceOverflowValue;
-
-      const finalCritDamagePct = critdSkillVal + helmCritDmg + overflowCritDmgBonus;
-
-      // 4. Official Diminishing Returns Soft Cap for Armor & Dodge: (Raw * 100) / (Raw + SoftCap)
-      const armorRaw = armorSkillVal + chestArmor;
-      const dodgeRaw = dodgeSkillVal + bootsDodge;
-      const armorPct = clampPercent(applySoftCap(armorRaw, rules.armorSoftCap));
-      const dodgePct = clampPercent(applySoftCap(dodgeRaw, rules.dodgeSoftCap));
-
-      // 5. Attack Modifiers (Ammo: 0% / 10% / 20% / 40%, Pill: +60%, Battle Bonus: +20%)
-      const ammoType = overrideAmmoType || document.getElementById('inp-ammo').value;
-      const ammoBonusPct = OFFICIAL_CONSTANTS.AMMO_BONUS_PCT[ammoType] ?? 0;
-      const pillBonusPct = document.getElementById('chk-pill').checked ? state.runtimeConfig.pillAttackBonusPct : 0;
-      const battleBonusPct = document.getElementById('chk-ally').checked ? 20 : 0;
-
-      const attackPreAmmo = atkSkillVal + w.dmg + overflowAttackBonus;
-      const attackWithModifiers = attackPreAmmo * (1 + pillBonusPct / 100) * (1 + ammoBonusPct / 100);
-      const battleMultiplier = 1 + battleBonusPct / 100;
-
-      // 6. Official Hit Outcomes (Miss = 0.5x, Normal = 1.0x, Crit = 1 + CritDmg%)
-      const hitChance = precisionPct / 100;
-      const missChance = 1 - hitChance;
-      const critChance = critChancePct / 100;
-
-      const normalHit = attackWithModifiers * battleMultiplier;
-      const critHit = attackWithModifiers * (1 + finalCritDamagePct / 100) * battleMultiplier;
-      const missHit = attackWithModifiers * OFFICIAL_CONSTANTS.MISS_DAMAGE_MULTIPLIER * battleMultiplier;
-
-      const expectedDamagePerAttempt =
-        (missChance * missHit) +
-        (hitChance * (1 - critChance) * normalHit) +
-        (hitChance * critChance * critHit);
-
-      // 7. Official HP Loss per Attempt & Dynamic Attempts Calculation
-      const dodgeChance = dodgePct / 100;
-      const armorReducedCost = Math.max(1, OFFICIAL_CONSTANTS.BASE_HP_COST_PER_ATTEMPT * (1 - armorPct / 100));
-      const expectedHpLossPerAttempt = (1 - dodgeChance) * armorReducedCost;
-
-      // Duration: 8H Sustained includes 8 hourly ticks of 10% regen; Burst uses current full bars (0h regen)
-      const durationHours = state.mode === '8h' ? 8 : 0;
-      const foodType = document.getElementById('inp-food').value;
-      const foodRestoreRatio = (state.runtimeConfig.foodRestorePct[foodType] ?? 0) / 100;
-
-      const availableHp = maxHp + (maxHp * OFFICIAL_CONSTANTS.HOURLY_REGEN_RATE * durationHours);
-      const availableHunger = maxHunger + (maxHunger * OFFICIAL_CONSTANTS.HOURLY_REGEN_RATE * durationHours);
-      const foodUnitsConsumed = foodType === 'none' ? 0 : Math.floor(availableHunger);
-      const recoverableHpFromFood = foodUnitsConsumed * (maxHp * foodRestoreRatio);
-      const effectiveHealthPool = availableHp + recoverableHpFromFood;
-
-      const hits = (effectiveHealthPool >= OFFICIAL_CONSTANTS.MINIMUM_BATTLE_HEALTH && expectedHpLossPerAttempt > 0)
-        ? Math.floor(effectiveHealthPool / expectedHpLossPerAttempt)
-        : 0;
-
-      const totalDmg = Math.round(hits * expectedDamagePerAttempt);
-
-      // 8. Financial Cashflow (Factories + v0.27 Loot EV + Bounty - Ammo - Food - Durability Wear - Pill)
-      const factories = +document.getElementById('inp-factories').value || 0;
-      const factoryAvg = +document.getElementById('inp-factory-profit').value || 0;
-      const factoryIncome = factories * factoryAvg;
-
-      const strat = document.getElementById('inp-case-strat').value;
-      const baseCase = state.market.caseBase;
-      const caseVal = strat === 'sell' ? baseCase * 0.92 : (strat === 'open_sell' ? baseCase * 1.09 : baseCase);
-      const estCases = totalDmg / 50000;
-      const lootEV = estCases * caseVal;
-
-      const bountyRate = +document.getElementById('inp-bounty').value || 0;
-      const bountyIncome = (totalDmg / 1000) * bountyRate;
-
-      const ammoUnitCost = ammoType === 'none' ? 0 : (ammoType === 'lightAmmo' ? state.market.ammoLight : (ammoType === 'ammo' ? state.market.ammoStd : state.market.ammoHeavy));
-      const foodUnitCost = foodType === 'none' ? 0 : (foodType === 'bread' ? state.market.foodBread : (foodType === 'steak' ? state.market.foodSteak : state.market.foodFish));
-
-      const consumablesCost = (hits * ammoUnitCost) + (foodUnitsConsumed * foodUnitCost);
-
-      // Official Wear Rates: Weapon wears 1.0 per hit; Armor wears (1 - dodgeChance) per hit
-      const armorWearRate = 1 - dodgeChance;
-      const armorBaseWearCost = 0.65;
-      const gearWearCost = hits * ((w.wearCost * 1.0) + (armorBaseWearCost * armorWearRate));
-      const wearAndPillCost = gearWearCost + (pillBonusPct > 0 ? state.market.pill : 0);
-
-      const grossRev = factoryIncome + lootEV + bountyIncome;
-      const totalBurn = consumablesCost + wearAndPillCost;
-      const netPnL = grossRev - totalBurn;
-
-      return {
-        w, level, prestige, ammoType,
-        normalHit: Math.round(normalHit),
-        critHit: Math.round(critHit),
-        missHit: Math.round(missHit),
-        precisionPct, critChancePct, finalCritDamagePct,
-        armorPct, dodgePct,
-        expectedDamagePerAttempt, expectedHpLossPerAttempt,
-        effectiveHealthPool: Math.round(effectiveHealthPool),
-        hits, totalDmg,
-        factoryIncome, estCases, lootEV, bountyIncome,
-        consumablesCost, wearAndPillCost,
-        grossRev, totalBurn, netPnL
+      const simState = {
+        maximum: maxHp,
+        regen: maxHp / divisor,
+        hunger: curHunger,
+        hungerMax: maxHunger,
+        hungerRegen: maxHunger / divisor
       };
+
+      // Binary search minimum required HP
+      let low = 0;
+      let high = maxHp;
+      for (let i = 0; i < 45; i++) {
+        const mid = (low + high) / 2;
+        const out = simulateHH(mid, simState, ticks, foodHeal);
+        const isFull = out.health >= maxHp - 1e-8 && (foodHeal === 0 || out.hunger >= maxHunger - 1e-8);
+        if (isFull) high = mid;
+        else low = mid;
+      }
+
+      const rawMinimum = Math.min(maxHp, Math.max(0, Math.ceil(high * 10 - 1e-7) / 10));
+      const stopHp = curHp >= rawMinimum
+        ? calcStoppingHealth(curHp, rawMinimum, hpPerHit, baseHealthCost)
+        : rawMinimum;
+
+      const finalSim = simulateHH(Math.min(curHp, stopHp), simState, ticks, foodHeal);
+      const spendableHp = Math.max(0, curHp - stopHp);
+      const safeHits = curHp >= baseHealthCost ? Math.floor(spendableHp / hpPerHit) : 0;
+
+      state.lastHH = {
+        stopHp,
+        safeHits,
+        portions: finalSim.used,
+        hpPerHit,
+        totalArmor,
+        reductionPct
+      };
+
+      $('hh-stop-hp').textContent = stopHp.toFixed(1);
+      $('hh-stop-max').textContent = maxHp;
+      $('kpi-safehits-val').textContent = safeHits;
+
+      $('hh-action-badge').textContent = isAr
+        ? `${safeHits} ضربات متاحة الآن`
+        : `${safeHits} safe hits available now`;
+
+      $('hh-food-portions').textContent = foodHeal > 0
+        ? (isAr ? `الكمية المطلوبة: ${finalSim.used} قطعة طعام` : `Food needed: ${finalSim.used} portions`)
+        : (isAr ? 'خطة بدون طعام' : 'No-food plan');
+
+      const reservePct = Math.min(100, (stopHp / maxHp) * 100);
+      const spendPct = Math.min(100 - reservePct, (spendableHp / maxHp) * 100);
+      $('hh-bar-reserve').style.width = `${reservePct}%`;
+      $('hh-bar-spendable').style.width = `${spendPct}%`;
+
+      if (ticks.length * simState.regen >= maxHp) {
+        $('hh-summary-text').textContent = isAr
+          ? `الوقت المتبقي (${ticks.length} ساعات استشفاء) يكفي لملء صحتك بالكامل تلقائياً حتى من 0 HP — لا حاجة لحجز صحة أو طعام.`
+          : `Remaining time (${ticks.length} regen ticks) refills Health completely even from 0 HP — no reserve or food required.`;
+      } else if (curHp < rawMinimum) {
+        $('hh-summary-text').textContent = isAr
+          ? `⚠️ توقف عن الضرب فوراً! صحتك الحالية أقل من الحد الآمن (${rawMinimum.toFixed(1)} HP). ستصل صحتك إلى ${finalSim.health.toFixed(1)} / ${maxHp} عند موعد المعركة.`
+          : `⚠️ Stop shooting now! Current HP is below safe reserve (${rawMinimum.toFixed(1)} HP). You will reach ${finalSim.health.toFixed(1)} / ${maxHp} by battle time.`;
+      } else {
+        $('hh-summary-text').textContent = isAr
+          ? `✅ يمكنك تنفيذ ${safeHits} ضربة الآن حتى تصل صحتك إلى ${stopHp.toFixed(1)} HP${finalSim.used ? ` ثم أكل ${finalSim.used} قطعة طعام` : ''}، وستدخل المعركة بصحة وجوع 100%.`
+          : `✅ Deal ${safeHits} hits down to ${stopHp.toFixed(1)} HP${finalSim.used ? ` then eat ${finalSim.used} portions` : ''}, and enter battle at 100% Health & Hunger.`;
+      }
     }
 
-    function renderArmory() {
-      const w = WEAPONS[state.weaponTier - 1];
-      const grid = document.getElementById('armory-grid');
-      let html = `
-        <div class="sm:col-span-2 p-3.5 rounded-xl bg-obsidian border border-slate-700/80 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center border shrink-0" style="border-color:${w.color}44; background:${w.color}15">
-              <svg class="w-8 h-8" viewBox="0 0 24 24" fill="${w.color}">${w.svg}</svg>
-            </div>
-            <div>
-              <div class="text-xs font-extrabold" style="color:${w.color}">${w.name}</div>
-              <div class="text-[11px] text-slate-400 font-mono">Base ATK: +${w.dmg} • Wear: 1.0/hit (${w.wearCost.toFixed(2)}€)</div>
-            </div>
-          </div>
-          <select onchange="state.weaponTier=+this.value; renderArmory(); recalcAll();" class="px-3 py-1.5 rounded-lg bg-carbon border border-slate-700 text-xs font-bold text-white">
-            ${WEAPONS.map(item => `<option value="${item.tier}" ${item.tier === state.weaponTier ? 'selected' : ''}>${item.name}</option>`).join('')}
-          </select>
-        </div>
-      `;
+    // =========================================================================
+    // 6. ONE-CLICK AUTO-BUILD & FACTORY ECONOMY
+    // =========================================================================
+    function renderSkillCards() {
+      const grid = $('skills-grid');
+      const isAr = state.lang === 'ar';
+      let spent = 0;
 
-      ARMOR_SLOTS.forEach(slot => {
-        const idx = state.armor[slot.id] - 1;
-        html += `
-          <div class="p-3 rounded-xl bg-obsidian border border-slate-800 flex items-center justify-between gap-2">
+      grid.innerHTML = SKILL_CATALOG.map(sk => {
+        const lv = state.skills[sk.key] || 0;
+        spent += lv;
+        const val = sk.base + lv * sk.perLv;
+        const badgeColor = sk.cat === 'combat' ? 'text-emeraldHud' : sk.cat === 'loot' ? 'text-goldHud' : 'text-cyanHud';
+
+        return `
+          <div class="p-3 rounded-xl bg-obsidian border border-line flex items-center justify-between gap-2">
             <div>
-              <div class="text-[11px] text-slate-400">${slot.label}</div>
-              <div class="text-xs font-bold text-slate-200">${slot.tiers[idx]} <span class="text-amber-400 font-mono">(+${slot.bonus[idx]})</span></div>
+              <div class="text-xs font-extrabold text-white">${isAr ? sk.ar : sk.en}</div>
+              <div class="text-[11px] ${badgeColor} font-bold mt-0.5" dir="ltr">Lv.${lv}/${sk.max} • ${val}${sk.unit}</div>
             </div>
-            <select onchange="state.armor['${slot.id}']=+this.value; renderArmory(); recalcAll();" class="px-2 py-1 rounded-lg bg-carbon border border-slate-700 text-xs text-white">
-              ${slot.tiers.map((t, i) => `<option value="${i+1}" ${i+1 === state.armor[slot.id] ? 'selected' : ''}>T${i+1}</option>`).join('')}
-            </select>
+            <div class="flex items-center gap-1.5" dir="ltr">
+              <button type="button" data-skill-step="${sk.key}" data-delta="-1" class="w-7 h-7 rounded-lg bg-panel hover:bg-panelLight border border-line text-white font-bold">−</button>
+              <span class="w-5 text-center text-xs font-extrabold text-white">${lv}</span>
+              <button type="button" data-skill-step="${sk.key}" data-delta="1" class="w-7 h-7 rounded-lg bg-panel hover:bg-panelLight border border-line text-emeraldHud font-bold">+</button>
+            </div>
           </div>
         `;
-      });
-      grid.innerHTML = html;
+      }).join('');
+
+      $('ab-spent-sp').textContent = spent;
     }
 
-    function setCombatMode(m) {
-      state.mode = m;
-      document.getElementById('mode-8h').className = m === '8h' ? 'px-3 py-1 rounded-lg text-xs font-bold bg-crimson text-white' : 'px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white';
-      document.getElementById('mode-burst').className = m === 'burst' ? 'px-3 py-1 rounded-lg text-xs font-bold bg-crimson text-white' : 'px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white';
+    function runAutoBuildOptimizer() {
+      let sp = Math.max(0, Math.min(550, Math.floor(Number($('ab-total-sp').value || 0))));
+      const goal = $('ab-goal').value;
+
+      // Reset all skills
+      SKILL_CATALOG.forEach(s => { state.skills[s.key] = 0; });
+
+      const priorityMap = {
+        combat: ['attack', 'critMult', 'critChance', 'precision', 'health', 'armor'],
+        hybrid: ['lootChance', 'attack', 'critMult', 'critChance', 'precision', 'health'],
+        economy: ['production', 'management', 'health', 'lootChance', 'attack']
+      };
+
+      const order = priorityMap[goal] || priorityMap.combat;
+      // Triangular cost per level: level 1 costs 1 SP, level 2 costs 2 SP, etc.
+      let progress = true;
+      while (sp > 0 && progress) {
+        progress = false;
+        for (const key of order) {
+          const curLv = state.skills[key];
+          const nextCost = curLv + 1;
+          if (curLv < 10 && sp >= nextCost) {
+            state.skills[key] = curLv + 1;
+            sp -= nextCost;
+            progress = true;
+          }
+        }
+      }
+
+      renderSkillCards();
       recalcAll();
+    }
+
+    function computeFactoryProfit() {
+      const sell = Number($('fac-sell-price').value || 0);
+      const raw = Number($('fac-raw-cost').value || 0);
+      const ppUnits = Number($('fac-pp-units').value || 0);
+      const aeUnits = Number($('fac-ae-units').value || 0);
+      const taxPct = Number($('fac-tax').value || 0);
+      const regionBonusPct = Number($('fac-region').value || 0);
+
+      const prodSkillBonus = (state.skills.production || 0) * 10;
+      const mgmtBonus = (state.skills.management || 0) * 5;
+      const totalMultiplier = 1 + (regionBonusPct + prodSkillBonus + mgmtBonus) / 100;
+
+      const totalUnits = (ppUnits + aeUnits) * totalMultiplier;
+      const grossRevenue = totalUnits * sell;
+      const totalRawCost = totalUnits * raw;
+      const taxPaid = grossRevenue * (taxPct / 100);
+      const netDaily = grossRevenue - totalRawCost - taxPaid;
+
+      state.lastFactory = { netDaily, totalUnits, taxPaid };
+
+      $('fac-res-units').textContent = totalUnits.toFixed(1);
+      $('fac-res-tax').textContent = taxPaid.toFixed(2);
+      $('fac-res-net').textContent = `${netDaily >= 0 ? '+' : ''}${netDaily.toFixed(2)}`;
+      $('factory-net-badge').textContent = `Net: ${netDaily >= 0 ? '+' : ''}${netDaily.toFixed(2)} / day`;
+      $('kpi-factory-val').textContent = `${netDaily >= 0 ? '+' : ''}${netDaily.toFixed(2)}`;
+    }
+
+    // =========================================================================
+    // 7. MARKET RNG WEAPON COMPARATOR & BUDGET OPTIMIZER
+    // =========================================================================
+    function renderWeaponOffers() {
+      const container = $('weapon-offers-list');
+      const isAr = state.lang === 'ar';
+
+      const evaluated = state.weaponOffers.map(offer => {
+        const sim = computeCombatDamage(Number(offer.atk || 0), Number(offer.crit || 0));
+        const durFactor = Math.max(0.1, Math.min(1, Number(offer.dur || 100) / 100));
+        const price = Math.max(0.01, Number(offer.price || 1));
+        const dmgPerGold = (sim.avgHit * durFactor) / price;
+        return { ...offer, avgHit: sim.avgHit, dmgPerGold };
+      });
+
+      const bestScore = evaluated.length ? Math.max(...evaluated.map(e => e.dmgPerGold)) : 0;
+
+      container.innerHTML = evaluated.map(item => {
+        const isBest = bestScore > 0 && Math.abs(item.dmgPerGold - bestScore) < 1e-6;
+        return `
+          <div class="p-3.5 rounded-2xl bg-obsidian border ${isBest ? 'border-emeraldHud shadow-md shadow-emerald-400/10' : 'border-line'} space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <input type="text" data-offer-id="${item.id}" data-field="name" value="${item.name}" class="bg-panel border border-line rounded-lg px-2.5 py-1 text-xs font-extrabold text-white w-40" />
+                ${isBest ? `<span class="px-2.5 py-0.5 rounded-full bg-emeraldHud text-obsidian text-[11px] font-extrabold">${isAr ? '🏆 أفضل صفقة' : '🏆 BEST DEAL'}</span>` : ''}
+              </div>
+              <div class="flex items-center gap-3 text-xs" dir="ltr">
+                <span class="text-slate-300">Avg Hit: <strong class="text-white">${Math.round(item.avgHit).toLocaleString()}</strong></span>
+                <span class="text-emeraldHud font-extrabold">${item.dmgPerGold.toFixed(2)} DMG / $1</span>
+                <button type="button" data-del-offer="${item.id}" class="text-rose-400 hover:text-rose-300 font-bold px-1.5">✕</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs" dir="ltr">
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-0.5">Attack (ATK)</label>
+                <input type="number" data-offer-id="${item.id}" data-field="atk" value="${item.atk}" min="0" class="w-full bg-panel border border-line rounded-lg px-2.5 py-1.5 font-bold text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-0.5">Crit %</label>
+                <input type="number" data-offer-id="${item.id}" data-field="crit" value="${item.crit}" min="0" max="100" step="0.5" class="w-full bg-panel border border-line rounded-lg px-2.5 py-1.5 font-bold text-goldHud" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-0.5">Durability %</label>
+                <input type="number" data-offer-id="${item.id}" data-field="dur" value="${item.dur}" min="1" max="100" class="w-full bg-panel border border-line rounded-lg px-2.5 py-1.5 font-bold text-cyanHud" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-0.5">Price (Tax Incl.)</label>
+                <input type="number" data-offer-id="${item.id}" data-field="price" value="${item.price}" min="0.01" step="0.01" class="w-full bg-panel border border-line rounded-lg px-2.5 py-1.5 font-bold text-emeraldHud" />
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function computeBattleBudget() {
+      const isAr = state.lang === 'ar';
+      const gold = Math.max(0, Number($('bud-gold').value || 0));
+      const foodPrice = Math.max(0, Number($('bud-food-price').value || 0));
+      const ammoPrice = Math.max(0, Number($('bud-ammo-price').value || 0));
+
+      // Each 10 hits requires ~1 food portion (15% HP) + 10 ammo rounds
+      const costPer10Hits = ammoPrice * 10 + foodPrice;
+      const fundedHits = costPer10Hits > 0 ? Math.floor((gold / costPer10Hits) * 10) : 0;
+      const foodNeeded = Math.ceil(fundedHits / 10);
+      const expectedDmg = fundedHits * (state.lastCombat.avgHit || 0);
+
+      $('bud-res-hits').textContent = `${fundedHits.toLocaleString()} Hits`;
+      $('bud-res-supplies').textContent = isAr
+        ? `${fundedHits} طلقة ذخيرة + ${foodNeeded} قطعة أكل`
+        : `${fundedHits} Ammo + ${foodNeeded} Food rations`;
+      $('bud-res-dmg').textContent = `${Math.round(expectedDmg).toLocaleString()} DMG`;
+    }
+
+    // =========================================================================
+    // 8. HYBRID TACTICAL AI ADVISOR (BUILT-IN ZERO-KEY + OPTIONAL GEMINI)
+    // =========================================================================
+    function generateDeterministicAdvice(promptKeyOrText) {
+      const isAr = state.lang === 'ar';
+      const q = promptKeyOrText.toLowerCase();
+      const name = state.player.username || (isAr ? 'يا قائد' : 'Commander');
+      const bestWeapon = [...state.weaponOffers].sort((a, b) => (b.atk / Math.max(1, b.price)) - (a.atk / Math.max(1, a.price)))[0];
+
+      if (q === 'build' || q.includes('بيلد') || q.includes('تجميعة') || q.includes('build') || q.includes('skill')) {
+        return isAr
+          ? `📊 **تحليل التجميعة لـ ${name}:**\n• ضررك الفعلي الحالي: **${Math.round(state.lastCombat.avgHit).toLocaleString()}** للضربة ببونص إجمالي **+${state.lastCombat.bonusPct}%**.\n• إذا كنت تستعد لحرب حاسمة: ارفع **Attack** و **Crit Multiplier** أولاً لأن مضاعف الكريت يضاعف تأثير بونصات الوحدة (+15% و +20%).\n• إذا كنت تهدف للربح اليومي: ارفع **Loot Chance** مع **Attack** لجمع الصناديق أثناء القتال، أو **Production** لزيادة إنتاج مصنعك اليومي (**${state.lastFactory.totalUnits.toFixed(1)}** وحدة).`
+          : `📊 **Build Analysis for ${name}:**\n• Current Avg Hit: **${Math.round(state.lastCombat.avgHit).toLocaleString()}** with **+${state.lastCombat.bonusPct}%** total bonuses.\n• For decisive battles: prioritize **Attack** and **Crit Multiplier** to scale MU Order (+15%) & MU HQ (+20%) bonuses.\n• For daily profit: pair **Loot Chance** with **Attack**, or boost **Production** to expand your **${state.lastFactory.totalUnits.toFixed(1)}** daily factory units.`;
+      }
+
+      if (q === 'hh' || q.includes('توقف') || q.includes('صحة') || q.includes('أكل') || q.includes('stop') || q.includes('health')) {
+        return isAr
+          ? `❤️ **خطة الصحة والجوع (H&H) لـ ${name}:**\n• درعك الإجمالي: **${state.lastHH.totalArmor}** (تقليل ضرر **${state.lastHH.reductionPct}%** — تستهلك **${state.lastHH.hpPerHit} HP** لكل ضربة).\n• حد التوقف الآمن الآن: **${state.lastHH.stopHp.toFixed(1)} HP** (يمكنك تنفيذ **${state.lastHH.safeHits}** ضربة حالياً).\n• الكمية المطلوبة من الطعام للاستشفاء الكامل قبل المعركة: **${state.lastHH.portions}** قطعة.`
+          : `❤️ **H&H Battle Plan for ${name}:**\n• Total Armor: **${state.lastHH.totalArmor}** (**${state.lastHH.reductionPct}%** reduction — **${state.lastHH.hpPerHit} HP/hit**).\n• Safe Stopping Point: **${state.lastHH.stopHp.toFixed(1)} HP** (**${state.lastHH.safeHits}** safe hits available now).\n• Required food portions for 100% readiness: **${state.lastHH.portions}**.`;
+      }
+
+      if (q === 'market' || q.includes('سلاح') || q.includes('سوق') || q.includes('weapon') || q.includes('market')) {
+        const wText = bestWeapon
+          ? `${bestWeapon.name} (ATK ${bestWeapon.atk} / Crit ${bestWeapon.crit}% — السعر ${bestWeapon.price})`
+          : '---';
+        return isAr
+          ? `🎯 **تحليل صفقات السوق:**\n• أفضل قطعة مسجلة حالياً من حيث الكفاءة مقابل السعر هي: **${wText}**.\n• نصيحة تكتيكية: لا تنظر للهجوم (ATK) وحده؛ كل +2% في فرصة الكريت تعادل تقريباً +4 إلى +6 نقاط هجوم إضافية عند تفعيل بونصات الوحدة والحلف.`
+          : `🎯 **Market Deal Evaluation:**\n• Top value listing currently tracked: **${wText}**.\n• Tactical tip: Don't evaluate ATK alone—every +2% Crit Chance equals roughly +4 to +6 raw ATK once MU & Alliance multipliers are active.`;
+      }
+
+      return isAr
+        ? `🏭 **مقارنة العائد الاقتصادي والعسكري (ROI) لـ ${name}:**\n• صافي ربح مصنعك الحالي: **${state.lastFactory.netDaily >= 0 ? '+' : ''}${state.lastFactory.netDaily.toFixed(2)} ذهب/يوم** (بعد خصم الضرائب ${state.lastFactory.taxPaid.toFixed(2)}).\n• متوسط ضررك في المعركة: **${Math.round(state.lastCombat.avgHit).toLocaleString()}** للضربة.\n• **التوصية:** إذا كان صافي ربح مصنعك اليومي يغطي تكلفة ذخيرتك وطعامك، استثمر في تطوير **المحرك الآلي (AE)** لتمويل معاركك القادمة ذاتياً دون استنزاف رصيدك.`
+        : `🏭 **ROI & Strategic Summary for ${name}:**\n• Current Net Factory Profit: **${state.lastFactory.netDaily >= 0 ? '+' : ''}${state.lastFactory.netDaily.toFixed(2)} Gold/day** (after ${state.lastFactory.taxPaid.toFixed(2)} tax).\n• Current Avg Hit Damage: **${Math.round(state.lastCombat.avgHit).toLocaleString()}**.\n• **Recommendation:** Prioritize upgrading your **Automated Engine (AE)** until daily passive profit covers your battle ammo & food upkeep.`;
+    }
+
+    async function handleAiQuery(rawText, presetKey = null) {
+      const isAr = state.lang === 'ar';
+      const chatBox = $('ai-chat-box');
+      const userLabel = presetKey
+        ? ($(`[data-ai-prompt="${presetKey}"]`)?.textContent.trim() || rawText)
+        : rawText;
+
+      // Append user message bubble
+      const userBubble = document.createElement('div');
+      userBubble.className = 'p-3 rounded-xl bg-emeraldHud/15 border border-emeraldHud/30 text-white font-semibold ms-6';
+      userBubble.textContent = userLabel;
+      chatBox.appendChild(userBubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      // If Gemini API Key is provided & free-form question asked, call Gemini API with graceful fallback
+      if (state.geminiKey && !presetKey) {
+        const loadingBubble = document.createElement('div');
+        loadingBubble.className = 'p-3 rounded-xl bg-panel border border-line text-cyanHud me-6';
+        loadingBubble.textContent = isAr ? '⏳ جاري التحليل عبر Gemini + بيانات حسابك الحية...' : '⏳ Analyzing via Gemini + Live Stats...';
+        chatBox.appendChild(loadingBubble);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+          const contextSummary = `Game: WarEra.io. Commander: ${state.player.username || 'Guest'}. AvgHit: ${Math.round(state.lastCombat.avgHit)}, Bonus: +${state.lastCombat.bonusPct}%, Armor: ${state.lastHH.totalArmor} (${state.lastHH.reductionPct}% red), SafeHitsNow: ${state.lastHH.safeHits}, StopHP: ${state.lastHH.stopHp}, DailyFactoryNet: ${state.lastFactory.netDaily.toFixed(2)}. Language: ${isAr ? 'Arabic' : 'English'}.`;
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(state.geminiKey)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `You are RAAD Tactical AI for WarEra. Be concise, tactical, and accurate using these live player metrics: ${contextSummary}\nUser Question: ${rawText}` }] }]
+            })
+          });
+          const data = await res.json();
+          const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply) {
+            loadingBubble.className = 'p-3 rounded-xl bg-panel border border-purple-400/35 text-slate-100 whitespace-pre-line leading-relaxed me-6';
+            loadingBubble.textContent = reply;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return;
+          }
+        } catch (_) {
+          loadingBubble.remove();
+        }
+      }
+
+      // Built-in Zero-Key Tactical Intelligence Engine
+      const replyText = generateDeterministicAdvice(presetKey || rawText);
+      const aiBubble = document.createElement('div');
+      aiBubble.className = 'p-3 rounded-xl bg-panel border border-line text-slate-100 whitespace-pre-line leading-relaxed me-6';
+      aiBubble.textContent = replyText;
+      chatBox.appendChild(aiBubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // =========================================================================
+    // 9. NAVIGATION, LANGUAGE, TIMERS & EVENT BINDINGS
+    // =========================================================================
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      const target = $(`tab-${tabName}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.nav === tabName);
+      });
+    }
+
+    function applyLanguage() {
+      const isAr = state.lang === 'ar';
+      document.documentElement.lang = state.lang;
+      document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+      $('lang-toggle-btn').textContent = isAr ? 'EN' : 'عربي';
+
+      const pack = DICT[state.lang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (pack[key]) el.textContent = pack[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        if (pack[key]) el.placeholder = pack[key];
+      });
+
+      if (state.geminiKey) {
+        $('ai-mode-badge').textContent = isAr ? 'Gemini API + المحرك المدمج نشط' : 'Gemini API + Built-in Engine Active';
+      }
+
+      renderSkillCards();
+      renderWeaponOffers();
+      recalcAll();
+    }
+
+    function updateHudRegenCountdown() {
+      const now = Date.now();
+      let next = state.nextRegenAt ?? ((Math.floor(now / HOUR_MS) + 1) * HOUR_MS);
+      if (next <= now) next += (Math.floor((now - next) / HOUR_MS) + 1) * HOUR_MS;
+      const diffSec = Math.max(0, Math.floor((next - now) / 1000));
+      const mins = String(Math.floor(diffSec / 60)).padStart(2, '0');
+      const secs = String(diffSec % 60).padStart(2, '0');
+      $('hud-regen').textContent = `${mins}:${secs}`;
     }
 
     function recalcAll() {
-      const c = computeCombatScenario();
-      state.lastCalc = c;
-
-      document.getElementById('val-atk').textContent = document.getElementById('inp-atk').value;
-      document.getElementById('val-prec').textContent = document.getElementById('inp-prec').value;
-      document.getElementById('val-critc').textContent = document.getElementById('inp-critc').value;
-      document.getElementById('val-critd').textContent = document.getElementById('inp-critd').value;
-      document.getElementById('val-armor').textContent = document.getElementById('inp-armor').value;
-      document.getElementById('val-dodge').textContent = document.getElementById('inp-dodge').value;
-
-      const coveragePct = c.totalBurn > 0 ? Math.round((c.grossRev / c.totalBurn) * 100) : 100;
-
-      document.getElementById('kpi-normal').textContent = c.normalHit.toLocaleString();
-      document.getElementById('kpi-crit').textContent = c.critHit.toLocaleString();
-      document.getElementById('kpi-hit-meta').textContent = `Hit: ${c.precisionPct.toFixed(0)}% • Crit: ${c.critChancePct.toFixed(0)}% (+${c.finalCritDamagePct.toFixed(0)}%)`;
-      document.getElementById('kpi-mode-label').textContent = state.mode === '8h' ? '8H Sustained Damage' : 'Instant E-Burst Damage';
-      document.getElementById('kpi-total-dmg').textContent = c.totalDmg.toLocaleString();
-      document.getElementById('kpi-hits-count').textContent = `${c.hits} Hits • Avg ${Math.round(c.expectedDamagePerAttempt).toLocaleString()} • -${c.expectedHpLossPerAttempt.toFixed(1)} HP/hit`;
-      document.getElementById('kpi-gross-rev').textContent = `+${c.grossRev.toFixed(2)} €`;
-      document.getElementById('kpi-rev-split').textContent = `Factory: ${c.factoryIncome.toFixed(0)}€ + Loot: ${c.lootEV.toFixed(1)}€`;
-
-      const pnlEl = document.getElementById('kpi-net-pnl');
-      const verdEl = document.getElementById('kpi-verdict');
-      pnlEl.textContent = `${c.netPnL >= 0 ? '+' : ''}${c.netPnL.toFixed(2)} €`;
-      pnlEl.className = `text-lg sm:text-2xl font-extrabold tabular mt-1 ${c.netPnL >= 0 ? 'text-emerald' : 'text-red-400'}`;
-      verdEl.textContent = c.netPnL >= 0 ? `PROFITABLE (${coveragePct}% Covered)` : `CASH BLEED (${coveragePct}% Covered)`;
-      verdEl.className = `text-[11px] font-bold mt-1 ${c.netPnL >= 0 ? 'text-emerald' : 'text-red-400'}`;
-
-      document.getElementById('led-factory').textContent = `+${c.factoryIncome.toFixed(2)} €`;
-      document.getElementById('led-loot').textContent = `+${c.lootEV.toFixed(2)} €`;
-      document.getElementById('led-bounty').textContent = `+${c.bountyIncome.toFixed(2)} €`;
-      document.getElementById('led-consumables').textContent = `-${c.consumablesCost.toFixed(2)} €`;
-      document.getElementById('led-wear').textContent = `-${c.wearAndPillCost.toFixed(2)} €`;
-
-      const ledTot = document.getElementById('led-total');
-      ledTot.textContent = `${c.netPnL >= 0 ? '+' : ''}${c.netPnL.toFixed(2)} €`;
-      ledTot.className = c.netPnL >= 0 ? 'text-emerald' : 'text-red-400';
-
-      document.getElementById('hp-pool-est').textContent = `${c.effectiveHealthPool.toLocaleString()} HP Pool`;
-      document.getElementById('armor-dodge-summary').textContent = `Armor: ${c.armorPct.toFixed(1)}% • Dodge: ${c.dodgePct.toFixed(1)}%`;
-      document.getElementById('loot-cases-est').textContent = `~${c.estCases.toFixed(2)} Cases`;
-
-      calcEnergySplit();
-      calcRoadmap();
-      calcMerc();
-      calcGearROI();
+      computeCombatDamage();
+      computeHHPlanner();
+      computeFactoryProfit();
+      renderWeaponOffers();
+      computeBattleBudget();
     }
 
-    function runOptimizer(goal) {
-      const ammos = [
-        { name: 'No Ammo (0%)', val: 'none' },
-        { name: 'Light Ammo (+10%)', val: 'lightAmmo' },
-        { name: 'Ammo (+20%)', val: 'ammo' },
-        { name: 'Heavy Ammo (+40%)', val: 'heavyAmmo' }
-      ];
-      let best = null;
-      WEAPONS.forEach(w => {
-        ammos.forEach(a => {
-          const sim = computeCombatScenario(w.tier, a.val);
-          if (goal === 'zero_loss' && sim.netPnL < 0) return;
-          if (!best || sim.totalDmg > best.sim.totalDmg) {
-            best = { w, a, sim };
-          }
-        });
-      });
+    function initDateHourDefaults() {
+      const future = new Date(Date.now() + 3 * HOUR_MS);
+      const yyyy = future.getFullYear();
+      const mm = String(future.getMonth() + 1).padStart(2, '0');
+      const dd = String(future.getDate()).padStart(2, '0');
+      $('hh-target-date').value = `${yyyy}-${mm}-${dd}`;
 
-      const box = document.getElementById('optimizer-result');
-      if (!best) {
-        const fallbackSim = computeCombatScenario(1, 'none');
-        box.innerHTML = `<span class="text-amber-400 font-bold">Strict Zero-Loss Alert:</span> Even T1 Knife + No Ammo nets <strong class="text-red-400">${fallbackSim.netPnL.toFixed(2)} €</strong> with current factory count.`;
+      const hourSel = $('hh-target-hour');
+      hourSel.innerHTML = '';
+      for (let h = 0; h < 24; h++) {
+        const val = String(h).padStart(2, '0');
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = `${val}:00`;
+        if (h === future.getHours()) opt.selected = true;
+        hourSel.appendChild(opt);
+      }
+    }
+
+    // Event Listeners
+    document.addEventListener('click', (e) => {
+      const navBtn = e.target.closest('[data-nav]');
+      if (navBtn) {
+        switchTab(navBtn.dataset.nav);
         return;
       }
-      box.innerHTML = `
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div class="text-emerald font-extrabold text-sm">Optimal Build: ${best.w.name} + ${best.a.name}</div>
-            <div class="text-slate-400 mt-1">Session Damage: <strong class="text-white">${best.sim.totalDmg.toLocaleString()}</strong> (${best.sim.hits} hits) • Net Cashflow: <strong class="${best.sim.netPnL >= 0 ? 'text-emerald' : 'text-red-400'}">${best.sim.netPnL >= 0 ? '+' : ''}${best.sim.netPnL.toFixed(2)} €</strong></div>
-          </div>
-          <button onclick="state.weaponTier=${best.w.tier}; document.getElementById('inp-ammo').value='${best.a.val}'; renderArmory(); recalcAll(); switchTab('combat');" class="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-extrabold text-xs">
-            Apply Loadout
-          </button>
-        </div>
-      `;
-    }
 
-    function calcEnergySplit() {
-      const combatPct = +document.getElementById('inp-combat-pct').value;
-      const workPct = 100 - combatPct;
-      const wageSaved = +document.getElementById('inp-wage-saved').value || 0;
-
-      document.getElementById('val-combat-pct').textContent = `${combatPct}%`;
-      document.getElementById('energy-alloc-badge').textContent = `Combat: ${combatPct}% • Self-Work: ${workPct}%`;
-
-      const c = state.lastCalc;
-      const scaledDmg = Math.round((c.totalDmg || 0) * (combatPct / 100));
-      const combatNet = ((c.lootEV + c.bountyIncome - c.totalBurn) * (combatPct / 100));
-      const workGain = wageSaved * (workPct / 100);
-      const totalCombined = (c.factoryIncome || 0) + combatNet + workGain;
-
-      document.getElementById('energy-output').innerHTML = `
-        <div>Combat Output (${combatPct}% Energy): <strong class="text-amber-400">${scaledDmg.toLocaleString()} DMG</strong> (${combatNet >= 0 ? '+' : ''}${combatNet.toFixed(2)} € battle net)</div>
-        <div>Factory Self-Work (${workPct}% Energy): <strong class="text-emerald">+${workGain.toFixed(2)} €</strong> saved in worker wages</div>
-        <div class="pt-2 border-t border-slate-800 text-sm font-extrabold text-white">Combined Daily Net Profit: <span class="${totalCombined >= 0 ? 'text-emerald' : 'text-red-400'}">${totalCombined >= 0 ? '+' : ''}${totalCombined.toFixed(2)} €</span></div>
-      `;
-    }
-
-    function calcRoadmap() {
-      const lv = +document.getElementById('qe-lv').value || 1;
-      const pct = +document.getElementById('inp-xp-pct').value || 0;
-      const pace = +document.getElementById('inp-daily-pace').value || 100000;
-      const remLevels = Math.max(0, 50 - lv);
-      const remXP = (remLevels * 450000) + ((100 - pct) / 100 * 450000);
-      const days = lv >= 50 ? 0 : Math.ceil(remXP / (pace * 1.25));
-      document.getElementById('roadmap-output').innerHTML = lv >= 50
-        ? `<span class="text-amber-400 font-bold">MAX LEVEL 50 REACHED!</span> Ready to trigger Prestige.`
-        : `Remaining to Lv.50: <strong class="text-white">${Math.round(remXP).toLocaleString()} XP</strong><br/>Estimated Arrival: <strong class="text-emerald">${days} Days</strong> at current pace.`;
-    }
-
-    function updateMuLink() {
-      const muId = document.getElementById('inp-mu-id').value.trim() || '69f562f5747ceee9f38d631d';
-      document.getElementById('mu-direct-link').href = `https://app.warera.io/mu/${muId}`;
-    }
-
-    function calcMerc() {
-      const rate = +document.getElementById('inp-merc-rate').value || 0;
-      const c = state.lastCalc;
-      const burnPer1K = c.totalDmg > 0 ? (c.totalBurn / (c.totalDmg / 1000)) : 2.1;
-      const net1K = rate - burnPer1K;
-      document.getElementById('merc-output').innerHTML = `
-        <div>Contract Offer: <span class="text-white">${rate.toFixed(2)} € / 1K</span></div>
-        <div>Your Exact Burn: <span class="text-red-400">-${burnPer1K.toFixed(2)} € / 1K</span></div>
-        <div class="pt-1 border-t border-slate-800 font-bold ${net1K >= 0 ? 'text-emerald' : 'text-red-400'}">
-          Net Profit / 1K DMG: ${net1K >= 0 ? '+' : ''}${net1K.toFixed(2)} € (${net1K >= 0 ? 'PROFITABLE CONTRACT' : 'LOSS — NEGOTIATE HIGHER'})
-        </div>
-      `;
-
-      const targetM = +document.getElementById('inp-mu-target').value || 50;
-      const targetDmg = targetM * 1000000;
-      const reqHits = Math.ceil(targetDmg / (c.expectedDamagePerAttempt || 1500));
-      const reqBudget = Math.round((targetDmg / 1000) * burnPer1K);
-      document.getElementById('mu-output').innerHTML = `
-        <div>Required Hits: <span class="text-white">${reqHits.toLocaleString()} Hits</span></div>
-        <div>Ammo Units: <span class="text-amber-400">${reqHits.toLocaleString()} Units</span></div>
-        <div class="pt-1 border-t border-slate-800 font-bold text-emerald">Estimated MU Operation Cost: ${reqBudget.toLocaleString()} €</div>
-      `;
-    }
-
-    function calcGearROI() {
-      const cost = +document.getElementById('inp-upg-cost').value || 0;
-      const sell = +document.getElementById('inp-sell-val').value || 0;
-      const scrap = +document.getElementById('inp-scrap-val').value || 0;
-      const nextTier = Math.min(6, state.weaponTier + 1);
-      const currSim = computeCombatScenario(state.weaponTier);
-      const nextSim = computeCombatScenario(nextTier);
-      const extraLootPerHit = Math.max(0.25, ((nextSim.lootEV - currSim.lootEV) / Math.max(1, currSim.hits)));
-      const breakEvenHits = Math.ceil(cost / extraLootPerHit);
-
-      document.getElementById('gear-roi-output').innerHTML = `
-        <div>Market vs Scrap Verdict: <strong class="text-amber-400">${scrap >= sell ? `SCRAP FOR PARTS (+${scrap - sell}€ gain)` : `SELL ON MARKET (+${sell - scrap}€ gain)`}</strong></div>
-        <div class="mt-1">Upgrade Break-Even (T${state.weaponTier} → T${nextTier}): <strong class="text-emerald">${breakEvenHits.toLocaleString()} Hits</strong> (~${Math.max(1, Math.round(breakEvenHits / Math.max(1, currSim.hits)))} sessions) via extra v0.27 Loot EV.</div>
-      `;
-    }
-
-    function switchTab(tab) {
-      ['combat', 'market', 'optimizer', 'energy', 'merc', 'eco'].forEach(t => {
-        document.getElementById('view-' + t).classList.toggle('hidden', t !== tab);
-        const btn = document.getElementById('tab-' + t);
-        btn.className = t === tab
-          ? 'tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-crimson text-white shadow-md'
-          : 'tab-btn px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-carbon text-slate-300 border border-slate-800';
-      });
-    }
-
-    function copyDiscordReport() {
-      const c = state.lastCalc;
-      const name = document.getElementById('qe-name').value.trim() || 'Commander';
-      const report = [
-        `⚡ **RAAD // رَعـد v2.0 — War Era Official Report**`,
-        `👤 **Commander:** ${name} (Lv.${c.level} | P${c.prestige})`,
-        `🔫 **Loadout:** ${c.w.name} | Normal: ${c.normalHit.toLocaleString()} | Crit: ${c.critHit.toLocaleString()} | Miss: ${c.missHit.toLocaleString()}`,
-        `🛡️ **Defense:** Armor ${c.armorPct.toFixed(1)}% | Dodge ${c.dodgePct.toFixed(1)}% (-${c.expectedHpLossPerAttempt.toFixed(1)} HP/hit)`,
-        `💥 **${state.mode === '8h' ? '8H Sustained' : 'Instant E-Burst'} DMG:** ${c.totalDmg.toLocaleString()} (${c.hits} hits)`,
-        `💰 **Net Daily Cashflow:** ${c.netPnL >= 0 ? '+' : ''}${c.netPnL.toFixed(2)} € (Factories + v0.27 Loot EV)`
-      ].join('\n');
-
-      navigator.clipboard?.writeText(report);
-      const btn = document.getElementById('copy-btn');
-      btn.textContent = '✅ Copied!';
-      setTimeout(() => { btn.textContent = '📋 Copy Build'; }, 1800);
-    }
-
-    function toggleTheme() {
-      state.dark = !state.dark;
-      document.documentElement.classList.toggle('dark', state.dark);
-      document.body.className = state.dark
-        ? 'bg-obsidian text-slate-100 antialiased selection:bg-crimson selection:text-white'
-        : 'bg-applebg text-slate-900 antialiased selection:bg-crimson selection:text-white';
-      document.getElementById('theme-btn').textContent = state.dark ? '☀️' : '🌙';
-    }
-
-    function toggleLang() {
-      state.lang = state.lang === 'en' ? 'ar' : 'en';
-      document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
-    }
-
-    renderArmory();
-    try {
-      const saved = JSON.parse(localStorage.getItem('raad_warera_profile_v20') || 'null');
-      if (saved) {
-        document.getElementById('qe-name').value = saved.name || 'Commander';
-        document.getElementById('qe-lv').value = saved.lv || 1;
-        document.getElementById('qe-pr').value = saved.pr || 0;
-        document.getElementById('qe-comp').value = saved.comp ?? 0;
-        document.getElementById('qe-maxhp').value = saved.maxHp || 100;
-        document.getElementById('qe-maxhunger').value = saved.maxHunger || 100;
+      const skillBtn = e.target.closest('[data-skill-step]');
+      if (skillBtn) {
+        const key = skillBtn.dataset.skillStep;
+        const delta = Number(skillBtn.dataset.delta);
+        state.skills[key] = Math.max(0, Math.min(10, (state.skills[key] || 0) + delta));
+        if (key === 'health') {
+          $('hh-max-hp').value = 100 + state.skills.health * 10;
+        }
+        renderSkillCards();
+        recalcAll();
+        return;
       }
-    } catch (e) {}
-    applyDirectControls();
-    syncLiveMarketAndConfig();
+
+      const delOfferBtn = e.target.closest('[data-del-offer]');
+      if (delOfferBtn) {
+        const id = Number(delOfferBtn.dataset.delOffer);
+        state.weaponOffers = state.weaponOffers.filter(o => o.id !== id);
+        localStorage.setItem('raad_weapon_offers', JSON.stringify(state.weaponOffers));
+        renderWeaponOffers();
+        return;
+      }
+
+      const aiPromptBtn = e.target.closest('[data-ai-prompt]');
+      if (aiPromptBtn) {
+        handleAiQuery('', aiPromptBtn.dataset.aiPrompt);
+        return;
+      }
+    });
+
+    document.addEventListener('input', (e) => {
+      if (e.target.classList.contains('combat-trigger')) {
+        computeCombatDamage();
+        renderWeaponOffers();
+        computeBattleBudget();
+      } else if (e.target.classList.contains('hh-trigger')) {
+        computeHHPlanner();
+      } else if (e.target.classList.contains('fac-trigger')) {
+        computeFactoryProfit();
+      } else if (e.target.classList.contains('bud-trigger')) {
+        computeBattleBudget();
+      } else if (e.target.dataset.offerId) {
+        const id = Number(e.target.dataset.offerId);
+        const field = e.target.dataset.field;
+        const target = state.weaponOffers.find(o => o.id === id);
+        if (target) {
+          target[field] = field === 'name' ? e.target.value : Number(e.target.value || 0);
+          localStorage.setItem('raad_weapon_offers', JSON.stringify(state.weaponOffers));
+          renderWeaponOffers();
+        }
+      }
+    });
+
+    $('lang-toggle-btn').addEventListener('click', () => {
+      state.lang = state.lang === 'ar' ? 'en' : 'ar';
+      localStorage.setItem('raad_lang', state.lang);
+      applyLanguage();
+    });
+
+    $('player-lookup-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      lookupCommander($('player-search-input').value);
+    });
+
+    $('refresh-live-btn').addEventListener('click', () => {
+      const currentName = $('player-search-input').value.trim() || state.player.username;
+      if (currentName) lookupCommander(currentName);
+      else syncLiveServerMeta();
+    });
+
+    $('run-autobuild-btn').addEventListener('click', runAutoBuildOptimizer);
+    $('apply-build-to-combat-btn').addEventListener('click', () => {
+      recalcAll();
+      switchTab('combat');
+    });
+
+    $('add-offer-btn').addEventListener('click', () => {
+      state.weaponOffers.push({
+        id: Date.now(),
+        name: `Market Offer #${state.weaponOffers.length + 1}`,
+        atk: 120,
+        crit: 20,
+        dur: 100,
+        price: 80
+      });
+      localStorage.setItem('raad_weapon_offers', JSON.stringify(state.weaponOffers));
+      renderWeaponOffers();
+    });
+
+    $('ai-chat-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = $('ai-user-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      handleAiQuery(text, null);
+    });
+
+    // Settings Modal Handlers
+    $('open-settings-btn').addEventListener('click', () => {
+      $('input-warera-key').value = state.wareraKey;
+      $('input-gemini-key').value = state.geminiKey;
+      $('settings-modal').classList.remove('hidden');
+    });
+    $('close-settings-btn').addEventListener('click', () => $('settings-modal').classList.add('hidden'));
+    $('save-keys-btn').addEventListener('click', () => {
+      state.wareraKey = $('input-warera-key').value.trim();
+      state.geminiKey = $('input-gemini-key').value.trim();
+      localStorage.setItem('raad_warera_key', state.wareraKey);
+      localStorage.setItem('raad_gemini_key', state.geminiKey);
+      $('settings-modal').classList.add('hidden');
+      applyLanguage();
+      syncLiveServerMeta();
+    });
+    $('clear-keys-btn').addEventListener('click', () => {
+      state.wareraKey = '';
+      state.geminiKey = '';
+      localStorage.removeItem('raad_warera_key');
+      localStorage.removeItem('raad_gemini_key');
+      $('input-warera-key').value = '';
+      $('input-gemini-key').value = '';
+      $('settings-modal').classList.add('hidden');
+      applyLanguage();
+    });
+
+    // Boot Application
+    window.addEventListener('load', () => {
+      initDateHourDefaults();
+      renderSkillCards();
+      applyLanguage();
+      syncLiveServerMeta();
+      setInterval(updateHudRegenCountdown, 1000);
+    });
   </script>
 </body>
 </html>
+```
