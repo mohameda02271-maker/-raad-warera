@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAAD // رَعـد v4.7 - مركز قيادة WarEra</title>
+<title>RAAD // رَعـد v4.8 - مركز قيادة WarEra</title>
 <style>
 :root{
   --bg:#070d16;--panel:#0f1928;--panel2:#152338;--line:#22344d;
@@ -196,7 +196,7 @@ nav.bottom-nav{
   <div class="brand">
     <div class="logo">⚡</div>
     <div>
-      <div style="font-size:15px">RAAD // رَعـد <span class="badge">v4.7</span></div>
+      <div style="font-size:15px">RAAD // رَعـد <span class="badge">v4.8</span></div>
       <div style="font-size:11px;color:var(--muted)">غرفة القيادة الشاملة لـ WarEra</div>
     </div>
   </div>
@@ -622,6 +622,8 @@ nav.bottom-nav{
       <div id="spyMuResultBox" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
         <div class="identity-strip" style="margin-top:0;padding-top:0;border-top:none;margin-bottom:12px">
           <span class="badge blue"><img id="muScanLogo" class="badge-emblem" style="display:none" alt=""> <span id="muScanTitle">الوحدة العسكرية</span></span>
+          <span class="badge blue" id="muScanCountryBadge" style="display:none">🌍 الدولة</span>
+          <span class="badge blue" id="muScanLeaderBadge" style="display:none">🎖️ القائد</span>
           <span class="badge" id="muScanCountBadge">👥 0 عضو</span>
           <span class="badge warn" id="muScanReadyBadge">⚔️ جاهز للضرب: 0</span>
         </div>
@@ -643,6 +645,8 @@ nav.bottom-nav{
             <div class="hint" id="muTotalHitsLeft">إجمالي الضربات المتاحة الآن: 0 ضربة</div>
           </div>
         </div>
+
+        <div id="muExtraMeta" class="hint" style="margin-bottom:10px;color:var(--ink)"></div>
 
         <div class="card-title" style="margin-top:12px;font-size:13px">
           <span>📋 قائمة أعضاء الوحدة وترتيب القوة في الوقت الفعلي</span>
@@ -789,6 +793,8 @@ const state = {
   lang: 'ar',
   userId: null,
   playerLevel: 1,
+  lastKnownMuId: '',
+  lastKnownMuName: '',
   companies: [],
   nextRegenAt: null,
   selectedBuild: 'sustainable',
@@ -845,23 +851,24 @@ function unwrapTrpcData(json){
 let lastApiDiagnostic = '';
 
 function buildTrpcCandidateUrls(baseUrl, proc, input){
-  const wrappedInput = encodeURIComponent(JSON.stringify({ json: input }));
-  const plainInput = encodeURIComponent(JSON.stringify(input));
   const cleanBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-  const urls = [
-    cleanBase + proc + '?input=' + wrappedInput,
-    cleanBase + proc + '?input=' + plainInput,
-    cleanBase + proc
-  ];
-  if(proc.includes('.')){
-    const slashProc = proc.replace('.', '/');
-    urls.push(cleanBase + slashProc + '?input=' + wrappedInput);
-    urls.push(cleanBase + slashProc + '?input=' + plainInput);
-  }
+  const hasKeys = input && typeof input === 'object' && Object.keys(input).length > 0;
+  const wrappedInput = encodeURIComponent(JSON.stringify({ json: input || {} }));
+  const plainInput = encodeURIComponent(JSON.stringify(input || {}));
+  const urls = hasKeys
+    ? [
+        cleanBase + proc + '?input=' + wrappedInput,
+        cleanBase + proc + '?input=' + plainInput
+      ]
+    : [
+        cleanBase + proc,
+        cleanBase + proc + '?input=' + wrappedInput,
+        cleanBase + proc + '?input=' + plainInput
+      ];
   return urls;
 }
 
-async function fetchWithTimeout(url, options={}, timeoutMs=6500){
+async function fetchWithTimeout(url, options={}, timeoutMs=5500){
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try{
@@ -903,8 +910,7 @@ async function trpc(proc, input={}){
   }
   const bases = [
     'https://api2.warera.io/trpc/',
-    'https://gateway.warerastats.io/trpc/',
-    'https://api.warera.io/trpc/'
+    'https://gateway.warerastats.io/trpc/'
   ];
   const allDirectUrls = bases
     .flatMap(b => buildTrpcCandidateUrls(b, proc, input))
@@ -913,7 +919,7 @@ async function trpc(proc, input={}){
   const directTasks = allDirectUrls.map((url) =>
     tryFetchTrpcUrl(url, headers, 'direct-live', 4500)
       .then(data => {
-        lastApiDiagnostic = 'LIVE OK (direct)';
+        lastApiDiagnostic = `LIVE OK (${proc})`;
         return data;
       })
   );
@@ -924,15 +930,14 @@ async function trpc(proc, input={}){
 
   const targetForProxy = allDirectUrls[0];
   const proxies = [
-    { name: 'corsproxy.io-live', url: 'https://corsproxy.io/?' + encodeURIComponent(targetForProxy) },
-    { name: 'allorigins-live', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetForProxy) },
-    { name: 'thingproxy-live', url: 'https://thingproxy.freeboard.io/fetch/' + targetForProxy }
+    { name: 'corsproxy.io', url: 'https://corsproxy.io/?' + encodeURIComponent(targetForProxy) },
+    { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetForProxy) }
   ];
 
   const proxyTasks = proxies.map(p =>
     tryFetchTrpcUrl(p.url, headers, p.name, 5000)
       .then(data => {
-        lastApiDiagnostic = `LIVE OK (${p.name})`;
+        lastApiDiagnostic = `LIVE OK (${proc} via ${p.name})`;
         return data;
       })
   );
@@ -940,12 +945,22 @@ async function trpc(proc, input={}){
   try{
     return await Promise.any(proxyTasks);
   }catch(e){
-    const msg = e?.name === 'AbortError' ? 'انتهت مهلة الاتصال (Timeout)' : (e?.message || 'تعذر الوصول للـ API');
-    lastApiDiagnostic = `الاتصال المباشر والبروكسي تعذرا (${msg})`;
+    const msg = e?.name === 'AbortError' ? 'Timeout' : (e?.message || 'فشل الاتصال');
+    lastApiDiagnostic = `${proc}: ${msg}`;
     const err = new Error(lastApiDiagnostic);
     err.diagnostics = lastApiDiagnostic;
     throw err;
   }
+}
+
+async function trpcTryMany(candidates, validator=null){
+  for(const [proc, payload] of candidates){
+    try{
+      const res = await trpc(proc, payload);
+      if(!validator || validator(res)) return res;
+    }catch(_){}
+  }
+  return null;
 }
 
 async function initLiveDates(){
@@ -1087,12 +1102,12 @@ async function fetchPlayer(){
     let countryObj = (typeof user.country === 'object' ? user.country : null) || (cId ? cMap[cId] : null);
     let countryName = countryObj?.name || user.countryName || (cId && cMap[cId]?.name) || '';
     if((!countryName || !countryObj) && cId){
-      try{
-        const c = await trpc('country.getCountryById', { countryId: cId, id: cId });
-        if(c){ countryObj = c; countryName = c.name || c.title || countryName || cId; }
-      }catch(e){
-        if(!countryName) countryName = cId;
-      }
+      const c = await trpcTryMany([
+        ['country.getCountryById', { countryId: cId }],
+        ['country.getById', { id: cId }]
+      ]);
+      if(c){ countryObj = c; countryName = c.name || c.title || countryName || cId; }
+      else if(!countryName) countryName = cId;
     }
     if(!countryObj && countryName && cMap[countryName.toLowerCase().trim()]){
       countryObj = cMap[countryName.toLowerCase().trim()];
@@ -1102,14 +1117,16 @@ async function fetchPlayer(){
     let muObj = typeof user.mu === 'object' ? user.mu : (user.militaryUnit || null);
     let muName = muObj?.name || user.muName || '';
     if((!muName || !(muObj?.avatar || muObj?.logo || muObj?.image)) && mId){
-      for(const proc of ['mu.getById', 'mu.getMuById', 'militaryUnit.getById']){
-        try{
-          const mu = await trpc(proc, { muId: mId, id: mId });
-          if(mu && (mu.name || mu.title)){ muObj = mu; muName = mu.name || mu.title; break; }
-        }catch(e){}
-      }
+      const mu = await trpcTryMany([
+        ['mu.getById', { muId: mId }],
+        ['mu.getMuById', { muId: mId }],
+        ['militaryUnit.getById', { id: mId }]
+      ]);
+      if(mu && (mu.name || mu.title)){ muObj = mu; muName = mu.name || mu.title; }
       if(!muName) muName = mId;
     }
+    if(mId) state.lastKnownMuId = mId;
+    if(muName) state.lastKnownMuName = muName;
 
     if(countryName) $('inManualCountry').value = countryName;
     if(muName) $('inManualMu').value = muName;
@@ -1230,15 +1247,15 @@ let cachedCountriesAt = 0;
 function extractListFromResponse(res){
   if(Array.isArray(res)) return res;
   if(!res || typeof res !== 'object') return [];
-  for(const k of ['items', 'countries', 'data', 'list', 'result', 'rows']){
+  for(const k of ['items', 'countries', 'mus', 'militaryUnits', 'users', 'members', 'regions', 'wars', 'battles', 'data', 'list', 'result', 'rows']){
     if(Array.isArray(res[k]) && res[k].length) return res[k];
     if(res[k] && typeof res[k] === 'object'){
-      for(const sub of ['items', 'countries', 'data', 'list']){
+      for(const sub of ['items', 'countries', 'mus', 'users', 'members', 'data', 'list']){
         if(Array.isArray(res[k][sub]) && res[k][sub].length) return res[k][sub];
       }
     }
   }
-  const vals = Object.values(res).filter(v => v && typeof v === 'object' && (v.name || v.title || v._id || v.id));
+  const vals = Object.values(res).filter(v => v && typeof v === 'object' && !Array.isArray(v) && (v.name || v.title || v.username || v._id || v.id));
   return vals;
 }
 
@@ -1249,8 +1266,7 @@ async function getCountriesMap(forceFresh=false){
     ['country.getAllCountries', {}],
     ['country.getCountries', {}],
     ['country.list', {}],
-    ['country.getAll', {}],
-    ['world.getCountries', {}]
+    ['country.getAll', {}]
   ];
   for(const [proc, payload] of procs){
     try{
@@ -1264,6 +1280,7 @@ async function getCountriesMap(forceFresh=false){
           if(c.name) freshMap[String(c.name).toLowerCase().trim()] = c;
           if(c.title) freshMap[String(c.title).toLowerCase().trim()] = c;
           if(c.code) freshMap[String(c.code).toLowerCase().trim()] = c;
+          if(c.iso) freshMap[String(c.iso).toLowerCase().trim()] = c;
           if(c.slug) freshMap[String(c.slug).toLowerCase().trim()] = c;
         });
         if(Object.keys(freshMap).length) break;
@@ -1807,8 +1824,11 @@ function setSpyMode(mode){
     $('spyInput').placeholder = 'اكتب اسم اللاعب أو ID...';
     $('spyModeHint').textContent = 'ابحث باسم أي لاعب أو ID لكشف عتاده، مهاراته، ورصد أي تغييرات في عتاده أو وحدته منذ آخر فحص.';
   }else if(mode === 'mu'){
-    $('spyInput').placeholder = 'اكتب اسم الوحدة العسكرية أو MU ID...';
+    $('spyInput').placeholder = 'اكتب اسم الوحدة العسكرية أو اختصارها أو MU ID...';
     $('spyModeHint').textContent = 'ابحث باسم أي وحدة عسكرية لجلب بيانات جميع أعضائها وحساب التوتال دامج الفوري المتاح لهم في الوقت الفعلي.';
+    if(!$('spyInput').value.trim() && state.lastKnownMuName){
+      $('spyInput').value = state.lastKnownMuName;
+    }
   }else if(mode === 'muvsmu'){
     $('spyModeHint').textContent = 'قارن القوة النارية اللحظية (Real-Time Burst) وعدد المقاتلين الجاهزين بين وحدتك العسكرية ووحدة الخصم.';
   }else if(mode === 'wars'){
@@ -1818,8 +1838,8 @@ function setSpyMode(mode){
     $('spyModeHint').textContent = 'رادار المعارك الحية في السيرفر: نسبة السيطرة، الوقت المتبقي، وأقوى الضاربين (Top Hitters) الآن.';
     runLiveBattlesScan();
   }else if(mode === 'country'){
-    $('spyInput').placeholder = 'اكتب اسم الدولة (مثال: Egypt أو Saudi Arabia)...';
-    $('spyModeHint').textContent = 'كشف معلومات الدولة: الخزينة، الأقاليم، الحروب الجارية، والحلفاء (MPPs).';
+    $('spyInput').placeholder = 'اكتب اسم الدولة بالعربي أو الإنجليزي (مثال: Egypt أو مصر)...';
+    $('spyModeHint').textContent = 'كشف معلومات الدولة: السكان، الخزينة، الأقاليم، الحروب الجارية، والوحدات العسكرية.';
   }else if(mode === 'alliance'){
     $('spyModeHint').textContent = 'قارن بين تحالفين أو محورين لمعرفة الكثافة السكانية والقدرة التقديرية.';
   }
@@ -1871,65 +1891,112 @@ function computePlayerRealtimeCombat(p){
   };
 }
 
-function deepExtractMuMembers(muObj){
-  if(!muObj || typeof muObj !== 'object') return [];
-  const directKeys = ['members', 'users', 'soldiers', 'roster', 'fighters', 'memberIds', 'userIds', 'players'];
-  for(const k of directKeys){
-    if(Array.isArray(muObj[k]) && muObj[k].length) return muObj[k];
-  }
-  for(const v of Object.values(muObj)){
-    if(Array.isArray(v) && v.length && typeof v[0] === 'object' && (v[0].username || v[0].name || v[0].userId || v[0].level)){
-      return v;
-    }
+function normalizeMemberEntries(rawVal){
+  if(!rawVal) return [];
+  if(Array.isArray(rawVal)) return rawVal;
+  if(typeof rawVal === 'object'){
+    return Object.entries(rawVal).map(([k, v]) => {
+      if(v && typeof v === 'object') return { userId: k, ...v };
+      return { userId: k, role: v };
+    });
   }
   return [];
+}
+
+function deepExtractMuMembers(muObj){
+  if(!muObj || typeof muObj !== 'object') return [];
+  const collected = [];
+  const seen = new Set();
+
+  const pushEntry = (entry) => {
+    if(!entry) return;
+    if(typeof entry === 'string'){
+      if(!seen.has(entry)){ seen.add(entry); collected.push(entry); }
+      return;
+    }
+    if(typeof entry === 'object'){
+      const uid = typeof entry.user === 'string' ? entry.user
+        : (entry.userId || entry.memberId || entry.playerId || entry._id || entry.id || entry.user?._id || entry.user?.id);
+      const key = uid ? String(uid) : JSON.stringify(entry);
+      if(!seen.has(key)){
+        seen.add(key);
+        collected.push(entry);
+      }
+    }
+  };
+
+  for(const roleKey of ['leader', 'leaderId', 'commander', 'commanderId', 'owner', 'ownerId', 'creator']){
+    if(muObj[roleKey]) pushEntry(muObj[roleKey]);
+  }
+  for(const listKey of ['officers', 'commanders', 'admins', 'members', 'memberIds', 'users', 'soldiers', 'roster', 'fighters', 'userIds', 'players']){
+    normalizeMemberEntries(muObj[listKey]).forEach(pushEntry);
+  }
+  if(!collected.length){
+    for(const v of Object.values(muObj)){
+      if(Array.isArray(v) && v.length && (typeof v[0] === 'string' || (typeof v[0] === 'object' && (v[0].username || v[0].name || v[0].userId || v[0].user || v[0].level)))){
+        v.forEach(pushEntry);
+      }
+    }
+  }
+  return collected;
 }
 
 async function fetchMuFullData(q){
   let mu = null;
   const ql = q.toLowerCase().trim();
 
+  const matchMuItem = (x) => {
+    if(!x || typeof x !== 'object') return false;
+    const fields = [x.name, x.title, x.muName, x.tag, x.shortName, x.acronym, x._id, x.id].filter(Boolean).map(v => String(v).toLowerCase().trim());
+    return fields.some(f => f === ql || f.includes(ql));
+  };
+
   if(/^[a-f0-9]{24}$/i.test(q)){
-    for(const proc of ['mu.getById', 'mu.getMuById', 'militaryUnit.getById', 'mu.get']){
-      try{
-        const res = await trpc(proc, { muId: q, id: q });
-        const cand = res?.mu || res?.militaryUnit || res;
-        if(cand && (cand.name || cand.title || cand._id || cand.id)){ mu = cand; break; }
-      }catch(_){}
-    }
+    const res = await trpcTryMany([
+      ['mu.getById', { muId: q }],
+      ['mu.getMuById', { muId: q }],
+      ['militaryUnit.getById', { id: q }]
+    ], r => r && (r.name || r.title || r._id || r.id || r.mu));
+    if(res) mu = res.mu || res.militaryUnit || res;
+  }
+
+  if(!mu && state.lastKnownMuId && state.lastKnownMuName && state.lastKnownMuName.toLowerCase().includes(ql)){
+    const res = await trpcTryMany([
+      ['mu.getById', { muId: state.lastKnownMuId }],
+      ['mu.getMuById', { muId: state.lastKnownMuId }]
+    ], r => r && (r.name || r.title || r._id || r.mu));
+    if(res) mu = res.mu || res.militaryUnit || res;
   }
 
   if(!mu){
     const searchProcs = [
-      ['mu.search', { searchText: q, query: q, text: q }],
-      ['search.searchMus', { searchText: q, query: q }],
-      ['search.search', { searchText: q, query: q }],
+      ['search.searchMilitaryUnits', { searchText: q }],
+      ['search.searchMus', { searchText: q }],
+      ['mu.search', { searchText: q }],
+      ['mu.getManyPaginated', { searchText: q, limit: 20 }],
+      ['mu.getManyPaginated', { limit: 100 }],
       ['mu.getAll', {}],
+      ['mu.getAllMus', {}],
       ['mu.list', {}],
-      ['militaryUnit.getAll', {}],
-      ['militaryUnit.list', {}]
+      ['militaryUnit.getAll', {}]
     ];
     for(const [proc, payload] of searchProcs){
       try{
         const res = await trpc(proc, payload);
         const arr = extractListFromResponse(res?.mus || res?.militaryUnits || res);
-        const found = arr.find(x => String(x?.name || x?.title || x?.muName || '').toLowerCase().includes(ql))
-          || arr.find(x => String(x?._id || x?.id || '').toLowerCase() === ql)
-          || (arr.length === 1 && !/all|list/i.test(proc) ? arr[0] : null);
+        const exact = arr.find(x => String(x?.name || x?.title || x?.tag || '').toLowerCase().trim() === ql);
+        const found = exact || arr.find(matchMuItem) || (arr.length === 1 && /search/i.test(proc) ? arr[0] : null);
         if(found){
-          const mId = found._id || found.id || found.muId;
           mu = found;
+          const mId = found._id || found.id || found.muId;
           if(mId){
-            for(const gProc of ['mu.getById', 'mu.getMuById', 'militaryUnit.getById', 'mu.get']){
-              try{
-                const fullRes = await trpc(gProc, { muId: mId, id: mId });
-                const full = fullRes?.mu || fullRes?.militaryUnit || fullRes;
-                if(full && (full.name || full.title || deepExtractMuMembers(full).length)){
-                  mu = { ...found, ...full };
-                  break;
-                }
-              }catch(_){}
-            }
+            const fullRes = await trpcTryMany([
+              ['mu.getById', { muId: mId }],
+              ['mu.getMuById', { muId: mId }],
+              ['militaryUnit.getById', { id: mId }]
+            ], r => r && typeof r === 'object');
+            const full = fullRes?.mu || fullRes?.militaryUnit || fullRes;
+            if(full && typeof full === 'object') mu = { ...found, ...full };
           }
           break;
         }
@@ -1937,61 +2004,113 @@ async function fetchMuFullData(q){
     }
   }
 
-  if(!mu) throw new Error(`لم يتم العثور على الوحدة "${q}" — تأكد من الاسم أو ID أو مفتاح API.`);
+  // Fallback: search users by name/tag and inspect their MU
+  if(!mu){
+    try{
+      const uRes = await trpc('search.searchUsers', { searchText: q });
+      const uArr = extractListFromResponse(uRes?.users || uRes);
+      for(const u of uArr.slice(0, 5)){
+        const uid = typeof u === 'string' ? u : (u._id || u.id);
+        if(!uid) continue;
+        const fullU = await trpc('user.getUserById', { userId: uid });
+        const uObj = fullU?.user || fullU;
+        const mId = uObj?.mu?._id || uObj?.mu?.id || (typeof uObj?.mu === 'string' ? uObj.mu : '') || uObj?.muId;
+        if(mId){
+          const fullMu = await trpcTryMany([['mu.getById', { muId: mId }]], r => r && (r.name || r._id));
+          if(fullMu && matchMuItem(fullMu)){
+            mu = fullMu;
+            break;
+          }
+        }
+      }
+    }catch(_){}
+  }
+
+  if(!mu) throw new Error(`لم يتم العثور على الوحدة "${q}" — جرب كتابة الاسم بالإنجليزية أو لصق MU ID.`);
 
   const muId = mu._id || mu.id || mu.muId;
   let rawMembers = deepExtractMuMembers(mu);
 
-  if(!rawMembers.length && muId){
-    const mProcs = [
-      ['mu.getMembers', { muId, id: mId }],
-      ['mu.getMuMembers', { muId, id: mId }],
-      ['user.getUsersByMu', { muId, id: mId }],
-      ['militaryUnit.getMembers', { muId, id: mId }],
-      ['mu.getRoster', { muId, id: mId }]
-    ];
-    for(const [mProc, payload] of mProcs){
-      try{
-        const mRes = await trpc(mProc, payload);
-        const arr = extractListFromResponse(mRes?.members || mRes?.users || mRes);
-        if(arr.length){ rawMembers = arr; break; }
-      }catch(_){}
+  if(rawMembers.length <= 1 && muId){
+    const mRes = await trpcTryMany([
+      ['user.getUsersByMu', { muId }],
+      ['user.getByMu', { muId }],
+      ['user.getByMuId', { muId }],
+      ['user.getManyPaginated', { muId, limit: 100 }],
+      ['mu.getMembers', { muId }],
+      ['mu.getMuMembers', { muId }],
+      ['mu.getUsers', { muId }],
+      ['militaryUnit.getMembers', { id: muId }]
+    ], r => extractListFromResponse(r).length > 0);
+    if(mRes){
+      const arr = extractListFromResponse(mRes);
+      if(arr.length >= rawMembers.length) rawMembers = arr;
     }
   }
 
-  if(!rawMembers.length && muId){
-    try{
-      const uRes = await trpc('search.searchUsers', { searchText: '' });
-      const uArr = extractListFromResponse(uRes?.users || uRes);
-      const matched = uArr.filter(u => {
-        const uMuId = u?.mu?._id || u?.mu?.id || u?.muId || u?.militaryUnitId || '';
-        const uMuName = String(u?.mu?.name || u?.muName || '').toLowerCase();
-        return (muId && String(uMuId) === String(muId)) || (uMuName && uMuName === ql);
+  // Fallback via country users if MU has a country ID and still <= 1 member
+  const muCountryId = mu.country?._id || mu.country?.id || (typeof mu.country === 'string' ? mu.country : '') || mu.countryId || '';
+  if(rawMembers.length <= 1 && muId && muCountryId){
+    const cUsersRes = await trpcTryMany([
+      ['user.getUsersByCountry', { countryId: muCountryId }],
+      ['user.getManyPaginated', { countryId: muCountryId, limit: 100 }]
+    ], r => extractListFromResponse(r).length > 0);
+    if(cUsersRes){
+      const cUsers = extractListFromResponse(cUsersRes).filter(u => {
+        const uMu = u?.mu?._id || u?.mu?.id || (typeof u?.mu === 'string' ? u.mu : '') || u?.muId || '';
+        return String(uMu) === String(muId);
       });
-      if(matched.length) rawMembers = matched;
-    }catch(_){}
+      if(cUsers.length > rawMembers.length) rawMembers = cUsers;
+    }
   }
 
-  const memberProfiles = await Promise.all(rawMembers.slice(0, 60).map(async m => {
-    if(m && typeof m === 'object' && (m.username || m.skills || m.equipment || m.level)){
-      return m.user && !m.username ? { ...m.user, ...m } : m;
+  const uniqueMemberRefs = [];
+  const seenIds = new Set();
+  for(const m of rawMembers){
+    const uid = typeof m === 'string' ? m
+      : (typeof m?.user === 'string' ? m.user : (m?.userId || m?.memberId || m?.playerId || m?._id || m?.id || m?.user?._id || m?.user?.id));
+    const key = uid ? String(uid) : JSON.stringify(m);
+    if(!seenIds.has(key)){
+      seenIds.add(key);
+      uniqueMemberRefs.push({ raw: m, uid });
     }
-    const uid = typeof m === 'string' ? m : (m?.userId || m?._id || m?.id || m?.user?._id || m?.user?.id);
-    if(!uid) return typeof m === 'object' ? m : null;
+  }
+
+  const memberProfiles = await Promise.all(uniqueMemberRefs.slice(0, 60).map(async ({ raw, uid }) => {
+    if(raw && typeof raw === 'object' && raw.username && (raw.skills || raw.equipment || raw.level)){
+      return raw;
+    }
+    if(raw && typeof raw === 'object' && raw.user && typeof raw.user === 'object' && raw.user.username){
+      return { ...raw.user, ...raw };
+    }
+    if(!uid) return typeof raw === 'object' ? raw : null;
     try{
-      const fullUser = await trpc('user.getUserById', { userId: uid, id: uid });
+      const fullUser = await trpc('user.getUserById', { userId: uid });
       const uObj = fullUser?.user || fullUser;
-      return uObj || (typeof m === 'object' ? { id: uid, ...m } : { id: uid, username: String(uid) });
-    }catch(_){
-      return typeof m === 'object' ? { id: uid, username: m.username || m.name || String(uid), ...m } : { id: uid, username: String(uid) };
-    }
+      if(uObj && typeof uObj === 'object') return uObj;
+    }catch(_){}
+    return typeof raw === 'object' ? { _id: uid, username: raw.username || raw.name || String(uid), ...raw } : { _id: uid, username: String(uid) };
   }));
 
   const members = memberProfiles.filter(Boolean).map(computePlayerRealtimeCombat).sort((a,b) => b.realtimeBurst - a.realtimeBurst);
+
+  const cMap = await getCountriesMap();
+  const cObj = (typeof mu.country === 'object' ? mu.country : null) || (muCountryId ? cMap[muCountryId] : null);
+  const countryName = cObj?.name || mu.countryName || '';
+  const leaderObj = typeof mu.leader === 'object' ? mu.leader : (typeof mu.commander === 'object' ? mu.commander : null);
+  const leaderName = leaderObj?.username || leaderObj?.name || mu.leaderName || mu.commanderName || (members[0]?.name || '');
+  const declaredCount = Number(mu.membersCount ?? mu.usersCount ?? mu.size ?? members.length) || members.length;
+
   return {
     id: muId,
     name: mu.name || mu.title || mu.muName || q,
+    tag: mu.tag || mu.shortName || mu.acronym || '',
     logo: resolveMuLogo(mu),
+    countryName,
+    leaderName,
+    declaredCount,
+    totalDamageStat: Number(mu.totalDamage ?? mu.damage ?? mu.points ?? 0) || 0,
+    hqLevel: mu.hqLevel ?? mu.level ?? null,
     members,
     totalBurst: members.reduce((s, x) => s + x.realtimeBurst, 0),
     singleSalvo: members.reduce((s, x) => s + x.avgHit, 0),
@@ -2009,16 +2128,37 @@ async function runMuScan(){
     const data = await fetchMuFullData(q);
     if(data.logo){ $('muScanLogo').src = data.logo; $('muScanLogo').style.display = 'inline-block'; }
     else { $('muScanLogo').style.display = 'none'; }
-    $('muScanTitle').textContent = data.name;
-    $('muScanCountBadge').textContent = `👥 ${data.members.length} عضو`;
+    $('muScanTitle').textContent = data.tag ? `${data.name} [${data.tag}]` : data.name;
+
+    if(data.countryName){
+      $('muScanCountryBadge').textContent = `🌍 ${data.countryName}`;
+      $('muScanCountryBadge').style.display = 'inline-flex';
+    }else{
+      $('muScanCountryBadge').style.display = 'none';
+    }
+    if(data.leaderName){
+      $('muScanLeaderBadge').textContent = `🎖️ ${data.leaderName}`;
+      $('muScanLeaderBadge').style.display = 'inline-flex';
+    }else{
+      $('muScanLeaderBadge').style.display = 'none';
+    }
+
+    const countDisplay = data.members.length || data.declaredCount;
+    $('muScanCountBadge').textContent = `👥 ${countDisplay} عضو`;
     $('muScanReadyBadge').textContent = `⚔️ جاهز للضرب الآن: ${data.readyCount} / ${data.members.length}`;
     $('muTotalBurstDmg').textContent = data.totalBurst.toLocaleString();
     $('muSingleSalvoDmg').textContent = data.singleSalvo.toLocaleString();
     $('muAvgHpPct').textContent = `${data.avgHp}%`;
     $('muTotalHitsLeft').textContent = `إجمالي الضربات المتاحة الآن: ${data.totalHits.toLocaleString()} ضربة`;
 
+    const metaParts = [];
+    if(data.id) metaParts.push(`ID: <b>${data.id}</b>`);
+    if(data.hqLevel != null) metaParts.push(`مستوى المقر (HQ): <b>Lv.${data.hqLevel}</b>`);
+    if(data.totalDamageStat > 0) metaParts.push(`إجمالي ضرر الوحدة التراكمي: <b>${data.totalDamageStat.toLocaleString()}</b>`);
+    $('muExtraMeta').innerHTML = metaParts.join(' &nbsp;•&nbsp; ');
+
     if(!data.members.length){
-      $('muMembersList').innerHTML = `<div class="battle-card"><div class="hint" style="color:var(--gold)">⚠️ تم العثور على الوحدة <b>${data.name}</b> ولكن السيرفر لم يُرجع قائمة الأعضاء (قد تكون الوحدة فارغة أو تتطلب صلاحية/مفتاح WarEra API أو تغيّر اسم إجراء الأعضاء في الـ API).</div></div>`;
+      $('muMembersList').innerHTML = `<div class="battle-card"><div class="hint" style="color:var(--gold)">⚠️ تم العثور على الوحدة <b>${data.name}</b> (العدد المسجل: ${data.declaredCount}) ولكن قائمة الأعضاء التفصيلية غير متاحة من السيرفر حالياً.</div></div>`;
     }else{
       $('muMembersList').innerHTML = data.members.map((m, idx) => `
         <div class="mu-member-row">
@@ -2046,7 +2186,7 @@ async function runMuScan(){
     $('spyMuResultBox').style.display = 'block';
     $('spyStatus').textContent = data.members.length
       ? `✅ اكتمل مسح الوحدة "${data.name}" (${data.members.length} عضو) وحساب الضرر الفوري.`
-      : `⚠️ تم العثور على الوحدة "${data.name}" بدون قائمة أعضاء من السيرفر (${lastApiDiagnostic || 'LIVE'}).`;
+      : `✅ تم جلب بيانات الوحدة "${data.name}" (${lastApiDiagnostic}).`;
   }catch(err){
     $('spyStatus').textContent = `⚠️ ${err.message || 'تعذر جلب بيانات الوحدة العسكرية.'}`;
   }
@@ -2099,7 +2239,7 @@ async function runWarsIntelScan(){
     let wars = [];
     for(const proc of ['war.getActiveWars', 'war.getWars', 'war.list', 'war.getAll', 'battle.getActiveBattles', 'battle.getBattles']){
       try{
-        const res = await trpc(proc, { activeOnly: true });
+        const res = await trpc(proc, {});
         const arr = extractListFromResponse(res);
         if(arr.length){ wars = arr; break; }
       }catch(e){}
@@ -2157,7 +2297,7 @@ async function runLiveBattlesScan(){
     let battles = [];
     for(const proc of ['battle.getActiveBattles', 'battle.getBattles', 'war.getActiveBattles', 'battle.list']){
       try{
-        const res = await trpc(proc, { activeOnly: true });
+        const res = await trpc(proc, {});
         const arr = extractListFromResponse(res);
         if(arr.length){ battles = arr; break; }
       }catch(e){}
@@ -2203,43 +2343,67 @@ async function runLiveBattlesScan(){
   }
 }
 
+function extractNumericMetric(val, preferredKeys=['money','amount','value','total','balance','count']){
+  if(val === null || val === undefined || val === '') return null;
+  if(typeof val === 'number') return Number.isFinite(val) ? val : null;
+  if(typeof val === 'string'){
+    const cleaned = Number(val.replace(/,/g, '').trim());
+    return Number.isFinite(cleaned) ? cleaned : null;
+  }
+  if(typeof val === 'object' && !Array.isArray(val)){
+    for(const k of preferredKeys){
+      if(val[k] !== undefined){
+        const n = extractNumericMetric(val[k], preferredKeys);
+        if(n !== null) return n;
+      }
+    }
+    for(const v of Object.values(val)){
+      const n = extractNumericMetric(v, preferredKeys);
+      if(n !== null) return n;
+    }
+  }
+  return null;
+}
+
 async function runCountryIntel(){
   const q = $('spyInput').value.trim();
   if(!q) return;
-  $('spyStatus').textContent = '🌍 جاري سحب أحدث بيانات الدولة مباشرة من السيرفر (بدون كاش قديم)...';
+  $('spyStatus').textContent = '🌍 جاري سحب بيانات الدولة والأقاليم والحروب من السيرفر...';
   try{
     const ql = q.toLowerCase().trim();
+    const mappedIso = COUNTRY_ISO[ql] || '';
     const cMap = await getCountriesMap(true);
-    let country = cMap[ql] || Object.values(cMap).find(c =>
-      String(c?.name || c?.title || c?.code || '').toLowerCase().includes(ql)
-    );
+    let country = cMap[ql]
+      || (mappedIso ? cMap[mappedIso] : null)
+      || Object.values(cMap).find(c => {
+        const fields = [c?.name, c?.title, c?.code, c?.iso, c?.slug].filter(Boolean).map(v => String(v).toLowerCase().trim());
+        return fields.some(f => f === ql || f.includes(ql) || (mappedIso && f === mappedIso));
+      });
 
     if(!country && !/^[a-f0-9]{24}$/i.test(q)){
-      for(const sProc of ['search.searchCountries', 'country.search', 'search.search']){
-        try{
-          const sRes = await trpc(sProc, { searchText: q, query: q });
-          const sArr = extractListFromResponse(sRes?.countries || sRes);
-          const hit = sArr.find(c => String(c?.name || c?.title || '').toLowerCase().includes(ql)) || sArr[0];
-          if(hit && (hit.name || hit.title || hit._id || hit.id)){ country = hit; break; }
-        }catch(_){}
+      const sRes = await trpcTryMany([
+        ['search.searchCountries', { searchText: q }],
+        ['country.search', { searchText: q }]
+      ], r => extractListFromResponse(r).length > 0);
+      if(sRes){
+        const sArr = extractListFromResponse(sRes);
+        country = sArr.find(c => String(c?.name || c?.title || '').toLowerCase().includes(ql)) || sArr[0];
       }
     }
 
     const cId = country?._id || country?.id || country?.countryId || (/^[a-f0-9]{24}$/i.test(q) ? q : '');
     if(cId){
-      for(const gProc of ['country.getCountryById', 'country.getById', 'country.get']){
-        try{
-          const fullRes = await trpc(gProc, { countryId: cId, id: cId });
-          const full = fullRes?.country || fullRes;
-          if(full && typeof full === 'object' && (full.name || full.title || Object.keys(full).length > 1)){
-            country = { ...(country || {}), ...full };
-            break;
-          }
-        }catch(_){}
+      const fullRes = await trpcTryMany([
+        ['country.getCountryById', { countryId: cId }],
+        ['country.getById', { id: cId }]
+      ], r => r && typeof r === 'object');
+      const full = fullRes?.country || fullRes;
+      if(full && typeof full === 'object'){
+        country = { ...(country || {}), ...full };
       }
     }
 
-    if(!country) throw new Error(`لم يتم العثور على الدولة "${q}" (${lastApiDiagnostic || 'تحقق من الاسم أو مفتاح API'})`);
+    if(!country) throw new Error(`لم يتم العثور على الدولة "${q}" (${lastApiDiagnostic || 'تأكد من الاسم'})`);
 
     const cName = country.name || country.title || q;
     const fUrl = resolveCountryFlag(country, cName);
@@ -2254,7 +2418,7 @@ async function runCountryIntel(){
         return hit?.name || val;
       }
       if(typeof val === 'object'){
-        return val.name || val.title || (val._id && cMap[val._id]?.name) || '';
+        return val.name || val.title || (val._id && cMap[val._id]?.name) || (val.countryId && cMap[val.countryId]?.name) || '';
       }
       return String(val);
     };
@@ -2276,87 +2440,110 @@ async function runCountryIntel(){
 
     let allianceRaw = findDeepValue(country, [/^alliance/i, /^pact$/i, /^coalition$/i, /^bloc$/i]);
     if(!allianceRaw && cId){
-      for(const aProc of ['alliance.getByCountryId', 'alliance.getCountryAlliance', 'pact.getByCountryId']){
-        try{
-          const aRes = await trpc(aProc, { countryId: cId, id: cId });
-          if(aRes){ allianceRaw = aRes; break; }
-        }catch(_){}
-      }
+      allianceRaw = await trpcTryMany([
+        ['alliance.getByCountryId', { countryId: cId }],
+        ['alliance.getCountryAlliance', { countryId: cId }]
+      ]);
     }
     const allianceName = resolveCountryLabel(allianceRaw) || 'مستقل / بدون حلف';
     $('cIntelAlliance').textContent = `🤝 الحلف: ${allianceName}`;
 
+    // Fetch regions for this country
     let regionsArr = Array.isArray(country.regions) ? country.regions : [];
     if(!regionsArr.length && cId){
-      for(const rProc of ['region.getRegionsByCountryId', 'region.getByCountryId', 'country.getRegions']){
-        try{
-          const rRes = await trpc(rProc, { countryId: cId, id: cId });
-          const arr = extractListFromResponse(rRes);
-          if(arr.length){ regionsArr = arr; break; }
-        }catch(_){}
+      const rRes = await trpcTryMany([
+        ['region.getRegionsByCountryId', { countryId: cId }],
+        ['region.getByCountryId', { countryId: cId }],
+        ['region.getAllRegions', {}],
+        ['region.getRegions', {}]
+      ], r => extractListFromResponse(r).length > 0);
+      if(rRes){
+        const allRegs = extractListFromResponse(rRes);
+        const owned = allRegs.filter(r => {
+          const ownerId = r?.country?._id || r?.country?.id || (typeof r?.country === 'string' ? r.country : '') || r?.countryId || r?.owner?._id || (typeof r?.owner === 'string' ? r.owner : '') || r?.ownerCountryId || '';
+          return String(ownerId) === String(cId);
+        });
+        regionsArr = owned.length ? owned : (allRegs.length && !allRegs[0]?.country && !allRegs[0]?.countryId ? allRegs : []);
       }
     }
 
     let popRaw = findDeepValue(country, [/^citizensCount$/i, /^population$/i, /^usersCount$/i, /^membersCount$/i, /^totalCitizens$/i, /^citizenCount$/i, /^citizens$/i, /pop/i]);
-    if((popRaw === undefined || popRaw === 0) && regionsArr.length){
-      const sumRegPop = regionsArr.reduce((s, r) => s + (Number(r.population ?? r.citizensCount ?? r.usersCount ?? 0) || 0), 0);
-      if(sumRegPop > 0) popRaw = sumRegPop;
+    let popNum = extractNumericMetric(popRaw);
+    if((popNum === null || popNum === 0) && regionsArr.length){
+      const sumRegPop = regionsArr.reduce((s, r) => s + (extractNumericMetric(r.population ?? r.citizensCount ?? r.usersCount) || 0), 0);
+      if(sumRegPop > 0) popNum = sumRegPop;
     }
-    const popNum = Number(popRaw);
-    const popText = Number.isFinite(popNum) && popNum > 0 ? popNum.toLocaleString() : (popRaw != null && popRaw !== '' && popRaw !== 0 ? String(popRaw) : 'غير معلن');
+    const popText = popNum !== null && popNum > 0 ? Math.round(popNum).toLocaleString() : 'غير معلن';
     $('cIntelPop').textContent = `👥 السكان: ${popText}`;
     $('cIntelPopStat').textContent = popText;
 
-    const regRaw = country.regionsCount ?? (regionsArr.length ? regionsArr.length : (country.territoriesCount ?? null));
-    const regVal = regRaw != null && regRaw !== '' ? regRaw : 'غير معلن';
+    const regNum = extractNumericMetric(country.regionsCount ?? country.territoriesCount) ?? (regionsArr.length || null);
+    const regVal = regNum !== null ? regNum : 'غير معلن';
     $('cIntelRegions').textContent = `🗺️ الأقاليم: ${regVal}`;
 
-    const warsArr = Array.isArray(country.wars) ? country.wars : (Array.isArray(country.activeWars) ? country.activeWars : []);
-    const warsCount = warsArr.length ? warsArr.length : (Number(country.warsCount ?? country.activeWarsCount ?? 0) || 0);
+    // Cross-reference active wars for this country
+    let warsArr = Array.isArray(country.wars) ? country.wars : (Array.isArray(country.activeWars) ? country.activeWars : []);
+    if(!warsArr.length && cId){
+      const wRes = await trpcTryMany([
+        ['war.getActiveWars', {}],
+        ['war.getWars', {}]
+      ], r => extractListFromResponse(r).length > 0);
+      if(wRes){
+        warsArr = extractListFromResponse(wRes).filter(w => {
+          const attId = w?.attacker?._id || (typeof w?.attacker === 'string' ? w.attacker : '') || w?.attackerCountryId || w?.aggressorId || '';
+          const defId = w?.defender?._id || (typeof w?.defender === 'string' ? w.defender : '') || w?.defenderCountryId || w?.targetId || '';
+          return String(attId) === String(cId) || String(defId) === String(cId);
+        });
+      }
+    }
+    const warsCount = warsArr.length ? warsArr.length : (extractNumericMetric(country.warsCount ?? country.activeWarsCount) || 0);
     const warPopRaw = findDeepValue(country, [/warPop/i, /warCitizen/i, /fighter/i, /warPoint/i, /warDamage/i, /troop/i, /soldier/i, /army/i]);
-    const warPopNum = Number(warPopRaw);
-    const warPopText = Number.isFinite(warPopNum) && warPopNum > 0
-      ? warPopNum.toLocaleString()
-      : (warPopRaw != null && warPopRaw !== '' ? String(warPopRaw) : `${warsCount} حرب`);
-    const warPopRatio = (Number.isFinite(popNum) && popNum > 0 && Number.isFinite(warPopNum) && warPopNum > 0)
+    const warPopNum = extractNumericMetric(warPopRaw);
+    const warPopText = warPopNum !== null && warPopNum > 0 ? Math.round(warPopNum).toLocaleString() : `${warsCount} حرب نشطة`;
+    const warPopRatio = (popNum !== null && popNum > 0 && warPopNum !== null && warPopNum > 0)
       ? ` · نسبة السكان في الحرب: ${Math.min(100, ((warPopNum / popNum) * 100)).toFixed(1)}%`
       : '';
     $('cIntelWars').textContent = warPopText;
     $('cIntelWarPopSub').textContent = `حروب نشطة: ${warsCount}${warPopRatio}`;
 
-    const treasuryVal = country.money ?? country.treasury ?? country.bank ?? country.balance ?? country.funds ?? null;
-    const goldVal = country.gold ?? country.goldTreasury ?? null;
-    const ecoVal = country.economy ?? country.gdp ?? country.economyPoints ?? country.economicIndex ?? null;
-    const ecoHeadline = treasuryVal != null
-      ? `$${Number(treasuryVal).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-      : (ecoVal != null ? `${Number(ecoVal).toLocaleString()}` : (goldVal != null ? `${Number(goldVal).toLocaleString()} Gold` : 'غير معلن'));
+    // Safe numeric extraction for treasury, gold, and economy (handles both numbers and nested objects!)
+    const moneyNum = extractNumericMetric(country.money ?? country.treasury ?? country.bank ?? country.balance ?? country.funds, ['money','usd','cash','balance','amount','value']);
+    const goldNum = extractNumericMetric(country.gold ?? country.goldTreasury ?? country.treasury?.gold, ['gold','amount','value']);
+    const ecoNum = extractNumericMetric(country.economy ?? country.gdp ?? country.economyPoints ?? country.economicIndex ?? country.development, ['economy','gdp','points','value','total']);
+
+    const ecoHeadline = moneyNum !== null
+      ? `$${moneyNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+      : (ecoNum !== null ? ecoNum.toLocaleString(undefined, { maximumFractionDigits: 2 }) : (goldNum !== null ? `${goldNum.toLocaleString()} Gold` : 'غير معلن'));
     const ecoParts = [];
-    if(treasuryVal != null) ecoParts.push(`الخزينة/المال: $${Number(treasuryVal).toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
-    if(goldVal != null) ecoParts.push(`الذهب: ${Number(goldVal).toLocaleString()}`);
-    if(ecoVal != null) ecoParts.push(`الاقتصاد: ${Number(ecoVal).toLocaleString()}`);
+    if(moneyNum !== null) ecoParts.push(`الخزينة: $${moneyNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
+    if(goldNum !== null) ecoParts.push(`الذهب: ${goldNum.toLocaleString()}`);
+    if(ecoNum !== null) ecoParts.push(`الاقتصاد: ${ecoNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
     $('cIntelGold').textContent = ecoHeadline;
     $('cIntelEcoSub').textContent = ecoParts.length ? ecoParts.join(' · ') : 'بيانات الاقتصاد من السيرفر';
 
     const alliesRawArr = Array.isArray(country.allies) ? country.allies : (Array.isArray(country.mpps) ? country.mpps : []);
-    const alliesCount = alliesRawArr.length ? alliesRawArr.length : (Number(country.alliesCount ?? country.mppsCount ?? 0) || 0);
+    const alliesCount = alliesRawArr.length ? alliesRawArr.length : (extractNumericMetric(country.alliesCount ?? country.mppsCount) || 0);
     const allyNames = alliesRawArr.map(resolveCountryLabel).filter(Boolean);
     $('cIntelAllies').textContent = `${alliesCount} حليف`;
     $('cIntelAlliesSub').textContent = allyNames.length ? allyNames.slice(0, 6).join('، ') : `الحلف: ${allianceName}`;
 
-    const taxVal = country.tax ?? country.workTax ?? country.productionTax ?? '-';
+    const taxVal = extractNumericMetric(country.tax ?? country.workTax ?? country.productionTax);
     const currVal = country.currency || country.currencyCode || country.code || '-';
     const extraCards = [
       { label: '🏛️ التحالف / الكتلة', val: allianceName },
       { label: '👥 عدد السكان', val: popText },
-      { label: '⚔️ الوار في السكان', val: warPopText },
+      { label: '⚔️ الوار / الحروب', val: warPopText },
       { label: '📈 الاقتصاد / الخزينة', val: ecoHeadline },
       { label: '💱 العملة / الرمز', val: String(currVal) },
-      { label: '🧾 ضريبة العمل/الإنتاج', val: taxVal === '-' ? '-' : `${taxVal}%` }
+      { label: '🧾 ضريبة العمل/الإنتاج', val: taxVal === null ? '-' : `${taxVal}%` }
     ];
     $('cIntelExtraGrid').innerHTML = extraCards.map(item => `
       <div class="gear-slot"><small>${item.label}</small><strong style="color:var(--ink)">${item.val}</strong></div>
     `).join('');
 
+    const regionNamesLine = regionsArr.length
+      ? `<div style="margin-top:6px">• <b>الأقاليم (${regionsArr.length}):</b> ${regionsArr.slice(0, 12).map(r => r.name || r.title || r._id).filter(Boolean).join('، ')}</div>`
+      : '';
     const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>أسماء الحلفاء:</b> ${allyNames.join('، ')}</div>` : '';
     const rawKeysPreview = Object.entries(country)
       .filter(([k, v]) => v !== null && v !== undefined && typeof v !== 'object' && !/^(name|_id|id|flag|flagUrl|image|icon|banner|allies|mpps)$/i.test(k))
@@ -2364,16 +2551,17 @@ async function runCountryIntel(){
       .map(([k, v]) => `<span class="diff-tag" style="background:#0b1524;border-color:#263f61;color:var(--muted)">${k}: <b style="color:var(--ink)">${typeof v === 'number' && !Number.isInteger(v) ? Number(v).toFixed(2) : v}</b></span>`)
       .join(' ');
 
+    const fetchedTime = new Date().toLocaleTimeString('ar-EG');
     $('cIntelDetails').innerHTML = `
       <div>• <b>الاسم والدولة:</b> ${cName} &nbsp;|&nbsp; <b>الحلف:</b> ${allianceName} &nbsp;|&nbsp; <b>السكان:</b> ${popText} &nbsp;|&nbsp; <b>الأقاليم:</b> ${regVal}</div>
       <div>• <b>الوار في السكان والحروب:</b> ${warPopText} (${warsCount} حرب نشطة${warPopRatio})</div>
-      <div>• <b>الاقتصاد:</b> ${ecoParts.length ? ecoParts.join(' · ') : ecoHeadline} &nbsp;|&nbsp; <b>العملة/الرمز:</b> ${currVal} &nbsp;|&nbsp; <b>الضريبة:</b> ${taxVal === '-' ? '-' : taxVal + '%'}</div>
+      <div>• <b>الاقتصاد:</b> ${ecoParts.length ? ecoParts.join(' · ') : ecoHeadline} &nbsp;|&nbsp; <b>العملة/الرمز:</b> ${currVal} &nbsp;|&nbsp; <b>الضريبة:</b> ${taxVal === null ? '-' : taxVal + '%'}</div>
+      ${regionNamesLine}
       ${allyNamesLine}
       ${rawKeysPreview ? `<div style="margin-top:8px">${rawKeysPreview}</div>` : ''}
+      <div style="margin-top:6px;color:var(--green)">🕒 تم التحديث اللحظي من السيرفر الساعة: <b>${fetchedTime}</b> (${lastApiDiagnostic})</div>
     `;
 
-    const fetchedTime = new Date().toLocaleTimeString('ar-EG');
-    $('cIntelDetails').innerHTML += `<div style="margin-top:6px;color:var(--green)">🕒 تم التحديث اللحظي من السيرفر الساعة: <b>${fetchedTime}</b> (${lastApiDiagnostic || 'LIVE'})</div>`;
     $('spyCountryBox').style.display = 'block';
     $('spyStatus').textContent = `✅ تم سحب أحدث بيانات دولة "${cName}" (${fetchedTime}).`;
   }catch(err){
@@ -2454,13 +2642,15 @@ async function runSpyScan(){
     let muObj = typeof target.mu === 'object' ? target.mu : (target.militaryUnit || null);
     let muName = muObj?.name || target.muName || '';
     if((!muName || !(muObj?.avatar || muObj?.logo)) && mId){
-      for(const proc of ['mu.getById', 'mu.getMuById', 'militaryUnit.getById']){
-        try{
-          const mu = await trpc(proc, { muId: mId, id: mId });
-          if(mu && (mu.name || mu.title)){ muObj = mu; muName = mu.name || mu.title; break; }
-        }catch(e){}
-      }
+      const mu = await trpcTryMany([
+        ['mu.getById', { muId: mId }],
+        ['mu.getMuById', { muId: mId }],
+        ['militaryUnit.getById', { id: mId }]
+      ]);
+      if(mu && (mu.name || mu.title)){ muObj = mu; muName = mu.name || mu.title; }
     }
+    if(mId) state.lastKnownMuId = mId;
+    if(muName) state.lastKnownMuName = muName;
 
     const avUrl = resolvePlayerAvatar(target);
     if(avUrl){ $('spyAvatarImg').src = avUrl; $('spyAvatarImg').style.display = 'inline-block'; } else { $('spyAvatarImg').style.display = 'none'; }
@@ -2649,7 +2839,7 @@ async function runAllianceIntel(){
       );
       if(hits.length){
         const pop = hits.reduce((s,c)=> s + (+(c.citizensCount || c.population || c.usersCount || 100)), 0);
-        const treas = hits.reduce((s,c)=> s + (+(c.treasury || c.gold || 0)), 0);
+        const treas = hits.reduce((s,c)=> s + (extractNumericMetric(c.treasury ?? c.money ?? c.gold) || 0), 0);
         return { name: q, count: hits.length, pop, treas, power: Math.round(pop * 120 + treas * 0.5) };
       }
       return { name: q, count: 3, pop: 450, treas: 25000, power: 66500 };
