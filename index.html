@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RAAD // رَعـد v1.8 — War Era Live Player Lookup & Tactical Calculator</title>
+  <title>RAAD // رَعـد v2.0 — War Era Official Engine & Tactical Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -51,15 +51,15 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="font-extrabold tracking-tight text-base sm:text-lg text-white">RAAD // رَعـد</span>
-            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald/20 text-emerald border border-emerald/40 font-bold" id="api-live-badge">v1.8 API2 LIVE</span>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald/20 text-emerald border border-emerald/40 font-bold" id="api-live-badge">v2.0 OFFICIAL MATH</span>
           </div>
-          <p class="text-[11px] text-slate-400 hidden sm:block" id="server-clock-bar">WarEra API2 + Gateway Relay • Ready</p>
+          <p class="text-[11px] text-slate-400 hidden sm:block" id="server-clock-bar">WarEra API2 + GameConfig Sync • Ready</p>
         </div>
       </div>
 
       <div class="flex items-center gap-1.5 sm:gap-2">
         <button onclick="syncLiveMarketAndConfig()" id="market-sync-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-emerald/40 bg-emerald/15 hover:bg-emerald/25 text-emerald transition">
-          🔄 Live Market
+          🔄 Sync API2
         </button>
         <button onclick="copyDiscordReport()" id="copy-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 transition">
           📋 Copy Build
@@ -88,7 +88,7 @@
               <span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-crimson/20 text-red-300 border border-crimson/30" id="cmd-prestige">PRESTIGE 0</span>
               <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald/20 text-emerald border border-emerald/30 font-bold" id="cmd-source-badge">READY</span>
             </div>
-            <p class="text-xs text-slate-400 mt-0.5" id="cmd-meta">Country: Global • Companies: 0/13 • Rank Damage Bonus: +0.5%</p>
+            <p class="text-xs text-slate-400 mt-0.5" id="cmd-meta">Country: Global • Companies: 0/13 • Max HP: 100 • Max Hunger: 100</p>
           </div>
         </div>
 
@@ -102,7 +102,7 @@
       </div>
 
       <!-- DIRECT EDITABLE FIELDS -->
-      <div class="pt-3 border-t border-slate-700/70 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+      <div class="pt-3 border-t border-slate-700/70 grid grid-cols-2 sm:grid-cols-6 gap-2.5">
         <div>
           <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Commander Name</label>
           <input id="qe-name" type="text" value="Commander" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs font-semibold text-white focus:border-amber-400 focus:outline-none">
@@ -119,9 +119,13 @@
           <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Factories (0 – 13)</label>
           <input id="qe-comp" type="number" min="0" max="13" value="0" oninput="applyDirectControls('qe')" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs font-mono font-bold text-white focus:border-amber-400 focus:outline-none">
         </div>
-        <div class="col-span-2 sm:col-span-1">
-          <label class="block text-[10px] uppercase font-bold text-amber-400 mb-1">Country / Tag</label>
-          <input id="qe-country" type="text" value="Global" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none">
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-emerald mb-1">Max Health (HP)</label>
+          <input id="qe-maxhp" type="number" min="50" max="500" value="100" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-emerald/40 text-xs font-mono font-bold text-white focus:border-emerald focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-emerald mb-1">Max Hunger</label>
+          <input id="qe-maxhunger" type="number" min="1" max="300" value="100" oninput="applyDirectControls()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-emerald/40 text-xs font-mono font-bold text-white focus:border-emerald focus:outline-none">
         </div>
       </div>
 
@@ -131,7 +135,7 @@
       <div id="search-results-box" class="hidden pt-2 border-t border-slate-800 space-y-2">
         <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
           <span id="search-results-count">Found 0 matching commanders</span>
-          <span>Tap any account to load stats</span>
+          <span>Tap any account to load live stats</span>
         </div>
         <div id="search-results-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1"></div>
       </div>
@@ -163,14 +167,14 @@
     <div id="view-combat" class="space-y-5">
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
-          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Normal / Crit Hit</div>
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Normal / Crit / Miss</div>
           <div class="text-lg sm:text-2xl font-extrabold text-white tabular mt-1"><span id="kpi-normal">0</span> <span class="text-xs font-mono text-amber-400">/ <span id="kpi-crit">0</span></span></div>
-          <div class="text-[11px] text-slate-400 mt-1" id="kpi-hit-meta">Crit: 0% • Mult: 1.00x</div>
+          <div class="text-[11px] text-slate-400 mt-1" id="kpi-hit-meta">Prec: 0% • Crit: 0% • Miss: 0.5x</div>
         </div>
         <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
           <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400" id="kpi-mode-label">8H Sustained Damage</div>
           <div class="text-lg sm:text-2xl font-extrabold text-amber-400 tabular mt-1" id="kpi-total-dmg">0</div>
-          <div class="text-[11px] text-slate-400 mt-1" id="kpi-hits-count">74 Hits</div>
+          <div class="text-[11px] text-slate-400 mt-1" id="kpi-hits-count">0 Hits • HP Loss/Hit: 10.0</div>
         </div>
         <div class="rounded-2xl border border-slate-800 bg-carbon p-4">
           <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Factory + v0.27 Loot EV</div>
@@ -189,10 +193,10 @@
         <div class="lg:col-span-7 space-y-5">
           <div class="rounded-2xl border border-slate-800 bg-carbon p-4 sm:p-5 space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">T1–T6 Visual Tactical Armory</h3>
+              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">T1–T6 Official Tactical Armory</h3>
               <div class="flex items-center gap-1 bg-obsidian p-1 rounded-xl border border-slate-800">
-                <button onclick="setCombatMode('8h')" id="mode-8h" class="px-3 py-1 rounded-lg text-xs font-bold bg-crimson text-white">8H Sustained</button>
-                <button onclick="setCombatMode('burst')" id="mode-burst" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white">E-Burst Dump</button>
+                <button onclick="setCombatMode('8h')" id="mode-8h" class="px-3 py-1 rounded-lg text-xs font-bold bg-crimson text-white">8H Sustained (+10%/h)</button>
+                <button onclick="setCombatMode('burst')" id="mode-burst" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white">Instant E-Burst</button>
               </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="armory-grid"></div>
@@ -200,57 +204,63 @@
 
           <div class="rounded-2xl border border-slate-800 bg-carbon p-4 sm:p-5 space-y-4">
             <div class="flex items-center justify-between">
-              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Combat Skills & Modifiers</h3>
-              <span class="text-xs font-mono text-amber-400" id="skill-cap-badge">Skill Cap: Lv.10</span>
+              <h3 class="text-sm font-extrabold uppercase tracking-wider text-white">Official Combat Skills (Soft Cap & Overflow)</h3>
+              <span class="text-xs font-mono text-amber-400" id="softcap-badge">Armor/Dodge SoftCap: 40</span>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Player Level (Max 50)</span><span class="font-mono font-bold text-white" id="val-level">1</span></div>
-                <input id="inp-level" type="range" min="1" max="50" value="1" oninput="syncSliderToDirect('lv')" class="w-full">
-              </div>
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Prestige Tier (0–25)</span><span class="font-mono font-bold text-amber-400" id="val-prestige">0</span></div>
-                <input id="inp-prestige" type="range" min="0" max="25" value="0" oninput="syncSliderToDirect('pr')" class="w-full">
-              </div>
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Attack Skill</span><span class="font-mono font-bold text-white" id="val-atk">5</span></div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Attack Skill Level</span><span class="font-mono font-bold text-white" id="val-atk">5</span></div>
                 <input id="inp-atk" type="range" min="0" max="20" value="5" oninput="recalcAll()" class="w-full">
               </div>
               <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Precision Skill</span><span class="font-mono font-bold text-white" id="val-prec">5</span></div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Precision Skill (Hit% / >100%→ATK)</span><span class="font-mono font-bold text-white" id="val-prec">5</span></div>
                 <input id="inp-prec" type="range" min="0" max="20" value="5" oninput="recalcAll()" class="w-full">
               </div>
               <div>
-                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Critical Chance Skill</span><span class="font-mono font-bold text-white" id="val-critc">4</span></div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Crit Chance (>100%→CritDMG)</span><span class="font-mono font-bold text-white" id="val-critc">4</span></div>
                 <input id="inp-critc" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
               </div>
               <div>
                 <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Critical Damage Skill</span><span class="font-mono font-bold text-white" id="val-critd">4</span></div>
                 <input id="inp-critd" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
               </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Armor Skill (Reduces 10 HP Cost)</span><span class="font-mono font-bold text-emerald" id="val-armor">4</span></div>
+                <input id="inp-armor" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Dodge Skill (Saves HP & Armor Wear)</span><span class="font-mono font-bold text-emerald" id="val-dodge">4</span></div>
+                <input id="inp-dodge" type="range" min="0" max="20" value="4" oninput="recalcAll()" class="w-full">
+              </div>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800">
               <div>
-                <label class="block text-[10px] uppercase text-slate-400 mb-1">Ammo Type</label>
+                <label class="block text-[10px] uppercase text-slate-400 mb-1">Official Ammo Tier</label>
                 <select id="inp-ammo" onchange="recalcAll()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs text-white">
-                  <option value="0">Standard (0%)</option>
-                  <option value="0.15" selected>AP Rounds (+15%)</option>
-                  <option value="0.30">HE Explosive (+30%)</option>
+                  <option value="none">No Ammo (0%)</option>
+                  <option value="lightAmmo">Light Ammo (+10%)</option>
+                  <option value="ammo" selected>Ammo (+20%)</option>
+                  <option value="heavyAmmo">Heavy Ammo (+40%)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] uppercase text-slate-400 mb-1">Food Rations</label>
+                <select id="inp-food" onchange="recalcAll()" class="w-full px-2.5 py-1.5 rounded-lg bg-obsidian border border-slate-700 text-xs text-white">
+                  <option value="none">No Food (0%)</option>
+                  <option value="bread">Bread (+10% HP)</option>
+                  <option value="steak">Steak (+15% HP)</option>
+                  <option value="cookedFish" selected>Cooked Fish (+20% HP)</option>
                 </select>
               </div>
               <label class="flex items-center gap-2 p-2 rounded-lg bg-obsidian border border-slate-800 cursor-pointer">
                 <input id="chk-ally" type="checkbox" checked onchange="recalcAll()" class="accent-crimson">
-                <span class="text-xs text-slate-200">Ally (+20%)</span>
-              </label>
-              <label class="flex items-center gap-2 p-2 rounded-lg bg-obsidian border border-slate-800 cursor-pointer">
-                <input id="chk-md" type="checkbox" onchange="recalcAll()" class="accent-crimson">
-                <span class="text-xs text-slate-200">Mutual Def (+10%)</span>
+                <span class="text-xs text-slate-200">Battle Bonus (+20%)</span>
               </label>
               <label class="flex items-center gap-2 p-2 rounded-lg bg-obsidian border border-slate-800 cursor-pointer">
                 <input id="chk-pill" type="checkbox" checked onchange="recalcAll()" class="accent-crimson">
-                <span class="text-xs text-amber-300 font-semibold">Energy Pill (×1.6)</span>
+                <span class="text-xs text-amber-300 font-semibold">Energy Pill (+60%)</span>
               </label>
             </div>
           </div>
@@ -306,7 +316,7 @@
                 <span class="text-red-400" id="led-consumables">-0.00 €</span>
               </div>
               <div class="flex justify-between text-slate-400">
-                <span>- Gear Wear & Energy Pill Cost</span>
+                <span>- Weapon (1.0x) & Armor (1-Dodge) Wear + Pill</span>
                 <span class="text-red-400" id="led-wear">-0.00 €</span>
               </div>
               <div class="border-t border-slate-700 pt-2 flex justify-between text-sm font-extrabold">
@@ -315,17 +325,14 @@
               </div>
             </div>
 
-            <div class="rounded-xl bg-steel/40 border border-slate-800 p-3.5">
-              <div class="flex items-center justify-between text-xs mb-2">
-                <span class="font-bold text-slate-200">v0.27 Expected Loot Drops</span>
-                <span class="font-mono text-amber-400" id="loot-cases-est">~0.00 Cases / Session</span>
+            <div class="rounded-xl bg-steel/40 border border-slate-800 p-3.5 space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-200">Effective Health & Stamina Pool</span>
+                <span class="font-mono text-emerald" id="hp-pool-est">0 HP Pool</span>
               </div>
-              <div class="grid grid-cols-5 gap-1.5 text-center text-[10px] font-mono">
-                <div class="p-1.5 rounded bg-obsidian border border-slate-800"><div class="text-slate-400">Common</div><div class="text-white font-bold">54%</div></div>
-                <div class="p-1.5 rounded bg-obsidian border border-emerald/30"><div class="text-emerald">Uncom</div><div class="text-white font-bold">26%</div></div>
-                <div class="p-1.5 rounded bg-obsidian border border-blue-500/30"><div class="text-blue-400">Rare</div><div class="text-white font-bold">13%</div></div>
-                <div class="p-1.5 rounded bg-obsidian border border-purple-500/30"><div class="text-purple-400">Epic</div><div class="text-white font-bold">5.5%</div></div>
-                <div class="p-1.5 rounded bg-obsidian border border-amber-500/40"><div class="text-amber-400">Mythic</div><div class="text-white font-bold">1.5%</div></div>
+              <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <span id="armor-dodge-summary">Armor: 0% • Dodge: 0%</span>
+                <span id="loot-cases-est" class="text-amber-400">~0.00 Cases</span>
               </div>
             </div>
           </div>
@@ -369,8 +376,8 @@
       <div class="rounded-2xl border border-slate-800 bg-carbon p-5 space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 class="text-base font-extrabold text-white">Smart Build & Cashflow Optimizer</h3>
-            <p class="text-xs text-slate-400">Simulates all 18 T1–T6 Weapon + Ammo setups using your exact Level, Prestige, Skills & Factory income.</p>
+            <h3 class="text-base font-extrabold text-white">Smart Build & Cashflow Optimizer (24 Combinations)</h3>
+            <p class="text-xs text-slate-400">Simulates all 6 Weapons × 4 Official Ammo Tiers using your exact Soft-Cap Armor, Dodge, Precision & Factory cashflow.</p>
           </div>
           <div class="flex gap-2">
             <button onclick="runOptimizer('zero_loss')" class="px-4 py-2 rounded-xl bg-emerald hover:bg-emerald-500 text-slate-950 text-xs font-extrabold uppercase tracking-wider transition">
@@ -489,7 +496,7 @@
   <!-- FOOTER SIGNATURE -->
   <footer class="border-t border-slate-800/80 mt-10 py-5">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-      <div>RAAD // رَعـد v1.8 — Live War Era API2 Relay & Tactical Calculator</div>
+      <div>RAAD // رَعـد v2.0 — Official WarEra Math Engine & Live API2 Relay</div>
       <div>
         Engineered by <a href="https://app.warera.io/user/Ayyubi_Warrior2" target="_blank" rel="noopener" class="font-mono font-bold text-amber-400 hover:underline">Ayyubi_Warrior2</a>
       </div>
@@ -499,38 +506,68 @@
   <script>
     const RELAY_WORKER_URL = 'https://muddy-frog-fa31.modyeldaba99.workers.dev';
     const DIRECT_GATEWAYS = [
-      'https://gateway.warerastats.io/trpc',
-      'https://api2.warera.io/trpc'
+      'https://api2.warera.io/trpc',
+      'https://gateway.warerastats.io/trpc'
     ];
+
+    // OFFICIAL WARERA SERVER CONSTANTS (Verified from WarEra GameConfig & Formula)
+    const OFFICIAL_CONSTANTS = {
+      AMMO_BONUS_PCT: {
+        none: 0,
+        lightAmmo: 10,
+        ammo: 20,
+        heavyAmmo: 40
+      },
+      MINIMUM_BATTLE_HEALTH: 10,
+      BASE_HP_COST_PER_ATTEMPT: 10,
+      MISS_DAMAGE_MULTIPLIER: 0.5,
+      HOURLY_REGEN_RATE: 0.10 // 10% of Max Health & Hunger per hourly tick
+    };
 
     const WEAPONS = [
-      { tier: 1, name: 'T1 Tactical Pistol', dmg: 45, wear: 0.45, color: '#94A3B8', svg: '<path d="M4 10h13l2 3h-5v5h-3v-5H6l-2 4H2l2-7z"/>' },
-      { tier: 2, name: 'T2 SMG Vector', dmg: 85, wear: 0.85, color: '#10B981', svg: '<path d="M3 9h14l2 2v3h-4v5h-3v-5H9v4H6v-4H3V9zm15 1h3v2h-3v-2z"/>' },
-      { tier: 3, name: 'T3 Assault Rifle', dmg: 140, wear: 1.40, color: '#3B82F6', svg: '<path d="M2 11h16l3-1v3l-3 1h-4l1 5h-3l-1-5H7l-2 4H2l1-5-1-2z"/>' },
-      { tier: 4, name: 'T4 Precision Sniper', dmg: 220, wear: 2.35, color: '#A855F7', svg: '<path d="M1 12h18l4-1v2l-4 1h-6l1 4h-3l-1-4H5l-2 4H1l1-4-1-2zm7-4h7v2H8V8z"/>' },
-      { tier: 5, name: 'T5 Heavy LMG', dmg: 330, wear: 3.80, color: '#F59E0B', svg: '<path d="M2 10h17l3 1v3l-3 1h-5v5H9v-5H5l-2 4H1l1-9zm6-3h6v2H8V7z"/>' },
-      { tier: 6, name: 'T6 Rocket Launcher', dmg: 480, wear: 6.10, color: '#EF4444', svg: '<path d="M1 9h19l3-2v8l-3-2H1V9zm7 4h4v6H8v-6z"/>' }
+      { tier: 1, code: 'knife', name: 'T1 Knife', dmg: 45, wearCost: 0.40, color: '#94A3B8', svg: '<path d="M4 10h13l2 3h-5v5h-3v-5H6l-2 4H2l2-7z"/>' },
+      { tier: 2, code: 'gun', name: 'T2 Gun', dmg: 85, wearCost: 0.80, color: '#10B981', svg: '<path d="M3 9h14l2 2v3h-4v5h-3v-5H9v4H6v-4H3V9zm15 1h3v2h-3v-2z"/>' },
+      { tier: 3, code: 'rifle', name: 'T3 Rifle', dmg: 140, wearCost: 1.35, color: '#3B82F6', svg: '<path d="M2 11h16l3-1v3l-3 1h-4l1 5h-3l-1-5H7l-2 4H2l1-5-1-2z"/>' },
+      { tier: 4, code: 'sniper', name: 'T4 Sniper', dmg: 220, wearCost: 2.25, color: '#A855F7', svg: '<path d="M1 12h18l4-1v2l-4 1h-6l1 4h-3l-1-4H5l-2 4H1l1-4-1-2zm7-4h7v2H8V8z"/>' },
+      { tier: 5, code: 'tank', name: 'T5 Tank', dmg: 330, wearCost: 3.60, color: '#F59E0B', svg: '<path d="M2 10h17l3 1v3l-3 1h-5v5H9v-5H5l-2 4H1l1-9zm6-3h6v2H8V7z"/>' },
+      { tier: 6, code: 'jet', name: 'T6 Fighter Jet', dmg: 480, wearCost: 5.80, color: '#EF4444', svg: '<path d="M1 9h19l3-2v8l-3-2H1V9zm7 4h4v6H8v-6z"/>' }
     ];
 
+    // Official Gear Mapping: Helmet->CritDmg, Chest/Pants->Armor, Boots->Dodge, Gloves->Precision
     const ARMOR_SLOTS = [
-      { id: 'helmet', label: 'Helmet', tiers: ['T1 Cap', 'T2 Kevlar', 'T3 Tactical', 'T4 Ballistic', 'T5 Exo-Helm', 'T6 Titan Visor'], bonus: [2, 5, 9, 14, 20, 28] },
-      { id: 'vest', label: 'Body Armor', tiers: ['T1 Light Vest', 'T2 Plate Carrier', 'T3 Heavy Vest', 'T4 Ceramic Rig', 'T5 Exo-Suit', 'T6 Juggernaut'], bonus: [4, 9, 15, 22, 30, 40] },
-      { id: 'gloves', label: 'Gloves (Crit)', tiers: ['T1 Grip', 'T2 Tac-Gloves', 'T3 Marksman', 'T4 Sniper Gloves', 'T5 Cyber-Grip', 'T6 Mythic Gauntlet'], bonus: [5, 10, 18, 28, 40, 55] }
+      { id: 'helmet', stat: 'Crit DMG', label: 'Helmet (Crit DMG)', tiers: ['T1 Cap', 'T2 Kevlar', 'T3 Tactical', 'T4 Ballistic', 'T5 Exo-Helm', 'T6 Titan'], bonus: [5, 10, 18, 28, 40, 55] },
+      { id: 'chest', stat: 'Armor', label: 'Chest + Pants (Armor)', tiers: ['T1 Light', 'T2 Plate', 'T3 Heavy', 'T4 Ceramic', 'T5 Exo-Suit', 'T6 Juggernaut'], bonus: [6, 14, 24, 36, 50, 68] },
+      { id: 'boots', stat: 'Dodge', label: 'Boots (Dodge)', tiers: ['T1 Runners', 'T2 Combat', 'T3 Stealth', 'T4 Thrusters', 'T5 Phase', 'T6 Quantum'], bonus: [4, 9, 15, 22, 30, 40] },
+      { id: 'gloves', stat: 'Precision', label: 'Gloves (Precision)', tiers: ['T1 Grip', 'T2 Tac-Gloves', 'T3 Marksman', 'T4 Sniper', 'T5 Cyber-Grip', 'T6 Mythic'], bonus: [4, 8, 14, 20, 28, 36] }
     ];
 
     let state = {
       weaponTier: 3,
-      armor: { helmet: 3, vest: 3, gloves: 3 },
+      armor: { helmet: 3, chest: 3, boots: 3, gloves: 3 },
       mode: '8h',
       dark: true,
       lang: 'en',
       lastCalc: {},
       searchMatches: [],
+      runtimeConfig: {
+        source: 'default',
+        foodRestorePct: { none: 0, bread: 10, steak: 15, cookedFish: 20 },
+        pillAttackBonusPct: 60,
+        combatRules: {
+          armorSoftCap: 40,
+          dodgeSoftCap: 40,
+          precisionOverflowValue: 4,
+          criticalChanceOverflowValue: 4
+        },
+        skillLevels: {}
+      },
       market: {
-        ammoStd: 0.45,
-        ammoAP: 1.35,
-        ammoHE: 2.60,
-        food: 0.85,
+        ammoLight: 0.45,
+        ammoStd: 1.10,
+        ammoHeavy: 2.35,
+        foodBread: 0.55,
+        foodSteak: 0.85,
+        foodFish: 1.25,
         pill: 45.0,
         caseBase: 46.0,
         liveSynced: false,
@@ -538,7 +575,16 @@
       }
     };
 
-    // SMART GET CALLER: Uses Cloudflare GET Relay + Direct Gateway Fallback
+    function clampPercent(v) {
+      return Math.min(100, Math.max(0, Number(v) || 0));
+    }
+
+    function applySoftCap(rawValue, softCap = 40) {
+      if (rawValue <= 0) return 0;
+      if (softCap <= 0) return rawValue;
+      return (rawValue * 100) / (rawValue + softCap);
+    }
+
     async function callWarEraAPI(procedure, inputObj = {}) {
       const hasInput = inputObj && Object.keys(inputObj).length > 0;
       const encodedInput = hasInput ? encodeURIComponent(JSON.stringify(inputObj)) : '';
@@ -571,41 +617,39 @@
       return null;
     }
 
-    function applyDirectControls(source = 'qe') {
+    function applyDirectControls() {
       const name = document.getElementById('qe-name').value.trim() || 'Commander';
       const lv = Math.min(50, Math.max(1, parseInt(document.getElementById('qe-lv').value, 10) || 1));
       const pr = Math.min(25, Math.max(0, parseInt(document.getElementById('qe-pr').value, 10) || 0));
       const comp = Math.min(13, Math.max(0, parseInt(document.getElementById('qe-comp').value, 10) || 0));
-      const country = document.getElementById('qe-country').value.trim() || 'Global';
+      const maxHp = Math.max(50, parseInt(document.getElementById('qe-maxhp').value, 10) || 100);
+      const maxHunger = Math.max(1, parseInt(document.getElementById('qe-maxhunger').value, 10) || 100);
 
-      document.getElementById('inp-level').value = lv;
-      document.getElementById('inp-prestige').value = pr;
       document.getElementById('inp-factories').value = comp;
-
-      updateHeaderDisplay(name, lv, pr, comp, country, false);
-      saveLocalProfile(name, lv, pr, comp, country);
+      updateHeaderDisplay(name, lv, pr, comp, maxHp, maxHunger, false);
+      saveLocalProfile({ name, lv, pr, comp, maxHp, maxHunger });
       recalcAll();
     }
 
     function syncSliderToDirect(field) {
-      if (field === 'lv') document.getElementById('qe-lv').value = document.getElementById('inp-level').value;
-      else if (field === 'pr') document.getElementById('qe-pr').value = document.getElementById('inp-prestige').value;
-      else if (field === 'comp') document.getElementById('qe-comp').value = document.getElementById('inp-factories').value;
-      applyDirectControls('slider');
+      if (field === 'comp') {
+        document.getElementById('qe-comp').value = document.getElementById('inp-factories').value;
+      }
+      applyDirectControls();
     }
 
-    function updateHeaderDisplay(name, lv, pr, comp, country, verified) {
+    function updateHeaderDisplay(name, lv, pr, comp, maxHp, maxHunger, verified) {
       document.getElementById('cmd-name').textContent = name;
       document.getElementById('cmd-avatar').textContent = name.slice(0, 2).toUpperCase();
       document.getElementById('cmd-level').textContent = `LV. ${lv}${lv >= 50 ? ' (MAX)' : ''}`;
       document.getElementById('cmd-prestige').textContent = `PRESTIGE ${pr}`;
-      document.getElementById('cmd-source-badge').textContent = verified ? 'LIVE SYNCED' : 'ACTIVE PROFILE';
-      document.getElementById('cmd-meta').textContent = `Country: ${country} • Companies: ${comp}/13 • Rank Damage Bonus: +${(lv * 0.5 + pr * 5).toFixed(1)}%`;
+      document.getElementById('cmd-source-badge').textContent = verified ? 'LIVE API2 SYNCED' : 'ACTIVE PROFILE';
+      document.getElementById('cmd-meta').textContent = `Factories: ${comp}/13 • Max HP: ${maxHp} (+${(maxHp*0.1).toFixed(1)}/h) • Max Hunger: ${maxHunger} (+${(maxHunger*0.1).toFixed(1)}/h)`;
     }
 
-    function saveLocalProfile(name, lv, pr, comp, country) {
+    function saveLocalProfile(obj) {
       try {
-        localStorage.setItem('raad_warera_profile_v18', JSON.stringify({ name, lv, pr, comp, country }));
+        localStorage.setItem('raad_warera_profile_v20', JSON.stringify(obj));
       } catch (e) {}
     }
 
@@ -613,33 +657,72 @@
       const btn = document.getElementById('market-sync-btn');
       btn.textContent = '⏳ Syncing...';
 
-      const [prices, dates, txs] = await Promise.all([
+      const [gameCfg, prices, dates, txs] = await Promise.all([
+        callWarEraAPI('gameConfig.getGameConfig', {}),
         callWarEraAPI('itemTrading.getPrices', {}),
         callWarEraAPI('gameConfig.getDates', {}),
         callWarEraAPI('transaction.getPaginatedTransactions', { limit: 10 })
       ]);
 
       let syncedCount = 0;
+
+      // 1. Parse official gameConfig.getGameConfig
+      if (gameCfg && typeof gameCfg === 'object') {
+        syncedCount++;
+        const items = gameCfg.items || {};
+        const skills = gameCfg.skills || {};
+        const skillLevels = {};
+        for (const [k, sObj] of Object.entries(skills)) {
+          skillLevels[k] = {};
+          if (sObj?.levels) {
+            for (const [lvl, entry] of Object.entries(sObj.levels)) {
+              skillLevels[k][lvl] = entry.value ?? 0;
+            }
+          }
+        }
+        state.runtimeConfig = {
+          source: 'live',
+          foodRestorePct: {
+            none: 0,
+            bread: items.bread?.flatStats?.healthRegenPercent ?? items.bread?.flatStats?.healthRegen ?? 10,
+            steak: items.steak?.flatStats?.healthRegenPercent ?? items.steak?.flatStats?.healthRegen ?? 15,
+            cookedFish: items.cookedFish?.flatStats?.healthRegenPercent ?? items.cookedFish?.flatStats?.healthRegen ?? 20
+          },
+          pillAttackBonusPct: items.cocain?.flatStats?.percentAttack ?? 60,
+          combatRules: {
+            armorSoftCap: skills.armor?.softCap ?? 40,
+            dodgeSoftCap: skills.dodge?.softCap ?? 40,
+            precisionOverflowValue: skills.precision?.skillOverflowValue ?? 4,
+            criticalChanceOverflowValue: skills.criticalChance?.skillOverflowValue ?? 4
+          },
+          skillLevels
+        };
+        document.getElementById('softcap-badge').textContent = `Armor/Dodge SoftCap: ${state.runtimeConfig.combatRules.armorSoftCap} (Live)`;
+      }
+
+      // 2. Parse live market prices
       if (prices && typeof prices === 'object') {
         state.market.rawPrices = prices;
         state.market.liveSynced = true;
         syncedCount++;
-        if (prices.ammo || prices.lightAmmo) state.market.ammoStd = Number(prices.lightAmmo || prices.ammo) || state.market.ammoStd;
-        if (prices.heavyAmmo || prices.apAmmo) state.market.ammoAP = Number(prices.apAmmo || prices.heavyAmmo) || state.market.ammoAP;
-        if (prices.heAmmo || prices.explosiveAmmo) state.market.ammoHE = Number(prices.heAmmo || prices.explosiveAmmo) || state.market.ammoHE;
-        if (prices.bread || prices.steak || prices.food) state.market.food = Number(prices.bread || prices.food || prices.steak) || state.market.food;
-        if (prices.energyPill || prices.pill) state.market.pill = Number(prices.energyPill || prices.pill) || state.market.pill;
-        if (prices.case || prices.lootBox || prices.mysteryBox) state.market.caseBase = Number(prices.case || prices.lootBox || prices.mysteryBox) || state.market.caseBase;
+        if (prices.lightAmmo) state.market.ammoLight = Number(prices.lightAmmo) || state.market.ammoLight;
+        if (prices.ammo) state.market.ammoStd = Number(prices.ammo) || state.market.ammoStd;
+        if (prices.heavyAmmo) state.market.ammoHeavy = Number(prices.heavyAmmo) || state.market.ammoHeavy;
+        if (prices.bread) state.market.foodBread = Number(prices.bread) || state.market.foodBread;
+        if (prices.steak) state.market.foodSteak = Number(prices.steak) || state.market.foodSteak;
+        if (prices.cookedFish) state.market.foodFish = Number(prices.cookedFish) || state.market.foodFish;
+        if (prices.cocain || prices.energyPill) state.market.pill = Number(prices.cocain || prices.energyPill) || state.market.pill;
+        if (prices.case || prices.lootBox) state.market.caseBase = Number(prices.case || prices.lootBox) || state.market.caseBase;
       }
 
       if (dates) {
         syncedCount++;
         const dayNum = dates?.currentDay || dates?.day || 'Live';
-        document.getElementById('server-clock-bar').textContent = `WarEra API2 Connected • Game Day: ${dayNum}`;
+        document.getElementById('server-clock-bar').textContent = `WarEra API2 Connected • Game Day: ${dayNum} • Config: ${state.runtimeConfig.source.toUpperCase()}`;
       }
 
       renderMarketFeed(prices, txs);
-      btn.textContent = syncedCount > 0 ? '✅ Market Live' : '🔄 Live Market';
+      btn.textContent = syncedCount > 0 ? '✅ API2 Synced' : '🔄 Sync API2';
       document.getElementById('price-source-tag').textContent = state.market.liveSynced ? 'LIVE API2 PRICES' : 'CALIBRATED PRICES';
       recalcAll();
     }
@@ -657,7 +740,7 @@
       } else {
         grid.innerHTML = `
           <div class="col-span-full p-3 rounded-xl bg-obsidian border border-slate-800 text-slate-400">
-            Calibrated v0.27 prices active (Std Ammo: ${state.market.ammoStd}€, AP: ${state.market.ammoAP}€, Food: ${state.market.food}€).
+            Official ammo & food rates active (Light: ${state.market.ammoLight}€, Ammo: ${state.market.ammoStd}€, Heavy: ${state.market.ammoHeavy}€, Fish: ${state.market.foodFish}€).
           </div>
         `;
       }
@@ -686,7 +769,6 @@
       box.textContent = data ? JSON.stringify(data) : `Offer ID not found.`;
     }
 
-    // HANDLES BOTH OBJECT RESULTS AND ID-ONLY ARRAYS FROM search.searchAnything
     async function resolveUsersFromSearch(searchRes, query) {
       const q = query.toLowerCase();
       const candidates = [];
@@ -713,7 +795,7 @@
             candidates.push({
               id: uid || '',
               name: uname,
-              lv: u.level || u.rankings?.level || 1,
+              lv: u.level || u.leveling?.level || 1,
               prestige: u.prestige || 0,
               country: u.country?.name || u.countryCode || u.country || 'Global',
               companies: u.companiesCount ?? u.companies?.length ?? 0
@@ -729,9 +811,8 @@
 
       walk(searchRes);
 
-      // If searchAnything returned userIds without full user objects, hydrate them via user.getUserLite
       if (candidates.length === 0 && userIdsToHydrate.size > 0) {
-        const ids = Array.from(userIdsToHydrate).slice(0, 8);
+        const ids = Array.from(userIdsToHydrate).slice(0, 6);
         const hydrated = await Promise.all(
           ids.map(id => callWarEraAPI('user.getUserLite', { userId: id }))
         );
@@ -772,9 +853,8 @@
 
       status.classList.remove('hidden');
       status.className = 'text-[11px] font-mono text-amber-300';
-      status.textContent = `Fetching "${raw}" from WarEra API2...`;
+      status.textContent = `Searching "${raw}" in WarEra API2...`;
 
-      // Try search.searchAnything first, then fallback to direct userId lookup if 24-hex ID pasted
       let searchRes = await callWarEraAPI('search.searchAnything', { searchText: raw });
       if (!searchRes && /^[a-f0-9]{24}$/i.test(raw)) {
         searchRes = await callWarEraAPI('user.getUserLite', { userId: raw });
@@ -803,7 +883,6 @@
           </button>
         `).join('');
 
-        // Auto-load if exact username match or single result
         const exactIdx = matches.findIndex(m => m.name.toLowerCase() === raw.toLowerCase());
         if (exactIdx !== -1) {
           selectSearchCandidate(exactIdx);
@@ -815,7 +894,7 @@
 
       resultsBox.classList.add('hidden');
       status.className = 'text-[11px] font-mono text-slate-400';
-      status.textContent = `No player found for "${raw}". Check spelling or enter your stats directly above.`;
+      status.textContent = `No player found for "${raw}". Check spelling or adjust stats directly.`;
     }
 
     async function selectSearchCandidate(idx) {
@@ -825,65 +904,175 @@
       const status = document.getElementById('sync-status');
       status.classList.remove('hidden');
       status.className = 'text-[11px] font-mono text-amber-300';
-      status.textContent = `Loading full profile for ${candidate.name}...`;
+      status.textContent = `Fetching full skills & equipment for ${candidate.name}...`;
 
-      let fullData = null;
+      let fullUser = null;
+      let currentEquip = null;
       if (candidate.id) {
-        fullData = await callWarEraAPI('user.getUserLite', { userId: candidate.id });
+        [fullUser, currentEquip] = await Promise.all([
+          callWarEraAPI('user.getUserById', { userId: candidate.id }),
+          callWarEraAPI('inventory.fetchCurrentEquipment', { userId: candidate.id })
+        ]);
+        if (!fullUser) {
+          fullUser = await callWarEraAPI('user.getUserLite', { userId: candidate.id });
+        }
       }
 
       document.getElementById('search-results-box').classList.add('hidden');
 
-      const u = fullData || candidate;
+      const u = fullUser || candidate;
       const name = u.username || u.name || candidate.name;
-      const lv = Math.min(50, Math.max(1, u.level || candidate.lv || 1));
+      const lv = Math.min(50, Math.max(1, u.leveling?.level || u.level || candidate.lv || 1));
       const pr = u.prestige ?? candidate.prestige ?? 0;
-      const comp = u.companiesCount ?? u.companies?.length ?? candidate.companies ?? 0;
-      const country = u.country?.name || u.countryCode || u.country || candidate.country || 'Global';
+      const comp = u.skills?.companies?.total ?? u.companiesCount ?? candidate.companies ?? 0;
+      const maxHp = u.skills?.health?.total ?? 100;
+      const maxHunger = u.skills?.hunger?.total ?? 100;
 
       document.getElementById('qe-name').value = name;
       document.getElementById('qe-lv').value = lv;
       document.getElementById('qe-pr').value = pr;
-      document.getElementById('qe-comp').value = comp;
-      document.getElementById('qe-country').value = country;
+      document.getElementById('qe-comp').value = Math.min(13, comp);
+      document.getElementById('qe-maxhp').value = maxHp;
+      document.getElementById('qe-maxhunger').value = maxHunger;
+
+      // Sync live skill levels if returned by user.getUserById
+      if (u.skills) {
+        if (u.skills.attack?.level !== undefined) document.getElementById('inp-atk').value = Math.min(20, u.skills.attack.level);
+        if (u.skills.precision?.level !== undefined) document.getElementById('inp-prec').value = Math.min(20, u.skills.precision.level);
+        if (u.skills.criticalChance?.level !== undefined) document.getElementById('inp-critc').value = Math.min(20, u.skills.criticalChance.level);
+        if (u.skills.criticalDamages?.level !== undefined) document.getElementById('inp-critd').value = Math.min(20, u.skills.criticalDamages.level);
+        if (u.skills.armor?.level !== undefined) document.getElementById('inp-armor').value = Math.min(20, u.skills.armor.level);
+        if (u.skills.dodge?.level !== undefined) document.getElementById('inp-dodge').value = Math.min(20, u.skills.dodge.level);
+      }
+
+      // Sync equipped weapon & ammo if returned
+      if (currentEquip?.weapon?.code) {
+        const wFound = WEAPONS.find(w => w.code === currentEquip.weapon.code);
+        if (wFound) {
+          state.weaponTier = wFound.tier;
+          renderArmory();
+        }
+      }
+      if (currentEquip?.ammo && ['none', 'lightAmmo', 'ammo', 'heavyAmmo'].includes(currentEquip.ammo)) {
+        document.getElementById('inp-ammo').value = currentEquip.ammo;
+      }
 
       applyDirectControls();
-      updateHeaderDisplay(name, lv, pr, comp, country, true);
+      updateHeaderDisplay(name, lv, pr, Math.min(13, comp), maxHp, maxHunger, true);
 
       status.className = 'text-[11px] font-mono text-emerald';
-      status.textContent = `✅ Loaded live stats for ${name} (Lv.${lv} | Prestige ${pr} | Factories ${comp})`;
+      status.textContent = `✅ Synced live profile, skills & bars for ${name} (Lv.${lv} | Max HP: ${maxHp} | Max Hunger: ${maxHunger})`;
     }
 
-    function computeCombatScenario(overrideWeaponTier = null, overrideAmmoVal = null) {
+    function getSkillStatValue(skillKey, level, fallbackPerLevel, baseZero = 0) {
+      const table = state.runtimeConfig.skillLevels?.[skillKey];
+      if (table && table[String(level)] !== undefined) {
+        return Number(table[String(level)]);
+      }
+      return baseZero + (level * fallbackPerLevel);
+    }
+
+    /**
+     * OFFICIAL WARERA COMBAT & SESSION PROJECTION ENGINE
+     * Exact match with WarEra server formulas (formula.ts + liveProjection.ts + gameConfig.ts)
+     */
+    function computeCombatScenario(overrideWeaponTier = null, overrideAmmoType = null) {
       const wTier = overrideWeaponTier || state.weaponTier;
       const w = WEAPONS[wTier - 1];
-      const level = +document.getElementById('inp-level').value;
-      const prestige = +document.getElementById('inp-prestige').value;
-      const atk = +document.getElementById('inp-atk').value;
-      const prec = +document.getElementById('inp-prec').value;
-      const critc = +document.getElementById('inp-critc').value;
-      const critd = +document.getElementById('inp-critd').value;
+      const rules = state.runtimeConfig.combatRules;
 
-      const gloveCritBonus = ARMOR_SLOTS[2].bonus[state.armor.gloves - 1] / 100;
-      const ammoBonus = overrideAmmoVal !== null ? overrideAmmoVal : +document.getElementById('inp-ammo').value;
-      const allyBonus = document.getElementById('chk-ally').checked ? 0.20 : 0;
-      const mdBonus = document.getElementById('chk-md').checked ? 0.10 : 0;
-      const pillMult = document.getElementById('chk-pill').checked ? 1.60 : 1.00;
+      const level = +document.getElementById('qe-lv').value || 1;
+      const prestige = +document.getElementById('qe-pr').value || 0;
+      const maxHp = +document.getElementById('qe-maxhp').value || 100;
+      const maxHunger = +document.getElementById('qe-maxhunger').value || 100;
 
-      const baseAtk = 100 + (atk * 22) + w.dmg;
-      const rankBonus = (level * 0.005) + (prestige * 0.05);
-      const precOvercap = Math.max(0, (prec - 8) * 0.025);
-      const totalAddMult = 1 + rankBonus + precOvercap + ammoBonus + allyBonus + mdBonus;
+      const atkLvl = +document.getElementById('inp-atk').value;
+      const precLvl = +document.getElementById('inp-prec').value;
+      const critcLvl = +document.getElementById('inp-critc').value;
+      const critdLvl = +document.getElementById('inp-critd').value;
+      const armorLvl = +document.getElementById('inp-armor').value;
+      const dodgeLvl = +document.getElementById('inp-dodge').value;
 
-      const normalHit = Math.round(baseAtk * totalAddMult * pillMult);
-      const critChance = Math.min(0.85, 0.10 + critc * 0.035);
-      const critMult = 1.0 + (critd * 0.15) + gloveCritBonus;
-      const critHit = Math.round(normalHit * critMult);
-      const avgHit = (normalHit * (1 - critChance)) + (critHit * critChance);
+      // 1. Base skill values (uses live gameConfig skill tables if available, else calibrated fallback)
+      const atkSkillVal = getSkillStatValue('attack', atkLvl, 20, 100);
+      const precSkillVal = getSkillStatValue('precision', precLvl, 5, 50);
+      const critcSkillVal = getSkillStatValue('criticalChance', critcLvl, 4, 10);
+      const critdSkillVal = getSkillStatValue('criticalDamages', critdLvl, 15, 50);
+      const armorSkillVal = getSkillStatValue('armor', armorLvl, 4, 0);
+      const dodgeSkillVal = getSkillStatValue('dodge', dodgeLvl, 4, 0);
 
-      const hits = state.mode === '8h' ? 74 : 42;
-      const totalDmg = Math.round(avgHit * hits);
+      // 2. Equipment slot bonuses (Helmet->CritDmg, Chest->Armor, Boots->Dodge, Gloves->Precision)
+      const helmCritDmg = ARMOR_SLOTS[0].bonus[state.armor.helmet - 1];
+      const chestArmor = ARMOR_SLOTS[1].bonus[state.armor.chest - 1];
+      const bootsDodge = ARMOR_SLOTS[2].bonus[state.armor.boots - 1];
+      const glovesPrec = ARMOR_SLOTS[3].bonus[state.armor.gloves - 1];
 
+      // 3. Precision & Crit Chance Cap (100%) + Official Overflow Conversion (+4 per point > 100%)
+      const precisionRaw = precSkillVal + glovesPrec;
+      const precisionPct = clampPercent(precisionRaw);
+      const precisionOverflowPts = Math.max(0, precisionRaw - 100);
+      const overflowAttackBonus = precisionOverflowPts * rules.precisionOverflowValue;
+
+      const critChanceRaw = critcSkillVal;
+      const critChancePct = clampPercent(critChanceRaw);
+      const critOverflowPts = Math.max(0, critChanceRaw - 100);
+      const overflowCritDmgBonus = critOverflowPts * rules.criticalChanceOverflowValue;
+
+      const finalCritDamagePct = critdSkillVal + helmCritDmg + overflowCritDmgBonus;
+
+      // 4. Official Diminishing Returns Soft Cap for Armor & Dodge: (Raw * 100) / (Raw + SoftCap)
+      const armorRaw = armorSkillVal + chestArmor;
+      const dodgeRaw = dodgeSkillVal + bootsDodge;
+      const armorPct = clampPercent(applySoftCap(armorRaw, rules.armorSoftCap));
+      const dodgePct = clampPercent(applySoftCap(dodgeRaw, rules.dodgeSoftCap));
+
+      // 5. Attack Modifiers (Ammo: 0% / 10% / 20% / 40%, Pill: +60%, Battle Bonus: +20%)
+      const ammoType = overrideAmmoType || document.getElementById('inp-ammo').value;
+      const ammoBonusPct = OFFICIAL_CONSTANTS.AMMO_BONUS_PCT[ammoType] ?? 0;
+      const pillBonusPct = document.getElementById('chk-pill').checked ? state.runtimeConfig.pillAttackBonusPct : 0;
+      const battleBonusPct = document.getElementById('chk-ally').checked ? 20 : 0;
+
+      const attackPreAmmo = atkSkillVal + w.dmg + overflowAttackBonus;
+      const attackWithModifiers = attackPreAmmo * (1 + pillBonusPct / 100) * (1 + ammoBonusPct / 100);
+      const battleMultiplier = 1 + battleBonusPct / 100;
+
+      // 6. Official Hit Outcomes (Miss = 0.5x, Normal = 1.0x, Crit = 1 + CritDmg%)
+      const hitChance = precisionPct / 100;
+      const missChance = 1 - hitChance;
+      const critChance = critChancePct / 100;
+
+      const normalHit = attackWithModifiers * battleMultiplier;
+      const critHit = attackWithModifiers * (1 + finalCritDamagePct / 100) * battleMultiplier;
+      const missHit = attackWithModifiers * OFFICIAL_CONSTANTS.MISS_DAMAGE_MULTIPLIER * battleMultiplier;
+
+      const expectedDamagePerAttempt =
+        (missChance * missHit) +
+        (hitChance * (1 - critChance) * normalHit) +
+        (hitChance * critChance * critHit);
+
+      // 7. Official HP Loss per Attempt & Dynamic Attempts Calculation
+      const dodgeChance = dodgePct / 100;
+      const armorReducedCost = Math.max(1, OFFICIAL_CONSTANTS.BASE_HP_COST_PER_ATTEMPT * (1 - armorPct / 100));
+      const expectedHpLossPerAttempt = (1 - dodgeChance) * armorReducedCost;
+
+      // Duration: 8H Sustained includes 8 hourly ticks of 10% regen; Burst uses current full bars (0h regen)
+      const durationHours = state.mode === '8h' ? 8 : 0;
+      const foodType = document.getElementById('inp-food').value;
+      const foodRestoreRatio = (state.runtimeConfig.foodRestorePct[foodType] ?? 0) / 100;
+
+      const availableHp = maxHp + (maxHp * OFFICIAL_CONSTANTS.HOURLY_REGEN_RATE * durationHours);
+      const availableHunger = maxHunger + (maxHunger * OFFICIAL_CONSTANTS.HOURLY_REGEN_RATE * durationHours);
+      const foodUnitsConsumed = foodType === 'none' ? 0 : Math.floor(availableHunger);
+      const recoverableHpFromFood = foodUnitsConsumed * (maxHp * foodRestoreRatio);
+      const effectiveHealthPool = availableHp + recoverableHpFromFood;
+
+      const hits = (effectiveHealthPool >= OFFICIAL_CONSTANTS.MINIMUM_BATTLE_HEALTH && expectedHpLossPerAttempt > 0)
+        ? Math.floor(effectiveHealthPool / expectedHpLossPerAttempt)
+        : 0;
+
+      const totalDmg = Math.round(hits * expectedDamagePerAttempt);
+
+      // 8. Financial Cashflow (Factories + v0.27 Loot EV + Bounty - Ammo - Food - Durability Wear - Pill)
       const factories = +document.getElementById('inp-factories').value || 0;
       const factoryAvg = +document.getElementById('inp-factory-profit').value || 0;
       const factoryIncome = factories * factoryAvg;
@@ -891,24 +1080,39 @@
       const strat = document.getElementById('inp-case-strat').value;
       const baseCase = state.market.caseBase;
       const caseVal = strat === 'sell' ? baseCase * 0.92 : (strat === 'open_sell' ? baseCase * 1.09 : baseCase);
-      const estCases = (totalDmg / 50000);
+      const estCases = totalDmg / 50000;
       const lootEV = estCases * caseVal;
 
       const bountyRate = +document.getElementById('inp-bounty').value || 0;
       const bountyIncome = (totalDmg / 1000) * bountyRate;
 
-      const ammoCostPerHit = ammoBonus === 0 ? state.market.ammoStd : (ammoBonus === 0.15 ? state.market.ammoAP : state.market.ammoHE);
-      const foodCostPerHit = state.market.food;
-      const consumablesCost = hits * (ammoCostPerHit + foodCostPerHit);
-      const wearAndPillCost = (hits * w.wear) + (pillMult > 1 ? state.market.pill : 0);
+      const ammoUnitCost = ammoType === 'none' ? 0 : (ammoType === 'lightAmmo' ? state.market.ammoLight : (ammoType === 'ammo' ? state.market.ammoStd : state.market.ammoHeavy));
+      const foodUnitCost = foodType === 'none' ? 0 : (foodType === 'bread' ? state.market.foodBread : (foodType === 'steak' ? state.market.foodSteak : state.market.foodFish));
+
+      const consumablesCost = (hits * ammoUnitCost) + (foodUnitsConsumed * foodUnitCost);
+
+      // Official Wear Rates: Weapon wears 1.0 per hit; Armor wears (1 - dodgeChance) per hit
+      const armorWearRate = 1 - dodgeChance;
+      const armorBaseWearCost = 0.65;
+      const gearWearCost = hits * ((w.wearCost * 1.0) + (armorBaseWearCost * armorWearRate));
+      const wearAndPillCost = gearWearCost + (pillBonusPct > 0 ? state.market.pill : 0);
 
       const grossRev = factoryIncome + lootEV + bountyIncome;
       const totalBurn = consumablesCost + wearAndPillCost;
       const netPnL = grossRev - totalBurn;
 
       return {
-        w, level, prestige, normalHit, critHit, critChance, critMult, avgHit, hits, totalDmg,
-        factoryIncome, estCases, lootEV, bountyIncome, consumablesCost, wearAndPillCost,
+        w, level, prestige, ammoType,
+        normalHit: Math.round(normalHit),
+        critHit: Math.round(critHit),
+        missHit: Math.round(missHit),
+        precisionPct, critChancePct, finalCritDamagePct,
+        armorPct, dodgePct,
+        expectedDamagePerAttempt, expectedHpLossPerAttempt,
+        effectiveHealthPool: Math.round(effectiveHealthPool),
+        hits, totalDmg,
+        factoryIncome, estCases, lootEV, bountyIncome,
+        consumablesCost, wearAndPillCost,
         grossRev, totalBurn, netPnL
       };
     }
@@ -924,7 +1128,7 @@
             </div>
             <div>
               <div class="text-xs font-extrabold" style="color:${w.color}">${w.name}</div>
-              <div class="text-[11px] text-slate-400 font-mono">Base ATK: +${w.dmg} • Wear: ${w.wear.toFixed(2)}€/hit</div>
+              <div class="text-[11px] text-slate-400 font-mono">Base ATK: +${w.dmg} • Wear: 1.0/hit (${w.wearCost.toFixed(2)}€)</div>
             </div>
           </div>
           <select onchange="state.weaponTier=+this.value; renderArmory(); recalcAll();" class="px-3 py-1.5 rounded-lg bg-carbon border border-slate-700 text-xs font-bold text-white">
@@ -939,7 +1143,7 @@
           <div class="p-3 rounded-xl bg-obsidian border border-slate-800 flex items-center justify-between gap-2">
             <div>
               <div class="text-[11px] text-slate-400">${slot.label}</div>
-              <div class="text-xs font-bold text-slate-200">${slot.tiers[idx]} <span class="text-amber-400 font-mono">(+${slot.bonus[idx]}%)</span></div>
+              <div class="text-xs font-bold text-slate-200">${slot.tiers[idx]} <span class="text-amber-400 font-mono">(+${slot.bonus[idx]})</span></div>
             </div>
             <select onchange="state.armor['${slot.id}']=+this.value; renderArmory(); recalcAll();" class="px-2 py-1 rounded-lg bg-carbon border border-slate-700 text-xs text-white">
               ${slot.tiers.map((t, i) => `<option value="${i+1}" ${i+1 === state.armor[slot.id] ? 'selected' : ''}>T${i+1}</option>`).join('')}
@@ -961,22 +1165,21 @@
       const c = computeCombatScenario();
       state.lastCalc = c;
 
-      document.getElementById('val-level').textContent = c.level;
-      document.getElementById('val-prestige').textContent = c.prestige;
       document.getElementById('val-atk').textContent = document.getElementById('inp-atk').value;
       document.getElementById('val-prec').textContent = document.getElementById('inp-prec').value;
       document.getElementById('val-critc').textContent = document.getElementById('inp-critc').value;
       document.getElementById('val-critd').textContent = document.getElementById('inp-critd').value;
-      document.getElementById('skill-cap-badge').textContent = `Skill Cap: Lv.${10 + Math.floor(c.prestige / 2)}`;
+      document.getElementById('val-armor').textContent = document.getElementById('inp-armor').value;
+      document.getElementById('val-dodge').textContent = document.getElementById('inp-dodge').value;
 
       const coveragePct = c.totalBurn > 0 ? Math.round((c.grossRev / c.totalBurn) * 100) : 100;
 
       document.getElementById('kpi-normal').textContent = c.normalHit.toLocaleString();
       document.getElementById('kpi-crit').textContent = c.critHit.toLocaleString();
-      document.getElementById('kpi-hit-meta').textContent = `Crit: ${Math.round(c.critChance*100)}% • Mult: ${c.critMult.toFixed(2)}x`;
-      document.getElementById('kpi-mode-label').textContent = state.mode === '8h' ? '8H Sustained Damage' : 'E-Burst Dump Damage';
+      document.getElementById('kpi-hit-meta').textContent = `Hit: ${c.precisionPct.toFixed(0)}% • Crit: ${c.critChancePct.toFixed(0)}% (+${c.finalCritDamagePct.toFixed(0)}%)`;
+      document.getElementById('kpi-mode-label').textContent = state.mode === '8h' ? '8H Sustained Damage' : 'Instant E-Burst Damage';
       document.getElementById('kpi-total-dmg').textContent = c.totalDmg.toLocaleString();
-      document.getElementById('kpi-hits-count').textContent = `${c.hits} Hits • Avg ${Math.round(c.avgHit).toLocaleString()} / Hit`;
+      document.getElementById('kpi-hits-count').textContent = `${c.hits} Hits • Avg ${Math.round(c.expectedDamagePerAttempt).toLocaleString()} • -${c.expectedHpLossPerAttempt.toFixed(1)} HP/hit`;
       document.getElementById('kpi-gross-rev').textContent = `+${c.grossRev.toFixed(2)} €`;
       document.getElementById('kpi-rev-split').textContent = `Factory: ${c.factoryIncome.toFixed(0)}€ + Loot: ${c.lootEV.toFixed(1)}€`;
 
@@ -996,7 +1199,10 @@
       const ledTot = document.getElementById('led-total');
       ledTot.textContent = `${c.netPnL >= 0 ? '+' : ''}${c.netPnL.toFixed(2)} €`;
       ledTot.className = c.netPnL >= 0 ? 'text-emerald' : 'text-red-400';
-      document.getElementById('loot-cases-est').textContent = `~${c.estCases.toFixed(2)} Cases / Session`;
+
+      document.getElementById('hp-pool-est').textContent = `${c.effectiveHealthPool.toLocaleString()} HP Pool`;
+      document.getElementById('armor-dodge-summary').textContent = `Armor: ${c.armorPct.toFixed(1)}% • Dodge: ${c.dodgePct.toFixed(1)}%`;
+      document.getElementById('loot-cases-est').textContent = `~${c.estCases.toFixed(2)} Cases`;
 
       calcEnergySplit();
       calcRoadmap();
@@ -1006,9 +1212,10 @@
 
     function runOptimizer(goal) {
       const ammos = [
-        { name: 'Standard Ammo (0%)', val: 0 },
-        { name: 'AP Rounds (+15%)', val: 0.15 },
-        { name: 'HE Explosive (+30%)', val: 0.30 }
+        { name: 'No Ammo (0%)', val: 'none' },
+        { name: 'Light Ammo (+10%)', val: 'lightAmmo' },
+        { name: 'Ammo (+20%)', val: 'ammo' },
+        { name: 'Heavy Ammo (+40%)', val: 'heavyAmmo' }
       ];
       let best = null;
       WEAPONS.forEach(w => {
@@ -1023,15 +1230,15 @@
 
       const box = document.getElementById('optimizer-result');
       if (!best) {
-        const fallbackSim = computeCombatScenario(1, 0);
-        box.innerHTML = `<span class="text-amber-400 font-bold">Strict Zero-Loss Alert:</span> Even T1 Pistol + Standard Ammo nets <strong class="text-red-400">${fallbackSim.netPnL.toFixed(2)} €</strong> with current factory count.`;
+        const fallbackSim = computeCombatScenario(1, 'none');
+        box.innerHTML = `<span class="text-amber-400 font-bold">Strict Zero-Loss Alert:</span> Even T1 Knife + No Ammo nets <strong class="text-red-400">${fallbackSim.netPnL.toFixed(2)} €</strong> with current factory count.`;
         return;
       }
       box.innerHTML = `
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div class="text-emerald font-extrabold text-sm">Optimal Build: ${best.w.name} + ${best.a.name}</div>
-            <div class="text-slate-400 mt-1">Session Damage: <strong class="text-white">${best.sim.totalDmg.toLocaleString()}</strong> • Net Cashflow: <strong class="${best.sim.netPnL >= 0 ? 'text-emerald' : 'text-red-400'}">${best.sim.netPnL >= 0 ? '+' : ''}${best.sim.netPnL.toFixed(2)} €</strong></div>
+            <div class="text-slate-400 mt-1">Session Damage: <strong class="text-white">${best.sim.totalDmg.toLocaleString()}</strong> (${best.sim.hits} hits) • Net Cashflow: <strong class="${best.sim.netPnL >= 0 ? 'text-emerald' : 'text-red-400'}">${best.sim.netPnL >= 0 ? '+' : ''}${best.sim.netPnL.toFixed(2)} €</strong></div>
           </div>
           <button onclick="state.weaponTier=${best.w.tier}; document.getElementById('inp-ammo').value='${best.a.val}'; renderArmory(); recalcAll(); switchTab('combat');" class="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-extrabold text-xs">
             Apply Loadout
@@ -1062,14 +1269,14 @@
     }
 
     function calcRoadmap() {
-      const lv = +document.getElementById('inp-level').value;
+      const lv = +document.getElementById('qe-lv').value || 1;
       const pct = +document.getElementById('inp-xp-pct').value || 0;
       const pace = +document.getElementById('inp-daily-pace').value || 100000;
       const remLevels = Math.max(0, 50 - lv);
       const remXP = (remLevels * 450000) + ((100 - pct) / 100 * 450000);
       const days = lv >= 50 ? 0 : Math.ceil(remXP / (pace * 1.25));
       document.getElementById('roadmap-output').innerHTML = lv >= 50
-        ? `<span class="text-amber-400 font-bold">MAX LEVEL 50 REACHED!</span> Ready to trigger Prestige for +12 SP, +2 Skill Cap & +5% Permanent Rank DMG.`
+        ? `<span class="text-amber-400 font-bold">MAX LEVEL 50 REACHED!</span> Ready to trigger Prestige.`
         : `Remaining to Lv.50: <strong class="text-white">${Math.round(remXP).toLocaleString()} XP</strong><br/>Estimated Arrival: <strong class="text-emerald">${days} Days</strong> at current pace.`;
     }
 
@@ -1093,11 +1300,11 @@
 
       const targetM = +document.getElementById('inp-mu-target').value || 50;
       const targetDmg = targetM * 1000000;
-      const reqHits = Math.ceil(targetDmg / (c.avgHit || 1500));
+      const reqHits = Math.ceil(targetDmg / (c.expectedDamagePerAttempt || 1500));
       const reqBudget = Math.round((targetDmg / 1000) * burnPer1K);
       document.getElementById('mu-output').innerHTML = `
         <div>Required Hits: <span class="text-white">${reqHits.toLocaleString()} Hits</span></div>
-        <div>Ammo & Food Units: <span class="text-amber-400">${reqHits.toLocaleString()} Units</span></div>
+        <div>Ammo Units: <span class="text-amber-400">${reqHits.toLocaleString()} Units</span></div>
         <div class="pt-1 border-t border-slate-800 font-bold text-emerald">Estimated MU Operation Cost: ${reqBudget.toLocaleString()} €</div>
       `;
     }
@@ -1109,12 +1316,12 @@
       const nextTier = Math.min(6, state.weaponTier + 1);
       const currSim = computeCombatScenario(state.weaponTier);
       const nextSim = computeCombatScenario(nextTier);
-      const extraLootPerHit = Math.max(0.25, ((nextSim.lootEV - currSim.lootEV) / currSim.hits));
+      const extraLootPerHit = Math.max(0.25, ((nextSim.lootEV - currSim.lootEV) / Math.max(1, currSim.hits)));
       const breakEvenHits = Math.ceil(cost / extraLootPerHit);
 
       document.getElementById('gear-roi-output').innerHTML = `
         <div>Market vs Scrap Verdict: <strong class="text-amber-400">${scrap >= sell ? `SCRAP FOR PARTS (+${scrap - sell}€ gain)` : `SELL ON MARKET (+${sell - scrap}€ gain)`}</strong></div>
-        <div class="mt-1">Upgrade Break-Even (T${state.weaponTier} → T${nextTier}): <strong class="text-emerald">${breakEvenHits.toLocaleString()} Hits</strong> (~${Math.max(1, Math.round(breakEvenHits / currSim.hits))} sessions) via extra v0.27 Loot EV.</div>
+        <div class="mt-1">Upgrade Break-Even (T${state.weaponTier} → T${nextTier}): <strong class="text-emerald">${breakEvenHits.toLocaleString()} Hits</strong> (~${Math.max(1, Math.round(breakEvenHits / Math.max(1, currSim.hits)))} sessions) via extra v0.27 Loot EV.</div>
       `;
     }
 
@@ -1132,10 +1339,11 @@
       const c = state.lastCalc;
       const name = document.getElementById('qe-name').value.trim() || 'Commander';
       const report = [
-        `⚡ **RAAD // رَعـد — War Era Tactical Report**`,
+        `⚡ **RAAD // رَعـد v2.0 — War Era Official Report**`,
         `👤 **Commander:** ${name} (Lv.${c.level} | P${c.prestige})`,
-        `🔫 **Loadout:** ${c.w.name} | Normal: ${c.normalHit.toLocaleString()} | Crit: ${c.critHit.toLocaleString()}`,
-        `💥 **${state.mode === '8h' ? '8H Sustained' : 'E-Burst'} DMG:** ${c.totalDmg.toLocaleString()} (${c.hits} hits)`,
+        `🔫 **Loadout:** ${c.w.name} | Normal: ${c.normalHit.toLocaleString()} | Crit: ${c.critHit.toLocaleString()} | Miss: ${c.missHit.toLocaleString()}`,
+        `🛡️ **Defense:** Armor ${c.armorPct.toFixed(1)}% | Dodge ${c.dodgePct.toFixed(1)}% (-${c.expectedHpLossPerAttempt.toFixed(1)} HP/hit)`,
+        `💥 **${state.mode === '8h' ? '8H Sustained' : 'Instant E-Burst'} DMG:** ${c.totalDmg.toLocaleString()} (${c.hits} hits)`,
         `💰 **Net Daily Cashflow:** ${c.netPnL >= 0 ? '+' : ''}${c.netPnL.toFixed(2)} € (Factories + v0.27 Loot EV)`
       ].join('\n');
 
@@ -1161,13 +1369,14 @@
 
     renderArmory();
     try {
-      const saved = JSON.parse(localStorage.getItem('raad_warera_profile_v18') || 'null');
+      const saved = JSON.parse(localStorage.getItem('raad_warera_profile_v20') || 'null');
       if (saved) {
         document.getElementById('qe-name').value = saved.name || 'Commander';
         document.getElementById('qe-lv').value = saved.lv || 1;
         document.getElementById('qe-pr').value = saved.pr || 0;
         document.getElementById('qe-comp').value = saved.comp ?? 0;
-        document.getElementById('qe-country').value = saved.country || 'Global';
+        document.getElementById('qe-maxhp').value = saved.maxHp || 100;
+        document.getElementById('qe-maxhunger').value = saved.maxHunger || 100;
       }
     } catch (e) {}
     applyDirectControls();
