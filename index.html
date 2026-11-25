@@ -3,41 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAAD // رَعـد v4.1 - مركز قيادة WarEra</title>
+<title>RAAD // رَعـد v4.5 - مركز قيادة WarEra</title>
 <style>
 :root{
-  --bg:#080e17;--panel:#101a29;--panel2:#152236;--line:#23354d;
+  --bg:#070d16;--panel:#0f1928;--panel2:#152338;--line:#22344d;
   --ink:#eef5ff;--muted:#93a8c4;--green:#2ee59d;--blue:#58a6ff;
   --gold:#f5b942;--red:#ff5f6d;--purple:#a78bfa;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
-  background:radial-gradient(circle at top right,#132942 0%,var(--bg) 55%);
+  background:radial-gradient(circle at top right,#122840 0%,var(--bg) 55%);
   color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   padding-bottom:84px;min-height:100vh;
 }
 [dir="ltr"]{direction:ltr;text-align:left}
 [dir="rtl"]{direction:rtl;text-align:right}
 header{
-  position:sticky;top:0;z-index:30;background:#09111de6;backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:30;background:#08101ce8;backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line);padding:12px 16px;
   display:flex;align-items:center;justify-content:space-between;gap:10px;
 }
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.4px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800}
 .logo{
   width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--green),var(--blue));
   color:#051410;display:grid;place-items:center;font-weight:900;font-size:18px;
 }
 .badge{
-  font-size:11px;padding:2px 8px;border-radius:20px;background:#163830;
-  color:var(--green);border:1px solid #265c4f;font-weight:700;
+  font-size:11px;padding:3px 9px;border-radius:20px;background:#163830;
+  color:var(--green);border:1px solid #265c4f;font-weight:700;display:inline-flex;align-items:center;gap:4px;
 }
+.badge.warn{background:#382612;color:var(--gold);border-color:#69461d}
+.badge.danger{background:#3b141c;color:var(--red);border-color:#702231}
+.badge.blue{background:#122947;color:var(--blue);border-color:#264e82}
+.badge-icon{width:18px;height:14px;border-radius:3px;object-fit:cover;border:1px solid #ffffff33;display:inline-block;vertical-align:middle}
+.badge-emblem{width:16px;height:16px;border-radius:50%;object-fit:cover;border:1px solid #ffffff33;display:inline-block;vertical-align:middle}
 .lang-btn{
   background:var(--panel2);color:var(--ink);border:1px solid var(--line);
   padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
 }
-main{max-width:960px;margin:0 auto;padding:16px}
-.tab-view{display:none;animation:fade .2s ease}
+main{max-width:980px;margin:0 auto;padding:16px}
+.tab-view{display:none;animation:fade .18s ease}
 .tab-view.active{display:block}
 @keyframes fade{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
 .card{
@@ -50,13 +55,14 @@ main{max-width:960px;margin:0 auto;padding:16px}
 }
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-@media(max-width:680px){.grid-2,.grid-3{grid-template-columns:1fr}}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:740px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
-input,select,textarea{
+input,select{
   width:100%;background:#0a1320;border:1px solid #2c415e;color:var(--ink);
   padding:9px 11px;border-radius:9px;font:inherit;font-size:14px;
 }
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+input:focus,select:focus{outline:none;border-color:var(--blue)}
 .btn{
   background:var(--green);color:#061f16;border:none;padding:10px 15px;
   border-radius:9px;font-weight:800;font-size:13px;cursor:pointer;
@@ -65,38 +71,77 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
 .btn:hover{filter:brightness(1.07)}
 .btn-sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
 .btn-blue{background:var(--blue);color:#061426}
-.btn-gold{background:var(--gold);color:#241600}
 .btn-sm{padding:6px 10px;font-size:12px;border-radius:7px}
 .row{display:flex;gap:8px;align-items:center}
 .row input{flex:1}
 .stat-box{
-  background:#0b1524;border:1px solid var(--line);border-radius:11px;padding:12px;
+  background:#0b1524;border:1px solid var(--line);border-radius:12px;padding:13px;
+  transition:border-color .15s,transform .15s;
 }
-.stat-box small{display:block;color:var(--muted);font-size:11px;margin-bottom:3px}
+.stat-box.clickable{cursor:pointer}
+.stat-box.clickable:hover{border-color:var(--green);transform:translateY(-2px)}
+.stat-box small{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
 .stat-box strong{font-size:19px;font-weight:800;color:var(--green)}
 .stat-box strong.blue{color:var(--blue)}
 .stat-box strong.gold{color:var(--gold)}
 .stat-box strong.red{color:var(--red)}
+.bar-row{
+  background:#0b1524;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;
+}
+.bar-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:13px;font-weight:700;
+}
+.bar-rate{
+  background:#13263d;color:var(--blue);border:1px solid #264870;
+  padding:2px 9px;border-radius:99px;font-size:12px;font-weight:800;
+}
+.bar-rate.gold{background:#332410;color:var(--gold);border-color:#66471c}
+.seg-track{
+  display:grid;grid-template-columns:repeat(10,1fr);gap:5px;
+}
+.seg-track.hunger-grid{
+  grid-template-columns:repeat(8,1fr);
+}
+.seg-cell{
+  height:16px;border-radius:4px;background:#18273b;border:1px solid #263b57;
+  transition:all .2s ease;position:relative;
+}
+.seg-cell.hp-on{
+  background:linear-gradient(180deg,#34d399,#10b981);border-color:#6ee7b7;
+  box-shadow:0 0 8px #10b98155;
+}
+.seg-cell.hp-low{
+  background:linear-gradient(180deg,#fb7185,#e11d48);border-color:#fda4af;
+  box-shadow:0 0 8px #e11d4855;
+}
+.seg-cell.hg-on{
+  background:linear-gradient(180deg,#fbbf24,#d97706);border-color:#fde68a;
+  box-shadow:0 0 8px #f59e0b55;
+}
+.seg-sub{
+  display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--muted);
+}
+.identity-strip{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);
+}
 .pill-toggle{
   display:flex;align-items:center;justify-content:space-between;
   background:#0b1524;border:1px solid var(--line);padding:9px 12px;border-radius:10px;
   cursor:pointer;user-select:none;font-size:13px;
 }
 .pill-toggle input{width:17px;height:17px;accent-color:var(--green)}
-.bar-wrap{height:10px;background:#1d2d44;border-radius:99px;overflow:hidden;margin-top:6px}
-.bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));transition:width .3s}
-.bar-fill.hunger{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
-.offer-row{
+.build-card{
+  background:#0b1524;border:1px solid var(--line);border-radius:12px;padding:13px;cursor:pointer;
+  transition:all .15s;
+}
+.build-card:hover,.build-card.selected{border-color:var(--green);background:#0e2324}
+.market-row{
   background:#0b1524;border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:9px;
 }
-.offer-row.best{border-color:var(--green);background:#0d2224}
-.best-tag{
-  background:var(--green);color:#041c13;font-size:11px;font-weight:800;
-  padding:2px 8px;border-radius:6px;
-}
+.market-row.best{border-color:var(--green);background:#0d2224}
 .chat-box{
   background:#09121e;border:1px solid var(--line);border-radius:12px;
-  padding:12px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+  padding:12px;max-height:350px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
   margin-bottom:10px;
 }
 .msg{padding:10px 13px;border-radius:11px;font-size:13.5px;line-height:1.6;white-space:pre-wrap}
@@ -111,8 +156,22 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
 nav.bottom-nav{
   position:fixed;bottom:0;left:0;right:0;z-index:40;
   background:#09111df2;backdrop-filter:blur(12px);border-top:1px solid var(--line);
-  display:grid;grid-template-columns:repeat(5,1fr);height:66px;
+  display:grid;grid-template-columns:repeat(6,1fr);height:66px;
 }
+.spy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:8px}
+.gear-slot{background:#0b1524;border:1px solid #253b59;border-radius:10px;padding:9px;text-align:center}
+.gear-slot small{display:block;color:var(--muted);font-size:11px}
+.gear-slot strong{display:block;color:var(--gold);font-size:13px;margin-top:3px}
+.vs-bar{height:12px;border-radius:8px;background:#1a2b42;overflow:hidden;display:flex;margin:8px 0}
+.vs-me{background:var(--green);height:100%;transition:width .3s}
+.vs-enemy{background:var(--red);height:100%;transition:width .3s}
+.spy-mode-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px;margin-bottom:12px}
+.spy-mode-btn{background:#0b1524;border:1px solid var(--line);color:var(--muted);padding:8px 6px;border-radius:10px;font-weight:750;font-size:12px;cursor:pointer;text-align:center}
+.spy-mode-btn.active{background:#122947;border-color:var(--blue);color:var(--ink);box-shadow:0 0 10px #58a6ff22}
+.battle-card{background:#0b1524;border:1px solid #243954;border-radius:12px;padding:12px;margin-bottom:10px}
+.diff-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#382612;color:var(--gold);border:1px solid #69461d;margin:2px}
+.mu-member-row{background:#0b1524;border:1px solid #22354f;border-radius:10px;padding:10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.mu-member-info{display:flex;align-items:center;gap:8px}
 .nav-item{
   background:none;border:none;color:var(--muted);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:700;cursor:pointer;
@@ -122,7 +181,8 @@ nav.bottom-nav{
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 .alert{padding:10px 12px;border-radius:9px;font-size:13px;margin-top:8px}
 .alert.ok{background:#11332a;border:1px solid #256856;color:#a7f3d0}
-.alert.warn{background:#332411;border:1px solid #6b491d;color:#fde68a}
+.empress-box{background:#0b1524;border:1px solid #264870;border-radius:12px;padding:12px;margin-top:12px}
+.verdict-pill{display:inline-block;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:800;background:#13382c;color:var(--green);border:1px solid #246b53;margin-top:6px}
 </style>
 </head>
 <body>
@@ -131,62 +191,122 @@ nav.bottom-nav{
   <div class="brand">
     <div class="logo">⚡</div>
     <div>
-      <div style="font-size:15px">RAAD // رَعـد <span class="badge">v4.1</span></div>
-      <div style="font-size:11px;color:var(--muted)" data-i18n="sub">مركز القيادة التكتيكي والاقتصادي لـ WarEra</div>
+      <div style="font-size:15px">RAAD // رَعـد <span class="badge">v4.5</span></div>
+      <div style="font-size:11px;color:var(--muted)">غرفة القيادة الشاملة لـ WarEra</div>
     </div>
   </div>
   <button class="lang-btn" id="langBtn" onclick="toggleLang()">EN</button>
 </header>
 
 <main>
-  <!-- TAB 1: HOME / PROFILE -->
+  <!-- TAB 1: UNIFIED COMMAND DASHBOARD -->
   <section id="tab-home" class="tab-view active">
     <div class="card">
       <div class="card-title">
-        <span data-i18n="profileTitle">ربط الحساب الحي (WarEra API)</span>
-        <span id="regenTimer" class="badge">--:--</span>
+        <span>بطاقة اللاعب والربط الحي</span>
+        <span id="regenTimer" class="badge">Regen --:--</span>
       </div>
       <div class="row">
-        <input id="playerInput" placeholder="اسم اللاعب أو ID (مثال: 681a...)" />
-        <button class="btn" onclick="fetchPlayer()" data-i18n="loadBtn">جلب البيانات</button>
+        <input id="playerInput" placeholder="اكتب اسم اللاعب أو ID..." />
+        <input id="homeLevelInput" type="number" min="1" max="200" placeholder="Lv" title="ليفل اللاعب" style="max-width:78px;text-align:center;font-weight:800" oninput="setManualPlayerLevel(this.value)" />
+        <button class="btn" onclick="fetchPlayer()">جلب البيانات</button>
       </div>
+
+      <div class="identity-strip">
+        <span class="badge blue" id="badgePlayer"><img id="playerAvatarImg" class="badge-emblem" style="display:none" alt=""> <span id="playerText">👤 اللاعب: غير محدد (Lv.?)</span></span>
+        <span class="badge blue" id="badgeCountry"><img id="countryFlagImg" class="badge-icon" style="display:none" alt=""> <span id="countryText">🌍 الدولة: غير محددة</span></span>
+        <span class="badge blue" id="badgeMu"><img id="muLogoImg" class="badge-emblem" style="display:none" alt=""> <span id="muText">🛡️ الوحدة العسكرية: بدون وحدة</span></span>
+        <span class="badge warn" id="badgePill">💊 الحبة: غير مفعّلة</span>
+        <span class="badge" id="badgeDebuff">✅ الديبف: لا يوجد</span>
+      </div>
+
+      <div style="margin-top:14px">
+        <div class="bar-row">
+          <div class="bar-head">
+            <span>❤️ شريط الصحة (10 مربعات = 10% لكل مربع)</span>
+            <span class="bar-rate" id="hpRateBadge">+15.0 / ساعة</span>
+          </div>
+          <div class="seg-track" id="hpBlocks"></div>
+          <div class="seg-sub">
+            <span id="hpBlocksInfo">8 / 10 مربعات ممتلئة</span>
+            <span id="hpHitsBadge">≈ 22 ضربة متاحة</span>
+          </div>
+        </div>
+
+        <div class="bar-row" style="margin-bottom:0">
+          <div class="bar-head">
+            <span>🍖 شريط الجوع (كل مربع = وجبة أكل جاهزة)</span>
+            <span class="bar-rate gold" id="hgRateBadge">+0.8 / ساعة</span>
+          </div>
+          <div class="seg-track hunger-grid" id="hgBlocks"></div>
+          <div class="seg-sub">
+            <span id="hgBlocksInfo">6 / 8 وجبات متاحة</span>
+            <span>كل مربع يسمح بتناول وجبة استشفاء</span>
+          </div>
+        </div>
+      </div>
+
       <details style="margin-top:10px">
-        <summary style="cursor:pointer;font-size:12px;color:var(--muted)" data-i18n="apiKeyOpt">إعدادات مفتاح WarEra API (اختياري لزيادة سرعة الجلب والمصانع)</summary>
-        <div class="row" style="margin-top:8px">
+        <summary style="cursor:pointer;font-size:12px;color:var(--muted)">⚙️ ضبط يدوي للحالة + مفتاح WarEra API (اختياري)</summary>
+        <div class="grid-3" style="margin-top:10px">
+          <div><label>نسبة الصحة الحالية %</label><input type="number" id="inHpPct" value="80" min="0" max="100" oninput="recalcAll()"></div>
+          <div><label>أقصى صحة (لحساب الزيادة/ساعة)</label><input type="number" id="inHpMax" value="150" oninput="recalcAll()"></div>
+          <div><label>نسبة الجوع الحالية %</label><input type="number" id="inHgPct" value="75" min="0" max="100" oninput="recalcAll()"></div>
+          <div><label>أقصى جوع (عدد المربعات)</label><input type="number" id="inHgMax" value="8" min="1" max="20" oninput="recalcAll()"></div>
+          <div>
+            <label>حالة الحبة (Booster Pill)</label>
+            <select id="inPillStatus" onchange="recalcAll()">
+              <option value="0" selected>غير مفعّلة</option>
+              <option value="1">مفعّلة الآن (+بونص نشط)</option>
+            </select>
+          </div>
+          <div><label>وقت الديبف المتبقي (بالدقائق)</label><input type="number" id="inDebuffMins" value="0" min="0" oninput="recalcAll()"></div>
+          <div><label>الدولة (تلقائي أو يدوي)</label><input id="inManualCountry" placeholder="مثال: Egypt" oninput="recalcAll()"></div>
+          <div><label>الوحدة العسكرية (تلقائي أو يدوي)</label><input id="inManualMu" placeholder="مثال: RAAD Force" oninput="recalcAll()"></div>
+        </div>
+        <div class="row" style="margin-top:10px">
           <input id="wareraKey" type="password" placeholder="WarEra API Key (اختياري)" onchange="saveKeys()" />
-          <button class="btn btn-sec btn-sm" onclick="saveKeys()" data-i18n="save">حفظ</button>
+          <button class="btn btn-sec btn-sm" onclick="saveKeys()">حفظ</button>
+        </div>
+        <div style="margin-top:10px">
+          <label>لصق بيانات اللاعب (JSON جاهز من API أو أداة خارجية - اختياري)</label>
+          <div class="row">
+            <input id="manualJsonInput" placeholder='مثال: {"username":"yubi_Warrior2","level":25}' />
+            <button class="btn btn-blue btn-sm" onclick="applyManualPlayerJson()">تطبيق JSON</button>
+          </div>
         </div>
       </details>
-      <p id="profileMsg" class="hint" data-i18n="profileHint">أدخل اسمك أو معرفك لجلب الصحة، الجوع، المهارات، المصانع، وبونصات الحلف تلقائياً.</p>
-    </div>
-
-    <div class="grid-3" style="margin-bottom:14px">
-      <div class="stat-box">
-        <small data-i18n="curHealth">الصحة الحالية</small>
-        <strong id="statHealth">100 / 100</strong>
-        <div class="bar-wrap"><div id="barHealth" class="bar-fill" style="width:100%"></div></div>
-      </div>
-      <div class="stat-box">
-        <small data-i18n="curHunger">الشبع / الجوع</small>
-        <strong id="statHunger" class="gold">4 / 4</strong>
-        <div class="bar-wrap"><div id="barHunger" class="bar-fill hunger" style="width:100%"></div></div>
-      </div>
-      <div class="stat-box">
-        <small data-i18n="readiness">جاهزية المعركة</small>
-        <strong id="statReady" class="blue">100%</strong>
-        <div class="hint" id="statRegenRate">+10 HP / ساعة</div>
-      </div>
+      <p id="profileMsg" class="hint"></p>
     </div>
 
     <div class="card">
-      <div class="card-title"><span data-i18n="quickOverview">تعديل سريع للقيم اليدوية</span></div>
-      <div class="grid-3">
-        <div><label data-i18n="lvl">المستوى (Level)</label><input type="number" id="inLevel" value="37" oninput="recalcAll()"></div>
-        <div><label data-i18n="hpNow">الصحة الآن</label><input type="number" id="inHpNow" value="100" step="0.1" oninput="recalcAll()"></div>
-        <div><label data-i18n="hpMax">أقصى صحة</label><input type="number" id="inHpMax" value="150" oninput="recalcAll()"></div>
-        <div><label data-i18n="hgNow">الجوع الآن</label><input type="number" id="inHgNow" value="6" step="0.1" oninput="recalcAll()"></div>
-        <div><label data-i18n="hgMax">أقصى جوع</label><input type="number" id="inHgMax" value="8" oninput="recalcAll()"></div>
-        <div><label data-i18n="armorSkill">مستوى مهارة الدرع (0-10)</label><input type="number" id="inArmorSkill" value="5" min="0" max="10" oninput="recalcAll()"></div>
+      <div class="card-title"><span>نظرة شاملة — اضغط على أي بطاقة للانتقال لقسمها</span></div>
+      <div class="grid-2">
+        <div class="stat-box clickable" onclick="navTo('combat')">
+          <small>⚔️ القتال والضرر الفعلي (اضغط للتفاصيل)</small>
+          <strong id="dashDmg">0 ضرر / ضربة</strong>
+          <div class="hint" id="dashBonus">البونص المفعّل: +85%</div>
+        </div>
+        <div class="stat-box clickable" onclick="navTo('combat')">
+          <small>⏱️ مخطط النزول للمعركة H&H (اضغط للتفاصيل)</small>
+          <strong id="dashHh" class="blue">جاهز للمعركة</strong>
+          <div class="hint" id="dashHhSub">اضغط لضبط الدروع وساعات المعركة</div>
+        </div>
+        <div class="stat-box clickable" onclick="navTo('build')">
+          <small>⭐ التجميعة المختارة والمصانع (اضغط للتفاصيل)</small>
+          <strong id="dashBuild" class="gold">تجميعة الهجين الحربي</strong>
+          <div class="hint" id="dashFactory">ربح المصانع: $0.00 / يوم</div>
+        </div>
+        <div class="stat-box clickable" onclick="navTo('market')">
+          <small>📦 سوق السلع والمنتجات (اضغط للتفاصيل)</small>
+          <strong id="dashMarket">أفضل هامش ربح</strong>
+          <div class="hint" id="dashMarketSub">اضغط لمقارنة أسعار المنتجات والربح</div>
+        </div>
+        <div class="stat-box clickable" onclick="navTo('spy')" style="grid-column:1/-1;border-color:#264e82">
+          <small>🕵️ الرادار الاستخباراتي Spy Radar (اضغط للدخول)</small>
+          <strong class="blue">كشف عتاد ومهارات أي لاعب + مقارنة القوة 1v1</strong>
+          <div class="hint">فحص السلاح، الدروع، المهارات، والضرر المتوقع للخصوم والوحدات</div>
+        </div>
       </div>
     </div>
   </section>
@@ -194,11 +314,11 @@ nav.bottom-nav{
   <!-- TAB 2: COMBAT & H&H PLANNER -->
   <section id="tab-combat" class="tab-view">
     <div class="card">
-      <div class="card-title"><span data-i18n="dmgCalcTitle">حاسبة الضرر والبونصات الرسمية</span></div>
+      <div class="card-title"><span>حاسبة الضرر والبونصات الرسمية</span></div>
       <div class="grid-3" style="margin-bottom:12px">
-        <div><label data-i18n="wpAtk">هجوم السلاح (Attack)</label><input type="number" id="inAtk" value="145" oninput="recalcAll()"></div>
-        <div><label data-i18n="wpCrit">فرصة الكريت (Crit %)</label><input type="number" id="inCrit" value="28" oninput="recalcAll()"></div>
-        <div><label data-i18n="ammoBonus">بونص الذخيرة %</label>
+        <div><label>هجوم السلاح (Attack)</label><input type="number" id="inAtk" value="145" oninput="recalcAll()"></div>
+        <div><label>فرصة الكريت (Crit %)</label><input type="number" id="inCrit" value="28" oninput="recalcAll()"></div>
+        <div><label>بونص الذخيرة %</label>
           <select id="inAmmo" onchange="recalcAll()">
             <option value="0">بدون ذخيرة (0%)</option>
             <option value="10">ذخيرة خفيفة (+10%)</option>
@@ -206,12 +326,11 @@ nav.bottom-nav{
             <option value="40">ذخيرة ثقيلة (+40%)</option>
           </select>
         </div>
-        <div><label data-i18n="precSkill">مهارة الدقة Precision (0-10)</label><input type="number" id="inPrec" value="6" min="0" max="10" oninput="recalcAll()"></div>
-        <div><label data-i18n="critDmgSkill">مضاعف الكريت %</label><input type="number" id="inCritMult" value="150" oninput="recalcAll()"></div>
-        <div><label data-i18n="mercBonus">بونص المرتزقة %</label><input type="number" id="inMerc" value="0" oninput="recalcAll()"></div>
+        <div><label>مهارة الدقة Precision (0-10)</label><input type="number" id="inPrec" value="6" min="0" max="10" oninput="recalcAll()"></div>
+        <div><label>مضاعف الكريت %</label><input type="number" id="inCritMult" value="150" oninput="recalcAll()"></div>
+        <div><label>بونص الحبة / المرتزقة %</label><input type="number" id="inMerc" value="0" oninput="recalcAll()"></div>
       </div>
 
-      <label style="margin-bottom:8px" data-i18n="officialBonuses">البونصات الرسمية (وحدة / حلف / وطن)</label>
       <div class="grid-2" style="margin-bottom:12px">
         <label class="pill-toggle"><span>أمر الوحدة (MU Order +15%)</span><input type="checkbox" id="bMuOrder" checked onchange="recalcAll()"></label>
         <label class="pill-toggle"><span>مقر الوحدة (MU HQ +20%)</span><input type="checkbox" id="bMuHq" checked onchange="recalcAll()"></label>
@@ -219,7 +338,7 @@ nav.bottom-nav{
         <label class="pill-toggle"><span>الدفاع عن الوطن (Homeland +20%)</span><input type="checkbox" id="bHome" checked onchange="recalcAll()"></label>
       </div>
       <div class="grid-2" style="margin-bottom:12px">
-        <div><label>بونص الحلف % (افتراضي 20% حسب التطوير)</label><input type="number" id="bAlliance" value="20" oninput="recalcAll()"></div>
+        <div><label>بونص الحلف % (افتراضي 20%)</label><input type="number" id="bAlliance" value="20" oninput="recalcAll()"></div>
         <div><label>إجمالي البونص المفعّل</label><input id="totalBonusOut" readonly style="color:var(--green);font-weight:800"></div>
       </div>
 
@@ -230,10 +349,10 @@ nav.bottom-nav{
       </div>
     </div>
 
-    <!-- H&H PLANNER FROM OFFICIAL FORMULA -->
     <div class="card">
-      <div class="card-title"><span data-i18n="hhTitle">مخطط الصحة والجوع للمعركة (H&H Planner)</span></div>
-      <div class="grid-3" style="margin-bottom:12px">
+      <div class="card-title"><span>مخطط الصحة والجوع للمعركة (H&H Planner)</span></div>
+      <div class="grid-4" style="margin-bottom:12px">
+        <div><label>مهارة الدرع (0-10)</label><input type="number" id="inArmorSkill" value="5" min="0" max="10" oninput="recalcAll()"></div>
         <div><label>درع البنطال (Pants)</label><input type="number" id="inPants" value="18" oninput="recalcAll()"></div>
         <div><label>درع الصدر (Chest)</label><input type="number" id="inChest" value="22" oninput="recalcAll()"></div>
         <div><label>ساعات متبقية للمعركة</label><input type="number" id="inHoursLeft" value="4" min="1" max="72" oninput="recalcAll()"></div>
@@ -242,13 +361,13 @@ nav.bottom-nav{
         <div>
           <label>نوع الطعام للاستشفاء</label>
           <select id="inFoodType" onchange="recalcAll()">
-            <option value="10">خبز Bread (+10% صحة)</option>
-            <option value="15" selected>ستيك Steak (+15% صحة)</option>
-            <option value="20">سمك مطهو Cooked Fish (+20% صحة)</option>
+            <option value="10">خبز Bread (+10% = +1 مربع صحة)</option>
+            <option value="15" selected>ستيك Steak (+15% = +1.5 مربع صحة)</option>
+            <option value="20">سمك مطهو Cooked Fish (+20% = +2 مربع صحة)</option>
           </select>
         </div>
         <div class="stat-box">
-          <small>تقليل الضرر واستهلاك الضربة (SoftCap 40)</small>
+          <small>تقليل الضرر (SoftCap 40)</small>
           <strong id="outArmorInfo" style="font-size:15px">64% تقليل · 3.6 HP/ضربة</strong>
         </div>
       </div>
@@ -256,23 +375,44 @@ nav.bottom-nav{
     </div>
   </section>
 
-  <!-- TAB 3: AUTO-BUILD & FACTORIES -->
+  <!-- TAB 3: MULTIPLE BUILDS & FACTORIES -->
   <section id="tab-build" class="tab-view">
     <div class="card">
-      <div class="card-title"><span data-i18n="autoBuildTitle">مولّد التجميعة التلقائي (Auto-Build Optimizer)</span></div>
+      <div class="card-title">
+        <span dir="ltr">⚔️ Empress War Respec &amp; Gear</span>
+        <button class="btn btn-blue btn-sm" onclick="applyFullWarRespec()">⚡ تطبيق الحربي + الجير</button>
+      </div>
+      <p class="hint" style="margin-bottom:12px">يعتمد الحساب الفعلي على ليفل اللاعب، دخله من المصانع، أسعار الجير، عدد القطع المطلوبة، الأكل، الطلقات، وإجمالي الدامج.</p>
       <div class="grid-3" style="margin-bottom:12px">
-        <div><label>إجمالي نقاط المهارات المتاحة</label><input type="number" id="inSkillPts" value="45" min="1" max="200"></div>
-        <div>
-          <label>هدف التجميعة</label>
-          <select id="inBuildGoal">
-            <option value="combat">حربي صافي (أقصى ضرر معركة)</option>
-            <option value="hybrid" selected>متوازن (حربي + لوت غنائم)</option>
-            <option value="econ">اقتصادي ومصانع (إنتاج وإدارة)</option>
+        <div><label>ليفل اللاعب (يتحدث تلقائياً أو يدوياً)</label><input type="number" id="inPlayerLevel" value="1" min="1" max="200" oninput="state.playerLevel=Math.max(1,+this.value||1);if(!$('inSkillPts').dataset.manual)$('inSkillPts').value=state.playerLevel*4;renderBuilds()"></div>
+        <div><label>إجمالي نقاط اللاعب (كل النقط)</label><input type="number" id="inSkillPts" value="1" min="1" max="500" oninput="this.dataset.manual='1';syncWarBuilderFromMain()"></div>
+        <div><label>ميزانية المعركة ($)</label><input type="number" id="inBudget" value="500" min="10" oninput="syncWarBuilderFromMain()"></div>
+        <div><label>أولوية البيلد الحربي</label>
+          <select id="optGoal" onchange="renderBuilds()">
+            <option value="sust" selected>ساستنبل حسب الليفل (Sustainable by Level)</option>
+            <option value="dmg">هجومي حرج (Max Crit / Burst)</option>
+            <option value="surv">صمود ودرع (Tank Armor / HP)</option>
+            <option value="eff">توازن وكفاءة (Balanced War)</option>
           </select>
         </div>
-        <div><label>ميزانية المعركة ($)</label><input type="number" id="inBudget" value="250"></div>
       </div>
-      <button class="btn" style="width:100%" onclick="generateBuild()">⚡ ابنِ التجميعة المثالية تلقائياً</button>
+      <details style="margin-bottom:12px;background:#0b1524;border:1px solid var(--line);border-radius:10px;padding:10px">
+        <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--gold)">🎲 تفاوت رولات الجير وأسعار القطع الأساسية</summary>
+        <div class="grid-3" style="margin-top:10px">
+          <div><label>دفاع الفيست الأزرق (رول منخفض)</label><input type="number" id="rollChestLow" value="11" oninput="renderBuilds()"></div>
+          <div><label>دفاع الفيست الأزرق (رول عالي)</label><input type="number" id="rollChestHigh" value="15" oninput="renderBuilds()"></div>
+          <div><label>دفاع البنطال (رول منخفض / عالي)</label>
+            <div class="row">
+              <input type="number" id="rollPantsLow" value="10" oninput="renderBuilds()" title="رول منخفض">
+              <input type="number" id="rollPantsHigh" value="14" oninput="renderBuilds()" title="رول عالي">
+            </div>
+          </div>
+          <div><label>هجوم السلاح (رول منخفض)</label><input type="number" id="rollWepLow" value="110" oninput="renderBuilds()"></div>
+          <div><label>هجوم السلاح (رول عالي)</label><input type="number" id="rollWepHigh" value="145" oninput="renderBuilds()"></div>
+          <div><label>العائد المتوقع من المعركة ($)</label><input type="number" id="inBattleReward" value="620" oninput="renderBuilds()"></div>
+        </div>
+      </details>
+      <div class="grid-2" id="buildsGrid"></div>
       <div id="buildOutput" style="margin-top:12px"></div>
     </div>
 
@@ -295,18 +435,61 @@ nav.bottom-nav{
         <div class="stat-box"><small>الربح الشهري المتوقع</small><strong id="outFacMonth" class="gold">$0.00</strong></div>
       </div>
       <div id="userCompaniesList" class="hint" style="margin-top:10px"></div>
+
+      <div class="empress-box">
+        <div class="card-title" style="margin-bottom:8px;font-size:13.5px">
+          <span>👷 نقطة تعادل الرواتب وسلاسل الإمداد (Employees & Supply Chain)</span>
+          <span class="badge blue">EMPRESS ECO</span>
+        </div>
+        <div class="grid-3">
+          <div><label>عدد العمال</label><input type="number" id="empCount" value="10" min="0" oninput="calcEmpressEco()"></div>
+          <div><label>إنتاجية العامل (وحدة/يوم)</label><input type="number" id="empOut" value="18" oninput="calcEmpressEco()"></div>
+          <div><label>الراتب اليومي للعامل ($)</label><input type="number" id="empWage" value="14" step="0.1" oninput="calcEmpressEco()"></div>
+          <div><label>سعر بيع المنتج ($)</label><input type="number" id="empSell" value="1.85" step="0.01" oninput="calcEmpressEco()"></div>
+          <div><label>تكلفة الخامات اليومية ($)</label><input type="number" id="empRawCost" value="110" oninput="calcEmpressEco()"></div>
+          <div><label>الإمداد الذاتي من الخام (%)</label><input type="number" id="empSupplyPct" value="75" min="0" max="100" oninput="calcEmpressEco()"></div>
+        </div>
+        <div id="empressEcoOut" class="hint" style="color:var(--ink);margin-top:8px"></div>
+      </div>
     </div>
   </section>
 
-  <!-- TAB 4: MARKET RNG SNIPER -->
+  <!-- TAB 4: COMMODITIES & CRAFTING MARKET -->
   <section id="tab-market" class="tab-view">
     <div class="card">
       <div class="card-title">
-        <span>قناص عروض السوق (أرقام كل قطعة المتغيرة RNG)</span>
-        <button class="btn btn-sec btn-sm" onclick="addOffer()">+ إضافة عرض</button>
+        <span>سوق السلع والمنتجات (مقارنة التكلفة وسعر البيع)</span>
+        <button class="btn btn-sec btn-sm" onclick="addProduct()">+ إضافة منتج</button>
       </div>
-      <p class="hint" style="margin-bottom:12px">أدخل الهجوم الفعلي، نسبة الكريت، والسعر شامل الضريبة لكل قطعة معروضة في السوق لاكتشاف أعلى صفقة كفاءة (DMG / $).</p>
-      <div id="offersContainer"></div>
+      <p class="hint" style="margin-bottom:12px">قارن بين تكلفة التصنيع/الشراء وسعر البيع في السوق لكل منتج لمعرفة أعلى هامش ربح صافي وتحديث أسعار الأكل والذخيرة.</p>
+      <div id="productsContainer"></div>
+
+      <div class="empress-box">
+        <div class="card-title" style="margin-bottom:8px;font-size:13.5px">
+          <span>📦 حاسبة القيمة المتوقعة للصناديق (Case EV: Sell vs Open vs Scrap)</span>
+          <span class="badge">EMPRESS CASES</span>
+        </div>
+        <div class="grid-4">
+          <div><label>سعر الصندوق مغلقاً ($)</label><input type="number" id="caseSealedPrice" value="25" step="0.1" oninput="calcCaseEV()"></div>
+          <div><label>متوسط قيمة المحتوى ($)</label><input type="number" id="caseOpenVal" value="28" step="0.1" oninput="calcCaseEV()"></div>
+          <div><label>قيمة التفكيك Scrap ($)</label><input type="number" id="caseScrapVal" value="22" step="0.1" oninput="calcCaseEV()"></div>
+          <div><label>عدد الصناديق</label><input type="number" id="caseQty" value="10" min="1" oninput="calcCaseEV()"></div>
+        </div>
+        <div id="caseEvOut" class="hint" style="color:var(--ink);margin-top:8px"></div>
+      </div>
+
+      <div class="empress-box">
+        <div class="card-title" style="margin-bottom:8px;font-size:13.5px">
+          <span>🛠️ مقارنة التصنيع مقابل الشراء (Craft vs Buy)</span>
+          <span class="badge blue">EMPRESS CRAFT</span>
+        </div>
+        <div class="grid-3">
+          <div><label>إجمالي تكلفة الخامات ($)</label><input type="number" id="craftMatCost" value="65" step="0.1" oninput="calcCraftVsBuy()"></div>
+          <div><label>رسوم التصنيع / الطاقة ($)</label><input type="number" id="craftFee" value="12" step="0.1" oninput="calcCraftVsBuy()"></div>
+          <div><label>سعر الشراء جاهزاً من السوق ($)</label><input type="number" id="marketBuyPrice" value="88" step="0.1" oninput="calcCraftVsBuy()"></div>
+        </div>
+        <div id="craftVsBuyOut" class="hint" style="color:var(--ink);margin-top:8px"></div>
+      </div>
     </div>
   </section>
 
@@ -318,14 +501,14 @@ nav.bottom-nav{
         <span class="badge" id="aiModeBadge">محرك مدمج نشط</span>
       </div>
       <div class="chips">
-        <button class="chip" onclick="askPreset('build')">🎯 أفضل بيلد لنقاطي وميزانيتي؟</button>
-        <button class="chip" onclick="askPreset('hh')">⏱️ أوقف ضرب إمتى للمعركة الجاية؟</button>
-        <button class="chip" onclick="askPreset('market')">🛒 أنهي سلاح أكسب في السوق؟</button>
+        <button class="chip" onclick="askPreset('build')">🎯 أنسب بيلد لحالتي؟</button>
+        <button class="chip" onclick="askPreset('hh')">⏱️ أوقف ضرب إمتى للمعركة؟</button>
+        <button class="chip" onclick="askPreset('market')">📦 أنهي منتج أكسب في التجارة؟</button>
         <button class="chip" onclick="askPreset('roi')">🏭 أطور مصنعي ولا أشتري عتاد؟</button>
       </div>
       <div id="chatBox" class="chat-box">
         <div class="msg ai">أهلاً بك في غرفة عمليات رَعـد ⚡
-أنا أقرأ أرقام حسابك، بونصات وحدتك، ومقارنات السوق مباشرة. اسألني أي سؤال أو اختر من الأزرار السريعة بالأعلى!</div>
+أنا أقرأ ليفلك الفعلي، دخل مصانعك، أسعار الجير، عدد الطلقات والأكل، وإجمالي الدامج مباشرة.</div>
       </div>
       <div class="row">
         <input id="aiInput" placeholder="اكتب سؤالك التكتيكي هنا..." onkeydown="if(event.key==='Enter')sendAi()" />
@@ -333,11 +516,11 @@ nav.bottom-nav{
       </div>
 
       <details style="margin-top:12px">
-        <summary style="cursor:pointer;font-size:12px;color:var(--blue)">✨ ربط مفتاح Google Gemini اختياري (للمحادثة الحرة المتقدمة)</summary>
+        <summary style="cursor:pointer;font-size:12px;color:var(--blue)">✨ ربط مفتاح Google Gemini اختياري (للمحادثة الحرة)</summary>
         <div style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.7">
-          يعمل المساعد تلقائياً بدون مفتاح. إذا أردت تفعيل Gemini للمحادثة المفتوحة مجاناً في 30 ثانية:<br>
+          يعمل المساعد تلقائياً بدون مفتاح. لتفعيل Gemini مجاناً في 30 ثانية:<br>
           1. افتح <b>aistudio.google.com/apikey</b> وسجّل بحساب جوجل.<br>
-          2. اضغط <b>Create API Key</b> وانسخه هنا (يُحفظ في متصفحك فقط):
+          2. اضغط <b>Create API Key</b> وانسخه هنا:
           <div class="row" style="margin-top:6px">
             <input id="geminiKey" type="password" placeholder="AIzaSy..." onchange="saveKeys()" />
             <button class="btn btn-blue btn-sm" onclick="saveKeys()">تفعيل</button>
@@ -346,50 +529,339 @@ nav.bottom-nav{
       </details>
     </div>
   </section>
+
+  <!-- TAB 6: COMPLETE SPY WARERA SUITE -->
+  <section id="tab-spy" class="tab-view">
+    <div class="card">
+      <div class="card-title">
+        <span>🕵️ منظومة Spy WarEra الاستخباراتية الشاملة</span>
+        <span class="badge danger">FULL INTEL SUITE</span>
+      </div>
+
+      <div class="spy-mode-tabs">
+        <button class="spy-mode-btn active" id="modePlayerBtn" onclick="setSpyMode('player')">👤 فحص لاعب (1v1)</button>
+        <button class="spy-mode-btn" id="modeMuBtn" onclick="setSpyMode('mu')">🛡️ وحدة عسكرية (MU)</button>
+        <button class="spy-mode-btn" id="modeMuvsMuBtn" onclick="setSpyMode('muvsmu')">⚔️ حرب وحدات (MU vs MU)</button>
+        <button class="spy-mode-btn" id="modeWarsBtn" onclick="setSpyMode('wars')">⚔️ الحروب (Wars)</button>
+        <button class="spy-mode-btn" id="modeBattlesBtn" onclick="setSpyMode('battles')">🔥 المعارك الحية (Live)</button>
+        <button class="spy-mode-btn" id="modeCountryBtn" onclick="setSpyMode('country')">🌍 استخبارات الدول</button>
+        <button class="spy-mode-btn" id="modeAllianceBtn" onclick="setSpyMode('alliance')">🤝 حرب التحالفات</button>
+      </div>
+
+      <p class="hint" id="spyModeHint" style="margin-bottom:10px">ابحث باسم أي لاعب أو ID لكشف عتاده، مهاراته، ورصد أي تغييرات في عتاده أو وحدته.</p>
+
+      <div class="row" id="spySingleSearchRow">
+        <input id="spyInput" placeholder="اكتب اسم اللاعب أو ID..." onkeydown="if(event.key==='Enter')dispatchSpyScan()" />
+        <button class="btn btn-blue" onclick="dispatchSpyScan()">🔍 فحص الآن</button>
+      </div>
+
+      <div id="spyDualSearchRow" style="display:none">
+        <div class="grid-2" style="margin-bottom:8px">
+          <div><label>🛡️ وحدتك العسكرية (أو الحليفة)</label><input id="muAllyInput" placeholder="اسم وحدتك أو ID..." /></div>
+          <div><label>🎯 وحدة الخصم المستهدفة</label><input id="muEnemyInput" placeholder="اسم وحدة الخصم أو ID..." /></div>
+        </div>
+        <button class="btn btn-blue" style="width:100%" onclick="runMuVsMu()">⚔️ بدء محاكاة المواجهة الحية (MU vs MU)</button>
+      </div>
+
+      <div id="spyWarsBar" style="display:none">
+        <button class="btn" style="width:100%" onclick="runWarsIntelScan()">🔄 جلب الحروب النشطة والسجل الآن</button>
+      </div>
+
+      <div id="spyBattlesBar" style="display:none">
+        <button class="btn" style="width:100%" onclick="runLiveBattlesScan()">🔄 تحديث رادار المعارك الحية وأقوى الضاربين الآن</button>
+      </div>
+
+      <div id="spyStatus" class="hint"></div>
+
+      <div id="spyResultBox" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div class="identity-strip" style="margin-top:0;padding-top:0;border-top:none;margin-bottom:12px">
+          <span class="badge blue"><img id="spyAvatarImg" class="badge-emblem" style="display:none" alt=""> <span id="spyNameBadge">الهدف</span></span>
+          <span class="badge blue"><img id="spyFlagImg" class="badge-icon" style="display:none" alt=""> <span id="spyCountryBadge">الدولة</span></span>
+          <span class="badge blue"><img id="spyMuImg" class="badge-emblem" style="display:none" alt=""> <span id="spyMuBadge">الوحدة</span></span>
+          <span class="badge warn" id="spyStatusBadge">الحالة: نشط</span>
+        </div>
+
+        <div id="spyChangeLogBox" style="display:none;margin-bottom:12px;background:#1a150b;border:1px solid #594118;border-radius:10px;padding:10px">
+          <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:4px">🚨 سجل رصد التغيرات منذ آخر فحص (Spy Alerts):</div>
+          <div id="spyChangeTags"></div>
+        </div>
+
+        <div class="grid-4" style="margin-bottom:12px">
+          <div class="stat-box"><small>❤️ الصحة الحالية</small><strong id="spyHpVal">-</strong></div>
+          <div class="stat-box"><small>🍖 الجوع الحالي</small><strong id="spyHgVal" class="gold">-</strong></div>
+          <div class="stat-box"><small>⚔️ متوسط ضربة الهدف</small><strong id="spyDmgVal" class="red">-</strong></div>
+          <div class="stat-box"><small>🛡️ تقليل الضرر (Armor)</small><strong id="spyArmorVal" class="blue">-</strong></div>
+        </div>
+
+        <div class="card-title" style="margin-top:10px;font-size:13px"><span>🎒 العتاد والمعدات المرصودة (Equipment)</span></div>
+        <div class="spy-grid" id="spyGearGrid"></div>
+
+        <div class="card-title" style="margin-top:14px;font-size:13px"><span>📊 توزيع المهارات (Skills Breakdown)</span></div>
+        <div class="spy-grid" id="spySkillsGrid"></div>
+
+        <div class="bar-row" style="margin-top:14px;margin-bottom:0">
+          <div class="bar-head">
+            <span>⚔️ مقارنة القوة القتالية: أنت ضد الهدف</span>
+            <span class="badge" id="spyVerdictBadge">تحليل المواجهة</span>
+          </div>
+          <div class="vs-bar">
+            <div class="vs-me" id="vsMeBar" style="width:50%"></div>
+            <div class="vs-enemy" id="vsEnemyBar" style="width:50%"></div>
+          </div>
+          <div class="seg-sub" id="vsDetailsText">أنت: 0 ضرر · الهدف: 0 ضرر</div>
+        </div>
+      </div>
+
+      <div id="spyMuResultBox" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div class="identity-strip" style="margin-top:0;padding-top:0;border-top:none;margin-bottom:12px">
+          <span class="badge blue"><img id="muScanLogo" class="badge-emblem" style="display:none" alt=""> <span id="muScanTitle">الوحدة العسكرية</span></span>
+          <span class="badge" id="muScanCountBadge">👥 0 عضو</span>
+          <span class="badge warn" id="muScanReadyBadge">⚔️ جاهز للضرب: 0</span>
+        </div>
+
+        <div class="grid-3" style="margin-bottom:12px">
+          <div class="stat-box">
+            <small>💥 إجمالي الضرر الفوري الآن (Real-Time Burst)</small>
+            <strong id="muTotalBurstDmg" class="red">0</strong>
+            <div class="hint">مجموع ضرر كل الأعضاء بصحتهم الحالية الآن</div>
+          </div>
+          <div class="stat-box">
+            <small>⚡ متوسط ضرر الرشقة الواحدة (Single Salvo)</small>
+            <strong id="muSingleSalvoDmg" class="gold">0</strong>
+            <div class="hint">لو ضرب جميع الأعضاء ضربة واحدة معاً</div>
+          </div>
+          <div class="stat-box">
+            <small>🔋 متوسط جاهزية الصحة للوحدة</small>
+            <strong id="muAvgHpPct" class="blue">0%</strong>
+            <div class="hint" id="muTotalHitsLeft">إجمالي الضربات المتاحة: 0 ضربة</div>
+          </div>
+        </div>
+
+        <div class="card-title" style="margin-top:12px;font-size:13px">
+          <span>📋 قائمة أعضاء الوحدة وترتيب القوة في الوقت الفعلي</span>
+        </div>
+        <div id="muMembersList"></div>
+      </div>
+
+      <div id="spyMuVsMuBox" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div class="bar-row">
+          <div class="bar-head">
+            <span id="muVsTitle">⚔️ مقارنة الضرر الفوري (Real-Time Burst)</span>
+            <span class="badge" id="muVsVerdict">تحليل المعركة</span>
+          </div>
+          <div class="vs-bar" style="height:16px">
+            <div class="vs-me" id="muVsAllyBar" style="width:50%"></div>
+            <div class="vs-enemy" id="muVsEnemyBar" style="width:50%"></div>
+          </div>
+          <div class="seg-sub" id="muVsSubText">وحدتك: 0 ضرر · الخصم: 0 ضرر</div>
+        </div>
+        <div class="grid-2" id="muVsCardsGrid"></div>
+      </div>
+
+      <div id="spyWarsBox" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div id="warsList"></div>
+      </div>
+
+      <div id="spyBattlesBox" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div id="liveBattlesList"></div>
+      </div>
+
+      <div id="spyCountryBox" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div class="identity-strip" style="margin-top:0;padding-top:0;border-top:none;margin-bottom:12px">
+          <span class="badge blue"><img id="cIntelFlag" class="badge-icon" style="display:none" alt=""> <span id="cIntelName">الدولة</span></span>
+          <span class="badge" id="cIntelAlliance">🤝 الحلف: -</span>
+          <span class="badge" id="cIntelPop">👥 السكان: -</span>
+          <span class="badge warn" id="cIntelRegions">🗺️ الأقاليم: -</span>
+        </div>
+        <div class="grid-4" style="margin-bottom:12px">
+          <div class="stat-box"><small>👥 عدد السكان (Population)</small><strong id="cIntelPopStat">-</strong><div class="hint" id="cIntelPopSub">المواطنون النشطون</div></div>
+          <div class="stat-box"><small>⚔️ الوار في السكان / الحروب</small><strong id="cIntelWars" class="red">-</strong><div class="hint" id="cIntelWarPopSub">حروب ونقاط حرب السكان</div></div>
+          <div class="stat-box"><small>📈 الاقتصاد والخزينة (Economy)</small><strong id="cIntelGold" class="gold">-</strong><div class="hint" id="cIntelEcoSub">الخزينة والذهب والإنتاج</div></div>
+          <div class="stat-box"><small>🤝 الحلفاء واتفاقيات الدفاع</small><strong id="cIntelAllies" class="blue">-</strong><div class="hint" id="cIntelAlliesSub">التحالف والـ MPPs</div></div>
+        </div>
+        <div class="spy-grid" id="cIntelExtraGrid" style="margin-bottom:12px"></div>
+        <div id="cIntelDetails" class="hint" style="color:var(--ink);line-height:1.7"></div>
+      </div>
+
+      <div id="spyAllianceBox" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div class="grid-2" style="margin-bottom:10px">
+          <div><label>التحالف الأول (Ally A)</label><input id="allyAInput" placeholder="اسم التحالف الأول أو دولة..." /></div>
+          <div><label>التحالف الثاني (Ally B)</label><input id="allyBInput" placeholder="اسم التحالف الثاني أو دولة..." /></div>
+        </div>
+        <button class="btn btn-blue" style="width:100%;margin-bottom:10px" onclick="runAllianceIntel()">🤝 مقارنة التحالفات (القوة، الدول، والخزينة)</button>
+        <div id="allianceCompareOut"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>📌 قائمة المراقبة وتتبع التغييرات (Watchlist & Snapshots)</span>
+        <button class="btn btn-sec btn-sm" onclick="saveCurrentTarget()">+ حفظ الهدف الحالي</button>
+      </div>
+      <div id="spyWatchlist" class="chips"></div>
+    </div>
+  </section>
 </main>
 
 <nav class="bottom-nav">
-  <button class="nav-item active" onclick="switchTab('home',this)">
+  <button class="nav-item active" data-tab="home" onclick="navTo('home')">
     <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5V21h-6v-6H9v6H3z"/></svg>
     <span>الرئيسية</span>
   </button>
-  <button class="nav-item" onclick="switchTab('combat',this)">
+  <button class="nav-item" data-tab="combat" onclick="navTo('combat')">
     <svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>
     <span>القتال</span>
   </button>
-  <button class="nav-item" onclick="switchTab('build',this)">
+  <button class="nav-item" data-tab="build" onclick="navTo('build')">
     <svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z"/></svg>
     <span>التجميعة</span>
   </button>
-  <button class="nav-item" onclick="switchTab('market',this)">
+  <button class="nav-item" data-tab="market" onclick="navTo('market')">
     <svg viewBox="0 0 24 24"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 5h14"/></svg>
     <span>السوق</span>
   </button>
-  <button class="nav-item" onclick="switchTab('ai',this)">
+  <button class="nav-item" data-tab="spy" onclick="navTo('spy')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+    <span>الرادار</span>
+  </button>
+  <button class="nav-item" data-tab="ai" onclick="navTo('ai')">
     <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 4 2.6 7.4 6.2 8.6L12 22l2.8-1.4A9 9 0 0 0 12 3z"/></svg>
     <span>المستشار</span>
   </button>
 </nav>
 
 <script>
+const BUILD_PRESETS = [
+  { id:'sustainable', name:'🌿 البيلد الساستنبل (Sustainable By Level)', desc:'يتدرج حسب الليفل: حماية واستمرارية دون صرف مبالغ فيه أو عتاد أعلى من المستوى', weights:{ Armor:0.32, Health:0.28, Precision:0.22, Hunger:0.18 } },
+  { id:'tank', name:'🛡️ المدرّع الصامد (Tank Frontline)', desc:'أقصى تقليل ضرر وصحة للضرب المستمر في الحروب الطويلة', weights:{ Health:0.35, Armor:0.35, Precision:0.20, Hunger:0.10 } },
+  { id:'assassin', name:'🎯 القناص الحرج (Crit Striker)', desc:'أعلى ضرر انفجاري ودقة للضربات الحاسمة', weights:{ Precision:0.42, Health:0.28, Armor:0.18, Hunger:0.12 } },
+  { id:'looter', name:'💎 صائد الغنائم (Hybrid Loot)', desc:'توازن بين الضرر القوي ورفع فرصة سقوط الصناديق والغنائم', weights:{ LootChance:0.35, Precision:0.28, Health:0.22, Armor:0.15 } },
+  { id:'tycoon', name:'🏭 إمبراطور المصانع (Economy)', desc:'أقصى إنتاجية للمصانع وإدارة العمال وتقليل التكاليف', weights:{ Production:0.48, Management:0.32, Energy:0.12, Health:0.08 } }
+];
+
+function extractCompanyLevel(c){
+  if(!c || typeof c !== 'object') return 0;
+  const raw = c.level ?? c.factoryLevel ?? c.companyLevel ?? c.tier ?? c.upgradeLevel ?? c.automatedEngineLevel ?? c.aeLevel ?? 0;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+function evaluateSustainableWarReadiness(lvl){
+  const n = Math.max(1, Math.floor(+lvl || 1));
+  const reqFactories = 6;
+  const reqFactoryLevel = 6;
+  const companies = Array.isArray(state.companies) ? state.companies : [];
+
+  let lv6Count = 0;
+  let totalFactoryLevels = 0;
+  companies.forEach(c => {
+    const fLv = extractCompanyLevel(c);
+    totalFactoryLevels += fLv;
+    if(fLv >= reqFactoryLevel) lv6Count += 1;
+  });
+
+  const hasFetchedCompanies = companies.length > 0;
+  const factoriesReady = lv6Count >= reqFactories;
+  const levelReady = n >= 20;
+  const warReady = levelReady && factoriesReady;
+
+  return {
+    warReady,
+    levelReady,
+    factoriesReady,
+    reqFactories,
+    reqFactoryLevel,
+    hasFetchedCompanies,
+    lv6Count,
+    totalCount: companies.length,
+    totalFactoryLevels
+  };
+}
+
+function getLevelTierProfile(lvl){
+  const n = Math.max(1, Math.floor(+lvl || 1));
+  const readyInfo = evaluateSustainableWarReadiness(n);
+
+  if(n < 20){
+    return {
+      tierName: 'مرحلة التأسيس (Lv.1–19 · غير جاهز لضرب حربي ساستنبل)',
+      warReady: false,
+      readyInfo,
+      gearCapMult: 0.45,
+      maxSetsSustainable: 0,
+      wepBase: 35,
+      chestBase: 25,
+      pantsBase: 20,
+      atkCap: 35 + n * 4,
+      sustainableWeights: { Health:0.36, Armor:0.34, Precision:0.16, Hunger:0.14 }
+    };
+  }
+  if(!readyInfo.factoriesReady){
+    return {
+      tierName: `تجهيز المصانع (${readyInfo.lv6Count}/${readyInfo.reqFactories} مصانع Lv.${readyInfo.reqFactoryLevel}+)`,
+      warReady: false,
+      readyInfo,
+      gearCapMult: 0.65,
+      maxSetsSustainable: 0,
+      wepBase: 90,
+      chestBase: 65,
+      pantsBase: 55,
+      atkCap: 100 + (n - 20) * 4,
+      sustainableWeights: { Health:0.34, Armor:0.32, Precision:0.18, Hunger:0.16 }
+    };
+  }
+  if(n <= 30){
+    return {
+      tierName: 'حربي ساستنبل مفعّل (Lv.20–30 · 6 مصانع Lv.6+)',
+      warReady: true,
+      readyInfo,
+      gearCapMult: 0.92,
+      maxSetsSustainable: 1,
+      wepBase: 130,
+      chestBase: 95,
+      pantsBase: 82,
+      atkCap: 140 + (n - 20) * 5,
+      sustainableWeights: { Armor:0.32, Health:0.28, Precision:0.23, Hunger:0.17 }
+    };
+  }
+  return {
+    tierName: 'حربي متقدم/نخبة (Lv.31+ · 6 مصانع Lv.6+)',
+    warReady: true,
+    readyInfo,
+    gearCapMult: 1.22,
+    maxSetsSustainable: Math.min(3, 1 + Math.floor((n - 20) / 15)),
+    wepBase: 195,
+    chestBase: 145,
+    pantsBase: 125,
+    atkCap: 190 + (n - 30) * 4,
+    sustainableWeights: { Armor:0.30, Health:0.27, Precision:0.25, Hunger:0.18 }
+  };
+}
+
 const state = {
   lang: 'ar',
   userId: null,
+  playerLevel: 1,
+  companies: [],
   nextRegenAt: null,
-  offers: [
-    { name: 'Tank Offer #1 (Vel)', atk: 153, crit: 28, price: 145.7 },
-    { name: 'Tank Offer #2 (Rastko)', atk: 145, crit: 30, price: 145.7 },
-    { name: 'AK Offer #3 (Carlos)', atk: 82, crit: 14, price: 13.66 }
+  selectedBuild: 'sustainable',
+  products: [
+    { name: 'ستيك (Steak)', cost: 2.10, sell: 2.85, qty: 100 },
+    { name: 'خبز (Bread)', cost: 1.15, sell: 1.55, qty: 200 },
+    { name: 'سمك مطهو (Cooked Fish)', cost: 2.90, sell: 3.95, qty: 80 },
+    { name: 'ذخيرة متوسطة (Ammo)', cost: 0.75, sell: 1.05, qty: 500 }
   ]
 };
 
 const $=id=>document.getElementById(id);
 
-function switchTab(name, btn){
+function navTo(name){
   document.querySelectorAll('.tab-view').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.tab === name);
+  });
   $('tab-'+name).classList.add('active');
-  if(btn) btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function toggleLang(){
@@ -415,15 +887,116 @@ function updateAiBadge(){
   $('aiModeBadge').textContent = hasG ? 'Gemini AI + المحرك المدمج' : 'محرك مدمج نشط';
 }
 
+function unwrapTrpcData(json){
+  const raw = json?.result?.data ?? json?.data ?? json;
+  if(raw && typeof raw === 'object' && 'json' in raw && Object.keys(raw).length === 1){
+    return raw.json;
+  }
+  return raw;
+}
+
+let lastApiDiagnostic = '';
+
+function buildTrpcCandidateUrls(baseUrl, proc, input){
+  const wrappedInput = encodeURIComponent(JSON.stringify({ json: input }));
+  const plainInput = encodeURIComponent(JSON.stringify(input));
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+  const urls = [
+    cleanBase + proc + '?input=' + wrappedInput,
+    cleanBase + proc + '?input=' + plainInput
+  ];
+  if(proc.includes('.')){
+    const slashProc = proc.replace('.', '/');
+    urls.push(cleanBase + slashProc + '?input=' + wrappedInput);
+  }
+  return urls;
+}
+
+async function fetchWithTimeout(url, options={}, timeoutMs=6500){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try{
+    return await fetch(url, { ...options, signal: controller.signal });
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
+async function tryFetchTrpcUrl(url, headers, label, timeoutMs){
+  const res = await fetchWithTimeout(url, { headers, mode: 'cors' }, timeoutMs);
+  const text = await res.text();
+  let json = null;
+  try{ json = JSON.parse(text); }catch(_){
+    if(!res.ok) throw new Error(`HTTP ${res.status} (${label})`);
+    throw new Error(`Non-JSON (${label})`);
+  }
+  if(!res.ok || json?.error){
+    throw new Error(json?.error?.message || json?.message || `HTTP ${res.status} (${label})`);
+  }
+  return unwrapTrpcData(json);
+}
+
+function appendCacheBust(url){
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}_t=${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
 async function trpc(proc, input={}){
-  const headers = {};
-  const key = $('wareraKey').value.trim();
-  if(key) headers['x-api-key'] = key;
-  const url = 'https://api2.warera.io/trpc/' + proc + '?input=' + encodeURIComponent(JSON.stringify(input));
-  const res = await fetch(url, { headers });
-  const json = await res.json();
-  if(!res.ok || json.error) throw new Error(json.error?.message || 'API Error');
-  return json.result?.data;
+  const headers = {
+    'Accept': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache'
+  };
+  const key = $('wareraKey')?.value?.trim();
+  if(key){
+    headers['x-api-key'] = key;
+    headers['Authorization'] = 'Bearer ' + key;
+  }
+  const bases = [
+    'https://api2.warera.io/trpc/',
+    'https://gateway.warerastats.io/trpc/',
+    'https://api.warera.io/trpc/'
+  ];
+  const allDirectUrls = bases
+    .flatMap(b => buildTrpcCandidateUrls(b, proc, input))
+    .map(appendCacheBust);
+
+  const directTasks = allDirectUrls.map((url) =>
+    tryFetchTrpcUrl(url, headers, 'direct-live', 4500)
+      .then(data => {
+        lastApiDiagnostic = 'LIVE OK (direct)';
+        return data;
+      })
+  );
+
+  try{
+    return await Promise.any(directTasks);
+  }catch(_){}
+
+  const targetForProxy = allDirectUrls[0];
+  const proxies = [
+    { name: 'corsproxy.io-live', url: 'https://corsproxy.io/?' + encodeURIComponent(targetForProxy) },
+    { name: 'allorigins-live', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetForProxy) },
+    { name: 'thingproxy-live', url: 'https://thingproxy.freeboard.io/fetch/' + targetForProxy }
+  ];
+
+  const proxyTasks = proxies.map(p =>
+    tryFetchTrpcUrl(p.url, headers, p.name, 5000)
+      .then(data => {
+        lastApiDiagnostic = `LIVE OK (${p.name})`;
+        return data;
+      })
+  );
+
+  try{
+    return await Promise.any(proxyTasks);
+  }catch(e){
+    const msg = e?.name === 'AbortError' ? 'انتهت مهلة الاتصال (Timeout)' : (e?.message || 'تعذر الوصول للـ API');
+    lastApiDiagnostic = `الاتصال المباشر والبروكسي تعذرا (${msg})`;
+    const err = new Error(lastApiDiagnostic);
+    err.diagnostics = lastApiDiagnostic;
+    throw err;
+  }
 }
 
 async function initLiveDates(){
@@ -441,73 +1014,420 @@ async function initLiveDates(){
   }, 1000);
 }
 
+function applyManualPlayerJson(){
+  const raw = ($('manualJsonInput')?.value || '').trim();
+  if(!raw) return;
+  try{
+    let parsed = JSON.parse(raw);
+    if(parsed?.result?.data) parsed = unwrapTrpcData(parsed);
+    if(parsed?.user && !parsed.username) parsed = parsed.user;
+    const uname = parsed.username || parsed.name || ($('playerInput')?.value || '').trim() || 'لاعب';
+    const lvl = extractPlayerLevel(parsed, null);
+    state.playerLevel = lvl;
+    if($('playerInput')) $('playerInput').value = uname;
+    if($('homeLevelInput')) $('homeLevelInput').value = lvl;
+    if($('inPlayerLevel')) $('inPlayerLevel').value = lvl;
+    if($('inSkillPts')){
+      delete $('inSkillPts').dataset.manual;
+      const pts = extractTotalPlayerPoints(parsed);
+      $('inSkillPts').value = pts > 0 ? pts : lvl * 4;
+    }
+    const cName = parsed.country?.name || parsed.countryName || (typeof parsed.country === 'string' ? parsed.country : '') || '';
+    const mName = parsed.mu?.name || parsed.militaryUnit?.name || parsed.muName || '';
+    if(cName) $('inManualCountry').value = cName;
+    if(mName) $('inManualMu').value = mName;
+    setIdentityDisplay(uname, lvl, resolvePlayerAvatar(parsed), cName, resolveCountryFlag(parsed.country, cName), mName, resolveMuLogo(parsed.mu || parsed.militaryUnit));
+    $('profileMsg').textContent = `✅ تم تطبيق بيانات JSON لـ ${uname} (Lv.${lvl}).`;
+    recalcAll();
+  }catch(e){
+    $('profileMsg').textContent = '⚠️ صيغة JSON غير صحيحة: تأكد من لصق كائن JSON سليم.';
+  }
+}
+
+function setManualPlayerLevel(val){
+  const n = Math.floor(Number(val));
+  if(!Number.isFinite(n) || n < 1) return;
+  state.playerLevel = n;
+  if($('inPlayerLevel') && document.activeElement !== $('inPlayerLevel')) $('inPlayerLevel').value = n;
+  if($('homeLevelInput') && document.activeElement !== $('homeLevelInput')) $('homeLevelInput').value = n;
+  if($('inSkillPts') && !$('inSkillPts').dataset.manual) $('inSkillPts').value = n * 4;
+  const currentName = ($('playerText')?.textContent || '').replace(/^👤\s*/, '').replace(/\s*\(Lv\..*?\)$/, '').trim() || ($('playerInput')?.value || '').trim() || 'اللاعب';
+  if($('playerText')) $('playerText').textContent = `${currentName} (Lv.${n})`;
+  renderBuilds();
+  recalcAll();
+}
+
+function deepFindLevel(obj, depth=0){
+  if(!obj || typeof obj !== 'object' || depth > 3) return null;
+  for(const [k, v] of Object.entries(obj)){
+    if(/^(level|lvl|playerLevel|userLevel)$/i.test(k)){
+      const num = typeof v === 'object' ? (v?.level ?? v?.value ?? v?.current) : v;
+      const n = Number(num);
+      if(Number.isFinite(n) && n > 0 && n <= 300) return Math.floor(n);
+    }
+  }
+  for(const v of Object.values(obj)){
+    if(v && typeof v === 'object'){
+      const found = deepFindLevel(v, depth + 1);
+      if(found) return found;
+    }
+  }
+  return null;
+}
+
+function extractTotalPlayerPoints(user){
+  const sk = user?.skills || {};
+  let sum = 0;
+  Object.values(sk).forEach(v => {
+    const lvl = Number(v?.level ?? v?.value ?? (typeof v === 'number' ? v : 0) ?? 0);
+    if(Number.isFinite(lvl) && lvl > 0) sum += lvl;
+  });
+  const unspent = Number(user?.unspentSkillPoints ?? user?.skillPoints ?? user?.availableSkillPoints ?? 0) || 0;
+  return sum + unspent;
+}
+
+function extractPlayerLevel(user, searchItem){
+  const candidates = [
+    user?.level,
+    user?.lvl,
+    user?.playerLevel,
+    user?.userLevel,
+    user?.stats?.level,
+    user?.profile?.level,
+    user?.data?.level,
+    searchItem?.level,
+    searchItem?.lvl,
+    searchItem?.playerLevel,
+    searchItem?.userLevel
+  ];
+  for(const c of candidates){
+    const n = Number(c);
+    if(Number.isFinite(n) && n > 0) return Math.floor(n);
+  }
+  const deep = deepFindLevel(user) || deepFindLevel(searchItem);
+  if(deep && deep > 0) return deep;
+  return 1;
+}
+
 async function fetchPlayer(){
   const q = $('playerInput').value.trim();
   if(!q) return;
-  $('profileMsg').textContent = 'جاري الاتصال بسيرفر WarEra...';
+  $('profileMsg').textContent = 'جاري جلب بيانات اللاعب، الليفل، الدولة، الوحدة العسكرية، والمصانع...';
   try{
     let user = null;
+    let searchHit = null;
     if(/^[a-f0-9]{24}$/i.test(q)){
       user = await trpc('user.getUserById', { userId: q });
     }else{
       const res = await trpc('search.searchUsers', { searchText: q });
       const list = Array.isArray(res) ? res : (res?.users || res?.items || []);
       if(!list.length) throw new Error('لم يتم العثور على اللاعب');
-      const first = typeof list[0] === 'string' ? await trpc('user.getUserById',{userId:list[0]}) : list[0];
-      user = first._id ? await trpc('user.getUserById',{userId:first._id}) : first;
+      searchHit = typeof list[0] === 'object' ? list[0] : null;
+      const id = typeof list[0] === 'string' ? list[0] : list[0]._id;
+      user = await trpc('user.getUserById', { userId: id });
     }
-    state.userId = user._id;
+    if(user?.user && !user.username) user = user.user;
+    state.userId = user._id || user.id;
+    state.playerLevel = extractPlayerLevel(user, searchHit);
+    if($('inPlayerLevel')) $('inPlayerLevel').value = state.playerLevel;
+    if($('homeLevelInput')) $('homeLevelInput').value = state.playerLevel;
+    if($('inSkillPts')) delete $('inSkillPts').dataset.manual;
+
+    const cMap = await getCountriesMap();
+    const cId = user.country?._id || user.country?.id || (typeof user.country === 'string' ? user.country : '') || user.countryId || user.citizenship || user.nationality || user.region?.countryId || '';
+    let countryObj = (typeof user.country === 'object' ? user.country : null) || (cId ? cMap[cId] : null);
+    let countryName = countryObj?.name || user.countryName || (cId && cMap[cId]?.name) || '';
+    if((!countryName || !countryObj) && cId){
+      try{
+        const c = await trpc('country.getCountryById', { countryId: cId });
+        if(c){ countryObj = c; countryName = c.name || c.title || countryName || cId; }
+      }catch(e){
+        if(!countryName) countryName = cId;
+      }
+    }
+    if(!countryObj && countryName && cMap[countryName.toLowerCase().trim()]){
+      countryObj = cMap[countryName.toLowerCase().trim()];
+    }
+
+    const mId = user.mu?._id || user.mu?.id || user.militaryUnit?._id || (typeof user.mu === 'string' ? user.mu : '') || user.muId || user.militaryUnitId || '';
+    let muObj = typeof user.mu === 'object' ? user.mu : (user.militaryUnit || null);
+    let muName = muObj?.name || user.muName || '';
+    if((!muName || !(muObj?.avatar || muObj?.logo || muObj?.image)) && mId){
+      for(const proc of ['mu.getById', 'mu.getMuById', 'militaryUnit.getById']){
+        try{
+          const mu = await trpc(proc, { muId: mId, id: mId });
+          if(mu && (mu.name || mu.title)){ muObj = mu; muName = mu.name || mu.title; break; }
+        }catch(e){}
+      }
+      if(!muName) muName = mId;
+    }
+
+    if(countryName) $('inManualCountry').value = countryName;
+    if(muName) $('inManualMu').value = muName;
+
+    const playerImgUrl = resolvePlayerAvatar(user);
+    const flagUrl = resolveCountryFlag(countryObj, countryName);
+    const muImgUrl = resolveMuLogo(muObj);
+    setIdentityDisplay(user.username || 'لاعب', state.playerLevel, playerImgUrl, countryName, flagUrl, muName, muImgUrl);
+
+    const totalWarPts = extractTotalPlayerPoints(user);
+    $('inSkillPts').value = totalWarPts > 0 ? totalWarPts : (state.playerLevel * 4);
+
     const h = user.skills?.health || {};
     const g = user.skills?.hunger || {};
     const a = user.skills?.armor || {};
-    if(h.currentBarValue != null) $('inHpNow').value = h.currentBarValue;
     if(h.total != null) $('inHpMax').value = h.total;
-    if(g.currentBarValue != null) $('inHgNow').value = g.currentBarValue;
+    if(h.currentBarValue != null && h.total) $('inHpPct').value = Math.min(100, Math.round((h.currentBarValue/h.total)*100));
     if(g.total != null) $('inHgMax').value = g.total;
+    if(g.currentBarValue != null && g.total) $('inHgPct').value = Math.min(100, Math.round((g.currentBarValue/g.total)*100));
     if(a.level != null) $('inArmorSkill').value = a.level;
-    if(user.level != null) $('inLevel').value = user.level;
-    $('profileMsg').textContent = `✅ تم تحميل بيانات: ${user.username || user._id} (Lv.${user.level || '-'})`;
+
+    const buffs = JSON.stringify(user.buffs || user.activeEffects || []).toLowerCase();
+    $('inPillStatus').value = buffs.includes('pill') || buffs.includes('boost') ? '1' : '0';
+    if(user.debuffUntil){
+      const minsLeft = Math.max(0, Math.round((Date.parse(user.debuffUntil) - Date.now())/60000));
+      $('inDebuffMins').value = minsLeft;
+    }
+
+    $('profileMsg').textContent = `✅ تم سحب بيانات ${user.username || 'اللاعب'} (Lv.${state.playerLevel}) · لتعديل الليفل يدوياً استخدم خانة Lv بجانب الاسم أو في تبويب التجميعة.`;
+    await fetchCompanies();
     recalcAll();
-    fetchCompanies();
   }catch(err){
-    $('profileMsg').textContent = '⚠️ تعذر الجلب التلقائي من المتصفح (يمكنك إدخال القيم يدوياً بالأسفل أو إضافة API Key).';
+    const typedLv = Math.max(1, Math.floor(Number($('homeLevelInput')?.value || $('inPlayerLevel')?.value || state.playerLevel || 1)));
+    state.playerLevel = typedLv;
+    if($('inPlayerLevel')) $('inPlayerLevel').value = typedLv;
+    if($('homeLevelInput')) $('homeLevelInput').value = typedLv;
+    setIdentityDisplay(q, typedLv, '', $('inManualCountry')?.value.trim() || '', '', $('inManualMu')?.value.trim() || '', '');
+    const diag = err?.diagnostics || err?.message || 'حجب CORS أو انقطاع الشبكة أو تغيّر مسار الـ API';
+    $('profileMsg').innerHTML = `⚠️ <b>تعذر السحب المباشر من الـ API (${q}):</b> ${diag}<br>✅ تم تثبيت الاسم <b>${q}</b> و<b>Lv.${typedLv}</b> محلياً — يمكنك المتابعة بالضبط اليدوي أو إضافة <b>WarEra API Key</b> أو لصق JSON اللاعب من الإعدادات.`;
+    recalcAll();
   }
+}
+
+function computeCompaniesDailyIncome(){
+  if(Array.isArray(state.companies) && state.companies.length){
+    let total = 0;
+    state.companies.forEach(c => {
+      const explicit = +(c.dailyNetIncome ?? c.netIncome ?? c.profitPerDay ?? NaN);
+      if(!Number.isNaN(explicit)){
+        total += explicit;
+      }else{
+        const pp = +(c.ppPerHour ?? c.productionPoints ?? c.pp ?? (+$('inFacPP').value || 24));
+        const ae = +(c.automatedEngineLevel ?? c.aeLevel ?? c.ae ?? (+$('inFacAE').value || 0));
+        const reg = +(c.regionBonus ?? c.regionalBonus ?? (+$('inFacReg').value || 0));
+        const price = +(c.productPrice ?? c.price ?? c.sellPrice ?? (+$('inFacPrice').value || 1.85));
+        const cost = +(c.dailyCost ?? c.wagesAndMaterials ?? c.cost ?? (+$('inFacCost').value || 320));
+        const tax = +(c.tax ?? c.countryTax ?? (+$('inFacTax').value || 10));
+        const mult = (1 + ae * 0.12) * (1 + reg / 100);
+        total += (pp * 24 * mult) * price * (1 - tax / 100) - cost;
+      }
+    });
+    return { income: total, source: `${state.companies.length} مصنع فعلي في الحساب` };
+  }
+  const facText = $('outFacNet')?.textContent || '0';
+  const parsed = parseFloat(facText.replace(/[^0-9.-]/g, ''));
+  return { income: Number.isNaN(parsed) ? 0 : parsed, source: 'حاسبة المصانع النشطة' };
 }
 
 async function fetchCompanies(){
   if(!state.userId) return;
   try{
     const data = await trpc('company.getCompanies', { userId: state.userId });
-    const list = Array.isArray(data) ? data : (data?.items || data?.companies || []);
+    const list = Array.isArray(data) ? data : (data?.items || data?.companies || data?.data || []);
+    state.companies = list;
+    const info = computeCompaniesDailyIncome();
+    const lv6Count = list.filter(c => extractCompanyLevel(c) >= 6).length;
     if(list.length){
-      $('userCompaniesList').textContent = `🏭 تم رصد ${list.length} مصنع/شركة مسجلة لحسابك.`;
+      $('userCompaniesList').textContent = `🏭 لديك ${list.length} مصنع/شركة (منها ${lv6Count}/6 بمستوى Lv.6+) · صافي الدخل اليومي الفعلي: $${info.income.toFixed(2)}`;
+    }else{
+      $('userCompaniesList').textContent = '🏭 لم يتم رصد مصانع في الحساب (0/6 مصانع Lv.6+)';
     }
-  }catch(e){}
+    renderBuilds();
+  }catch(e){
+    state.companies = [];
+    renderBuilds();
+  }
 }
 
-function calcWeaponAvg(atk, critPct, critMultPct, precLvl){
-  const effCrit = Math.min(100, critPct + precLvl * 1.5) / 100;
-  const mult = critMultPct / 100;
-  return atk * (1 - effCrit) + (atk * mult) * effCrit;
+const COUNTRY_ISO = {
+  egypt:'eg','مصر':'eg',saudi:'sa','saudi arabia':'sa','السعودية':'sa',uae:'ae','united arab emirates':'ae','الإمارات':'ae',
+  iraq:'iq','العراق':'iq',jordan:'jo','الأردن':'jo',kuwait:'kw','الكويت':'kw',
+  qatar:'qa','قطر':'qa',morocco:'ma','المغرب':'ma',algeria:'dz','الجزائر':'dz',
+  tunisia:'tn','تونس':'tn',syria:'sy','سوريا':'sy',lebanon:'lb','لبنان':'lb',
+  palestine:'ps','فلسطين':'ps',yemen:'ye','اليمن':'ye',libya:'ly','ليبيا':'ly',
+  sudan:'sd','السودان':'sd',oman:'om','عمان':'om',bahrain:'bh','البحرين':'bh',
+  turkey:'tr','türkiye':'tr','تركيا':'tr',usa:'us','united states':'us','united states of america':'us','امريكا':'us','أمريكا':'us',
+  uk:'gb','united kingdom':'gb','england':'gb','britain':'gb','بريطانيا':'gb',
+  germany:'de','المانيا':'de','ألمانيا':'de',france:'fr','فرنسا':'fr',italy:'it','ايطاليا':'it','إيطاليا':'it',
+  spain:'es','اسبانيا':'es','إسبانيا':'es',russia:'ru','russian federation':'ru','روسيا':'ru',
+  china:'cn','الصين':'cn',japan:'jp','اليابان':'jp',southkorea:'kr','south korea':'kr','korea':'kr','كوريا':'kr',
+  brazil:'br','البرازيل':'br',argentina:'ar','الأرجنتين':'ar',india:'in','الهند':'in',
+  poland:'pl','بولندا':'pl',serbia:'rs','صربيا':'rs',romania:'ro','رومانيا':'ro',ukraine:'ua','اوكرانيا':'ua','أوكرانيا':'ua'
+};
+
+let cachedCountries = null;
+let cachedCountriesAt = 0;
+async function getCountriesMap(forceFresh=false){
+  if(!forceFresh && cachedCountries && (Date.now() - cachedCountriesAt) < 15000) return cachedCountries;
+  cachedCountries = {};
+  for(const proc of ['country.getAllCountries', 'country.getCountries', 'country.list']){
+    try{
+      const res = await trpc(proc);
+      const arr = Array.isArray(res) ? res : (res?.items || res?.countries || res?.data || []);
+      if(arr.length){
+        arr.forEach(c => {
+          const id = c._id || c.id;
+          if(id) cachedCountries[id] = c;
+          if(c.name) cachedCountries[c.name.toLowerCase().trim()] = c;
+          if(c.code) cachedCountries[c.code.toLowerCase().trim()] = c;
+        });
+        break;
+      }
+    }catch(e){}
+  }
+  if(Object.keys(cachedCountries).length) cachedCountriesAt = Date.now();
+  return cachedCountries;
+}
+
+function resolveCountryFlag(obj, name){
+  const raw = obj?.flag || obj?.flagUrl || obj?.image || obj?.icon || obj?.banner || '';
+  if(raw){
+    if(raw.startsWith('http') || raw.startsWith('data:')) return raw;
+    return 'https://app.warera.io/' + raw.replace(/^\//,'');
+  }
+  const cleanName = (name || '').toLowerCase().trim();
+  const mappedObj = cachedCountries ? (cachedCountries[cleanName] || null) : null;
+  const iso = (
+    obj?.code || obj?.iso || obj?.iso2 || obj?.countryCode ||
+    mappedObj?.code || mappedObj?.iso || mappedObj?.iso2 ||
+    COUNTRY_ISO[cleanName] ||
+    (cleanName.length === 2 ? cleanName : '')
+  ).toLowerCase().trim();
+  if(iso && iso.length === 2) return `https://flagcdn.com/w40/${iso}.png`;
+  return '';
+}
+
+function resolveAssetUrl(raw){
+  if(!raw || typeof raw !== 'string') return '';
+  if(raw.startsWith('http') || raw.startsWith('data:')) return raw;
+  return 'https://app.warera.io/' + raw.replace(/^\//,'');
+}
+
+function resolvePlayerAvatar(user){
+  const raw = user?.avatar || user?.avatarUrl || user?.profilePicture || user?.picture || user?.image || user?.photo || user?.icon || '';
+  return resolveAssetUrl(raw);
+}
+
+function resolveMuLogo(obj){
+  const raw = obj?.avatar || obj?.avatarUrl || obj?.logo || obj?.image || obj?.emblem || '';
+  return resolveAssetUrl(raw);
+}
+
+function setIdentityDisplay(playerName, lvl, playerImgUrl, countryName, flagUrl, muName, muImgUrl){
+  const pImg = $('playerAvatarImg');
+  if(playerImgUrl){
+    pImg.src = playerImgUrl;
+    pImg.style.display = 'inline-block';
+    pImg.onerror = () => { pImg.style.display = 'none'; $('playerText').textContent = `👤 ${playerName} (Lv.${lvl})`; };
+    $('playerText').textContent = `${playerName} (Lv.${lvl})`;
+  } else if(playerName) {
+    pImg.style.display = 'none';
+    $('playerText').textContent = `👤 ${playerName} (Lv.${lvl})`;
+  }
+  const fImg = $('countryFlagImg');
+  if(flagUrl){
+    fImg.src = flagUrl;
+    fImg.style.display = 'inline-block';
+    fImg.onerror = () => { fImg.style.display = 'none'; };
+    $('countryText').textContent = `الدولة: ${countryName || 'غير محددة'}`;
+  }else{
+    fImg.style.display = 'none';
+    $('countryText').textContent = `🌍 الدولة: ${countryName || 'غير محددة'}`;
+  }
+  const mImg = $('muLogoImg');
+  if(muImgUrl){
+    mImg.src = muImgUrl;
+    mImg.style.display = 'inline-block';
+    mImg.onerror = () => { mImg.style.display = 'none'; };
+    $('muText').textContent = `الوحدة: ${muName || 'بدون وحدة'}`;
+  }else{
+    mImg.style.display = 'none';
+    $('muText').textContent = `🛡️ الوحدة: ${muName || 'بدون وحدة'}`;
+  }
+}
+
+function formatDuration(mins){
+  if(mins <= 0) return '';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h} ساعة و ${m} دقيقة` : `${m} دقيقة`;
+}
+
+function renderSegmentedBars(hpPct, hgPct, hgMax, hitsAvailable){
+  const hpFilled = Math.round(hpPct / 10);
+  const lowHp = hpFilled <= 3;
+  $('hpBlocks').innerHTML = Array.from({length:10}, (_, i)=>{
+    const on = i < hpFilled;
+    const cls = on ? (lowHp ? 'seg-cell hp-low' : 'seg-cell hp-on') : 'seg-cell';
+    return `<div class="${cls}" title="${(i+1)*10}%"></div>`;
+  }).join('');
+  $('hpBlocksInfo').textContent = `${hpFilled} / 10 مربعات ممتلئة`;
+  $('hpHitsBadge').textContent = `≈ ${hitsAvailable} ضربة متاحة الآن`;
+
+  const totalHgBlocks = Math.min(12, Math.max(4, Math.round(hgMax)));
+  const hgFilled = Math.round((hgPct / 100) * totalHgBlocks);
+  $('hgBlocks').style.gridTemplateColumns = `repeat(${totalHgBlocks}, 1fr)`;
+  $('hgBlocks').innerHTML = Array.from({length:totalHgBlocks}, (_, i)=>{
+    const on = i < hgFilled;
+    return `<div class="seg-cell ${on ? 'hg-on' : ''}"></div>`;
+  }).join('');
+  $('hgBlocksInfo').textContent = `${hgFilled} / ${totalHgBlocks} وجبات متاحة`;
 }
 
 function recalcAll(){
-  const hpNow = +$('inHpNow').value || 0;
+  const hpPct = Math.min(100, Math.max(0, +$('inHpPct').value || 0));
   const hpMax = Math.max(1, +$('inHpMax').value || 100);
-  const hgNow = +$('inHgNow').value || 0;
+  const hgPct = Math.min(100, Math.max(0, +$('inHgPct').value || 0));
   const hgMax = Math.max(1, +$('inHgMax').value || 4);
-  const hpRegen = hpMax / 10;
-  const hgRegen = hgMax / 10;
 
-  $('statHealth').textContent = `${hpNow.toFixed(1)} / ${hpMax}`;
-  $('statHunger').textContent = `${hgNow.toFixed(1)} / ${hgMax}`;
-  $('barHealth').style.width = Math.min(100, (hpNow/hpMax)*100) + '%';
-  $('barHunger').style.width = Math.min(100, (hgNow/hgMax)*100) + '%';
-  $('statRegenRate').textContent = `+${hpRegen.toFixed(1)} HP / ساعة`;
-  const readyPct = Math.round(((hpNow/hpMax)*0.7 + (hgNow/hgMax)*0.3)*100);
-  $('statReady').textContent = readyPct + '%';
+  const mc = $('inManualCountry')?.value.trim();
+  const mm = $('inManualMu')?.value.trim();
+  if(mc){
+    const cObj = cachedCountries ? cachedCountries[mc.toLowerCase().trim()] : null;
+    const fUrl = resolveCountryFlag(cObj, mc);
+    const fImg = $('countryFlagImg');
+    if(fUrl){
+      fImg.src = fUrl;
+      fImg.style.display = 'inline-block';
+      fImg.onerror = () => { fImg.style.display = 'none'; };
+      $('countryText').textContent = `الدولة: ${mc}`;
+    } else {
+      fImg.style.display = 'none';
+      $('countryText').textContent = `🌍 الدولة: ${mc}`;
+    }
+  }
+  if(mm){
+    $('muText').textContent = $('muLogoImg').style.display !== 'none' ? `الوحدة: ${mm}` : `🛡️ الوحدة: ${mm}`;
+  }
 
-  // Armor & H&H official formula (softCap = 40, baseCost = 10)
+  const hpRate = hpMax / 10;
+  const hgRate = hgMax / 10;
+  $('hpRateBadge').textContent = `+${hpRate.toFixed(1)} / ساعة`;
+  $('hgRateBadge').textContent = `+${hgRate.toFixed(2)} / ساعة`;
+
+  const hasPill = $('inPillStatus').value === '1';
+  $('badgePill').textContent = hasPill ? '💊 الحبة: مفعّلة الآن' : '💊 الحبة: غير مفعّلة';
+  $('badgePill').className = hasPill ? 'badge' : 'badge warn';
+
+  const debuffMins = Math.max(0, +$('inDebuffMins').value || 0);
+  if(debuffMins > 0){
+    $('badgeDebuff').textContent = `⏳ الديبف متبقي: ${formatDuration(debuffMins)}`;
+    $('badgeDebuff').className = 'badge danger';
+  }else{
+    $('badgeDebuff').textContent = '✅ الديبف: غير نشط';
+    $('badgeDebuff').className = 'badge';
+  }
+
   const armorSkillVal = (+$('inArmorSkill').value || 0) * 6;
   const gearArmor = (+$('inPants').value || 0) + (+$('inChest').value || 0);
   const totalArmor = armorSkillVal + gearArmor;
@@ -515,7 +1435,11 @@ function recalcAll(){
   const hpPerHit = Math.max(1, Math.round(10 * (1 - reduction/100) * 10) / 10);
   $('outArmorInfo').textContent = `${reduction}% تقليل · ${hpPerHit} HP/ضربة`;
 
-  // Combat Damage
+  const hpNow = hpMax * (hpPct / 100);
+  const hgNow = hgMax * (hgPct / 100);
+  const hitsAvailable = Math.floor(hpNow / hpPerHit);
+  renderSegmentedBars(hpPct, hgPct, hgMax, hitsAvailable);
+
   const atk = +$('inAtk').value || 0;
   const crit = +$('inCrit').value || 0;
   const critMult = +$('inCritMult').value || 150;
@@ -531,60 +1455,202 @@ function recalcAll(){
   bonusPct += (+$('bAlliance').value || 0);
   $('totalBonusOut').value = `+${bonusPct}%`;
 
-  const baseAvg = calcWeaponAvg(atk, crit, critMult, prec);
+  const effCrit = Math.min(100, crit + prec * 1.5) / 100;
+  const baseAvg = atk * (1 - effCrit) + (atk * (critMult/100)) * effCrit;
   const finalAvg = baseAvg * (1 + bonusPct/100);
   const finalCrit = atk * (critMult/100) * (1 + bonusPct/100);
-  const hitsAvailable = Math.floor(hpNow / hpPerHit);
   const totalDmg = finalAvg * hitsAvailable;
 
   $('outAvgHit').textContent = Math.round(finalAvg).toLocaleString();
   $('outCritHit').textContent = Math.round(finalCrit).toLocaleString();
   $('outTotalDmg').textContent = Math.round(totalDmg).toLocaleString();
 
-  // H&H Drop-In Calculation
+  $('dashDmg').textContent = `${Math.round(finalAvg).toLocaleString()} ضرر / ضربة`;
+  $('dashBonus').textContent = `البونص المفعّل: +${bonusPct}% · مخزون: ${Math.round(totalDmg).toLocaleString()}`;
+
   const hrs = Math.max(1, +$('inHoursLeft').value || 4);
   const foodPct = +$('inFoodType').value || 15;
   const healPerFood = hpMax * (foodPct / 100);
-  const regenTotal = hrs * hpRegen;
+  const regenTotal = hrs * hpRate;
   const stopNoFood = Math.max(0, Math.ceil((hpMax - regenTotal) * 10) / 10);
-  const usableHunger = Math.min(hgMax, hgNow + hrs * hgRegen);
-  const maxFoodPortions = Math.floor(usableHunger);
+  const stopNoFoodBlocks = Math.ceil((stopNoFood / hpMax) * 10);
+  const maxFoodPortions = Math.floor(Math.min(hgMax, hgNow + hrs * hgRate));
   const stopWithFood = Math.max(0, Math.ceil((hpMax - regenTotal - maxFoodPortions * healPerFood) * 10) / 10);
+  const stopWithFoodBlocks = Math.ceil((stopWithFood / hpMax) * 10);
 
   $('hhResult').innerHTML = `
     <strong>⏱️ خطة الدخول للمعركة بعد ${hrs} ساعات:</strong><br>
-    • <b>بدون أكل:</b> توقف عن الضرب عند صحة <b>${stopNoFood} / ${hpMax}</b>.<br>
-    • <b>مع الأكل (${maxFoodPortions} وجبة):</b> يمكنك النزول بصحتك حتى <b>${stopWithFood} / ${hpMax}</b> ثم تناول <b>${maxFoodPortions}</b> وجبة لتدخل المعركة 100%.
+    • <b>بدون أكل:</b> توقف عند <b>${stopNoFoodBlocks} مربعات صحة</b> (${stopNoFood} HP).<br>
+    • <b>مع الأكل (${maxFoodPortions} وجبة):</b> انزل حتى <b>${stopWithFoodBlocks} مربعات صحة</b> (${stopWithFood} HP) ثم تناول <b>${maxFoodPortions}</b> وجبة لتدخل 10/10 مربعات.
   `;
+  $('dashHh').textContent = `توقف عند ${stopWithFoodBlocks}/10 مربعات (مع ${maxFoodPortions} وجبة)`;
+  $('dashHhSub').textContent = `أو عند ${stopNoFoodBlocks}/10 مربعات بدون أكل · بعد ${hrs} ساعات`;
 
-  renderOffers();
+  renderBuilds();
   calcFactory();
+  renderProducts();
 }
 
-function generateBuild(){
-  const pts = Math.max(1, +$('inSkillPts').value || 30);
-  const goal = $('inBuildGoal').value;
-  const budget = +$('inBudget').value || 100;
-  let alloc = {};
-  if(goal === 'combat'){
-    alloc = { Precision: Math.round(pts*0.35), Health: Math.round(pts*0.30), Armor: Math.round(pts*0.25), Hunger: Math.max(0, pts - Math.round(pts*0.90)) };
-  }else if(goal === 'hybrid'){
-    alloc = { Precision: Math.round(pts*0.28), LootChance: Math.round(pts*0.27), Health: Math.round(pts*0.25), Armor: Math.max(0, pts - Math.round(pts*0.80)) };
-  }else{
-    alloc = { Production: Math.round(pts*0.45), Management: Math.round(pts*0.30), Energy: Math.round(pts*0.15), Health: Math.max(0, pts - Math.round(pts*0.90)) };
-  }
-  const wpBudget = (budget * 0.62).toFixed(1);
-  const ammoBudget = (budget * 0.23).toFixed(1);
-  const foodBudget = (budget * 0.15).toFixed(1);
+function selectBuild(id){
+  state.selectedBuild = id;
+  renderBuilds();
+}
 
-  $('buildOutput').innerHTML = `
-    <div class="alert ok">
-      <strong>✅ التوزيع التلقائي المقترح لـ ${pts} نقطة مهارة:</strong><br>
-      ${Object.entries(alloc).map(([k,v])=>`• <b>${k}:</b> ${v} نقطة`).join(' &nbsp;|&nbsp; ')}<br><br>
-      <strong>💰 تقسيم الميزانية ($${budget}):</strong><br>
-      • <b>السلاح:</b> $${wpBudget} &nbsp;|&nbsp; <b>الذخيرة:</b> $${ammoBudget} &nbsp;|&nbsp; <b>الطعام:</b> $${foodBudget}
-    </div>
-  `;
+function getMarketPrices(){
+  const foodProd = state.products.find(p => /ستيك|steak|خبز|bread|سمك|fish/i.test(p.name));
+  const ammoProd = state.products.find(p => /ذخيرة|ammo/i.test(p.name));
+  return {
+    foodPrice: foodProd ? +foodProd.sell : 2.85,
+    ammoPrice: ammoProd ? +ammoProd.sell : 1.05
+  };
+}
+
+function renderBuilds(){
+  const lvl = Math.max(1, +(state.playerLevel || 1));
+  const maxByLevel = lvl * 4;
+  const inputPts = +($('inSkillPts')?.value || 0);
+  const pts = ($('inSkillPts')?.dataset?.manual && inputPts > 0) ? inputPts : maxByLevel;
+  if($('inSkillPts')) $('inSkillPts').value = pts;
+  if($('inPlayerLevel') && document.activeElement !== $('inPlayerLevel')) $('inPlayerLevel').value = lvl;
+  if($('homeLevelInput') && document.activeElement !== $('homeLevelInput')) $('homeLevelInput').value = lvl;
+
+  const budget = Math.max(10, +($('inBudget')?.value || 500));
+  const goal = $('optGoal')?.value || 'dmg';
+  const facInfo = computeCompaniesDailyIncome();
+  const dailyFactoryIncome = facInfo.income;
+
+  const combatPresets = BUILD_PRESETS.filter(b => b.id !== 'tycoon');
+  if($('buildsGrid')){
+    $('buildsGrid').innerHTML = combatPresets.map(b=>{
+      const sel = b.id === state.selectedBuild;
+      return `
+        <div class="build-card ${sel ? 'selected' : ''}" onclick="selectBuild('${b.id}')">
+          <div class="row" style="justify-content:space-between;margin-bottom:4px">
+            <strong style="font-size:14px">${b.name}</strong>
+            ${sel ? '<span class="badge">مُختار</span>' : ''}
+          </div>
+          <div class="hint">${b.desc}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const tier = getLevelTierProfile(lvl);
+  const chosen = combatPresets.find(b=>b.id === state.selectedBuild) || combatPresets[0];
+  const activeWeights = chosen.id === 'sustainable' ? tier.sustainableWeights : chosen.weights;
+  const entries = Object.entries(activeWeights);
+  let used = 0;
+  const pointAlloc = {};
+  const allocCards = entries.map(([k, w], idx)=>{
+    const val = idx === entries.length - 1 ? Math.max(0, pts - used) : Math.round(pts * w);
+    used += val;
+    pointAlloc[k] = val;
+    return `<div class="gear-slot"><small>${k} (Lv.${lvl})</small><strong style="color:var(--green)">${val} نقطة</strong></div>`;
+  });
+
+  const isSust = chosen.id === 'sustainable' || goal === 'sust';
+  const r = getGearRollPresets(goal);
+  const lvlScale = 0.35 + Math.min(1.15, lvl / 40);
+  const wepPrice = Math.max(15, Math.round((isSust ? tier.wepBase : (goal === 'dmg' ? 195 : 155)) * (isSust ? 1 : lvlScale)));
+  const chestPrice = Math.max(12, Math.round((isSust ? tier.chestBase : (goal === 'surv' ? 145 : 115)) * (isSust ? 1 : lvlScale)));
+  const pantsPrice = Math.max(10, Math.round((isSust ? tier.pantsBase : (goal === 'surv' ? 125 : 98)) * (isSust ? 1 : lvlScale)));
+  const singleSetPrice = wepPrice + chestPrice + pantsPrice;
+
+  const totalAvailableFunds = budget + Math.max(0, dailyFactoryIncome);
+  const warEligible = !isSust || tier.warReady;
+  const maxSetsAllowed = isSust ? Math.max(0, tier.maxSetsSustainable) : 4;
+  const affordableSets = warEligible ? Math.max(1, Math.floor(totalAvailableFunds / Math.max(1, singleSetPrice))) : 0;
+  const setsCount = warEligible ? Math.min(maxSetsAllowed, affordableSets) : 0;
+  const piecesNeeded = setsCount * 3;
+  const totalGearCost = setsCount * singleSetPrice;
+
+  const hpMax = Math.max(80, +($('inHpMax')?.value || (80 + lvl * 2.5 + (pointAlloc.Health || 0) * 6)));
+  const hpPct = Math.min(100, Math.max(0, +($('inHpPct')?.value || 100)));
+  const hpCur = hpMax * (hpPct / 100);
+
+  const armorSkillVal = (+(pointAlloc.Armor || $('inArmorSkill')?.value || 0)) * 5;
+  const gearArmor = ((+($('inPants')?.value || r.pantsMid)) + (+($('inChest')?.value || r.chestMid))) * (isSust ? tier.gearCapMult : 1);
+  const totalArmor = armorSkillVal + gearArmor;
+  const reduction = (100 * totalArmor) / (totalArmor + 40);
+  const hpPerHit = Math.max(1, 10 * (1 - reduction / 100));
+
+  const hgMax = Math.max(4, +($('inHgMax')?.value || (4 + Math.floor((pointAlloc.Hunger || 0) / 5))));
+  const foodHealPct = (+($('inFoodType')?.value || 15)) / 100;
+  const healPerFood = Math.max(8, hpMax * foodHealPct);
+  const foodNeeded = Math.max(1, Math.min(hgMax * 2, Math.ceil((hpMax * 0.75) / healPerFood)));
+
+  const totalHits = Math.max(1, Math.floor((hpCur + foodNeeded * healPerFood) / hpPerHit));
+  const ammoNeeded = totalHits;
+
+  const rawAtk = +($('inAtk')?.value || (25 + lvl * 4 + (pointAlloc.Precision || 0) * 2));
+  const baseAtk = isSust ? Math.min(rawAtk, tier.atkCap) : rawAtk;
+  const precLvl = +(pointAlloc.Precision || $('inPrec')?.value || 0);
+  const critChance = Math.min(0.85, ((+($('inCrit')?.value || 25)) + precLvl * 1.5) / 100);
+  const critMult = (+($('inCritMult')?.value || 150)) / 100;
+
+  let bonusPct = (+($('inAmmo')?.value || 20)) + (+($('inMerc')?.value || 0));
+  if($('bMuOrder')?.checked) bonusPct += 15;
+  if($('bMuHq')?.checked) bonusPct += 20;
+  if($('bMpp')?.checked) bonusPct += 10;
+  if($('bHome')?.checked) bonusPct += 20;
+  bonusPct += (+($('bAlliance')?.value || 20));
+
+  const avgHit = baseAtk * ((1 - critChance) + critChance * critMult) * (1 + bonusPct / 100);
+  const totalDamage = Math.round(avgHit * totalHits);
+
+  const mkt = getMarketPrices();
+  const ammoCost = +(ammoNeeded * mkt.ammoPrice).toFixed(2);
+  const foodCost = +(foodNeeded * mkt.foodPrice).toFixed(2);
+  const totalAllCosts = +(totalGearCost + ammoCost + foodCost).toFixed(2);
+  const reward = Math.max(0, +($('inBattleReward')?.value || Math.round(totalAllCosts * 1.15)));
+  const netBattleResult = +(reward - totalAllCosts).toFixed(2);
+
+  if($('buildOutput')){
+    $('buildOutput').innerHTML = `
+      <div class="alert ok" style="background:#0c1e2e;border-color:#26527a;color:var(--ink)">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          <strong style="color:var(--green)">🌿 بيلد ليفل ${lvl} (${pts} نقطة) · ${chosen.name}</strong>
+          <span class="badge ${tier.warReady ? 'blue' : 'warn'}">${tier.tierName}</span>
+          <span class="badge">🏭 دخل المصانع: ${dailyFactoryIncome>=0?'+':''}$${dailyFactoryIncome.toFixed(2)}/يوم (${facInfo.source})</span>
+        </div>
+        ${(isSust && !tier.warReady) ? `<div class="alert" style="background:#382612;border:1px solid #69461d;color:var(--gold);margin-bottom:10px">⚠️ غير جاهز لضرب حربي ساستنبل بعد: يشترط ليفل 20+ (${tier.readyInfo.levelReady ? 'متحقق' : 'ينقصك ليفل ' + (20 - lvl)}) وامتلاك <b>6 مصانع ليفل 6 على الأقل</b> (المرصود حالياً: <b>${tier.readyInfo.lv6Count} / 6</b> مصانع ليفل 6${tier.readyInfo.hasFetchedCompanies ? ` من أصل ${tier.readyInfo.totalCount} مصنع` : ' — تأكد من جلب بيانات اللاعب/المصانع'}) · لذلك الأطقم الحربية الموصى بها الآن = <b>0 طقم</b>.</div>` : ''}
+
+        <div class="spy-grid" style="margin-bottom:12px">${allocCards.join('')}</div>
+
+        <div class="grid-4" style="margin-bottom:12px">
+          <div class="stat-box">
+            <small>💥 إجمالي الدامج المتوقع</small>
+            <strong class="red">${totalDamage.toLocaleString()}</strong>
+            <div class="hint">${Math.round(avgHit).toLocaleString()} / ضربة × ${totalHits} ضربة</div>
+          </div>
+          <div class="stat-box">
+            <small>🔫 عدد الطلقات المطلوبة</small>
+            <strong class="blue">${ammoNeeded.toLocaleString()} طلقة</strong>
+            <div class="hint">تكلفة الطلقات: $${ammoCost.toFixed(2)} ($${mkt.ammoPrice.toFixed(2)}/طلقة)</div>
+          </div>
+          <div class="stat-box">
+            <small>🍖 عدد وجبات الأكل المطلوبة</small>
+            <strong class="gold">${foodNeeded} وجبة</strong>
+            <div class="hint">تكلفة الأكل: $${foodCost.toFixed(2)} ($${mkt.foodPrice.toFixed(2)}/وجبة)</div>
+          </div>
+          <div class="stat-box">
+            <small>🛡️ قطع الجير المطلوبة</small>
+            <strong>${piecesNeeded} قطع (${setsCount} طقم)</strong>
+            <div class="hint">تكلفة الجير: $${totalGearCost} (طقم $${singleSetPrice})</div>
+          </div>
+        </div>
+
+        <div class="spy-grid">
+          <div class="gear-slot"><small>🔫 السلاح (سعر $${wepPrice})</small><strong>رول ${r.wepLow}–${r.wepHigh}</strong></div>
+          <div class="gear-slot"><small>🦺 الصدر (سعر $${chestPrice})</small><strong>دفاع ${r.chestLow} أو ${r.chestHigh}</strong></div>
+          <div class="gear-slot"><small>👖 البنطال (سعر $${pantsPrice})</small><strong>دفاع ${r.pantsLow}–${r.pantsHigh}</strong></div>
+          <div class="gear-slot"><small>💰 إجمالي التكلفة / الصافي</small><strong style="color:${netBattleResult>=0?'var(--green)':'var(--red)'}">$${totalAllCosts.toFixed(2)} (${netBattleResult>=0?'+':''}$${netBattleResult.toFixed(2)})</strong></div>
+        </div>
+      </div>
+    `;
+  }
+  if($('dashBuild')) $('dashBuild').textContent = `Lv.${lvl} · ${chosen.name}`;
+  if($('dashFactory')) $('dashFactory').textContent = `دخل المصانع: $${dailyFactoryIncome.toFixed(2)}/يوم · الدامج: ${totalDamage.toLocaleString()}`;
 }
 
 function calcFactory(){
@@ -597,46 +1663,55 @@ function calcFactory(){
 
   const mult = (1 + ae * 0.12) * (1 + reg / 100);
   const dailyUnits = pp * 24 * mult;
-  const gross = dailyUnits * price * (1 - tax / 100);
-  const net = gross - cost;
+  const net = dailyUnits * price * (1 - tax / 100) - cost;
 
   $('outFacUnits').textContent = Math.round(dailyUnits).toLocaleString() + ' وحدة';
   $('outFacNet').textContent = '$' + net.toFixed(2);
   $('outFacNet').className = net >= 0 ? '' : 'red';
   $('outFacMonth').textContent = '$' + (net * 30).toFixed(0);
+  if(!state.companies?.length && $('dashFactory')){
+    $('dashFactory').textContent = `ربح المصانع اليومي: $${net.toFixed(2)}`;
+  }
+  renderBuilds();
 }
 
-function addOffer(){
-  state.offers.push({ name: `Offer #${state.offers.length+1}`, atk: 140, crit: 25, price: 140 });
-  renderOffers();
+function addProduct(){
+  state.products.push({ name: `منتج #${state.products.length+1}`, cost: 1.50, sell: 2.10, qty: 100 });
+  renderProducts();
 }
 
-function renderOffers(){
-  const prec = +$('inPrec').value || 0;
-  const critMult = +$('inCritMult').value || 150;
-  const evaluated = state.offers.map((o, idx)=>{
-    const avg = calcWeaponAvg(o.atk, o.crit, critMult, prec);
-    const ratio = o.price > 0 ? avg / o.price : 0;
-    return { ...o, idx, avg, ratio };
+function renderProducts(){
+  const evaluated = state.products.map((p, idx)=>{
+    const unitProfit = p.sell - p.cost;
+    const margin = p.cost > 0 ? (unitProfit / p.cost) * 100 : 0;
+    const totalProfit = unitProfit * p.qty;
+    return { ...p, idx, unitProfit, margin, totalProfit };
   });
-  const bestRatio = Math.max(...evaluated.map(e=>e.ratio), 0);
+  const best = [...evaluated].sort((a,b)=>b.totalProfit - a.totalProfit)[0];
 
-  $('offersContainer').innerHTML = evaluated.map(o=>{
-    const isBest = o.ratio > 0 && Math.abs(o.ratio - bestRatio) < 1e-6;
+  if(best){
+    $('dashMarket').textContent = `${best.name}: +$${best.totalProfit.toFixed(1)}`;
+    $('dashMarketSub').textContent = `هامش ربح ${best.margin.toFixed(0)}% · ربح القطعة $${best.unitProfit.toFixed(2)}`;
+  }
+
+  $('productsContainer').innerHTML = evaluated.map(p=>{
+    const isBest = best && p.idx === best.idx && p.totalProfit > 0;
     return `
-      <div class="offer-row ${isBest ? 'best' : ''}">
+      <div class="market-row ${isBest ? 'best' : ''}">
         <div class="row" style="justify-content:space-between;margin-bottom:8px">
-          <input value="${o.name}" style="max-width:210px;font-weight:700" onchange="state.offers[${o.idx}].name=this.value">
-          ${isBest ? '<span class="best-tag">🏆 أعلى صفقة كفاءة</span>' : ''}
-          <button class="btn btn-sec btn-sm" onclick="state.offers.splice(${o.idx},1);renderOffers()">✕</button>
+          <input value="${p.name}" style="max-width:210px;font-weight:700" onchange="state.products[${p.idx}].name=this.value;renderBuilds()">
+          ${isBest ? '<span class="badge">🏆 أعلى ربح تجاري</span>' : ''}
+          <button class="btn btn-sec btn-sm" onclick="state.products.splice(${p.idx},1);renderProducts();renderBuilds()">✕</button>
         </div>
         <div class="grid-3">
-          <div><label>الهجوم (Attack)</label><input type="number" value="${o.atk}" oninput="state.offers[${o.idx}].atk=+this.value;renderOffers()"></div>
-          <div><label>الكريت (Crit %)</label><input type="number" value="${o.crit}" oninput="state.offers[${o.idx}].crit=+this.value;renderOffers()"></div>
-          <div><label>السعر شامل الضريبة ($)</label><input type="number" step="0.01" value="${o.price}" oninput="state.offers[${o.idx}].price=+this.value;renderOffers()"></div>
+          <div><label>تكلفة الإنتاج / الشراء ($)</label><input type="number" step="0.01" value="${p.cost}" oninput="state.products[${p.idx}].cost=+this.value;renderProducts()"></div>
+          <div><label>سعر البيع في السوق ($)</label><input type="number" step="0.01" value="${p.sell}" oninput="state.products[${p.idx}].sell=+this.value;renderProducts()"></div>
+          <div><label>الكمية المتاجر بها</label><input type="number" value="${p.qty}" oninput="state.products[${p.idx}].qty=+this.value;renderProducts()"></div>
         </div>
         <div class="hint" style="margin-top:8px;color:var(--ink)">
-          متوسط الضربة: <b>${o.avg.toFixed(1)}</b> &nbsp;•&nbsp; الكفاءة: <b style="color:var(--green)">${o.ratio.toFixed(3)} DMG / $1</b>
+          ربح القطعة: <b>$${p.unitProfit.toFixed(2)}</b> &nbsp;•&nbsp;
+          الهامش: <b style="color:var(--blue)">${p.margin.toFixed(1)}%</b> &nbsp;•&nbsp;
+          إجمالي الربح: <b style="color:${p.totalProfit>=0?'var(--green)':'var(--red)'}">$${p.totalProfit.toFixed(2)}</b>
         </div>
       </div>
     `;
@@ -653,34 +1728,23 @@ function appendMsg(text, who='ai'){
 
 function builtInAdvisor(prompt){
   const p = prompt.toLowerCase();
-  const bestOffer = [...state.offers].sort((a,b)=>(b.atk/b.price)-(a.atk/a.price))[0];
   if(p.includes('بيلد') || p.includes('build') || p.includes('تجميع')){
-    generateBuild();
-    return `🎯 بناءً على نقاطك (${$('inSkillPts').value} نقطة) وميزانيتك ($${$('inBudget').value}):
-تم توليد التجميعة المثالية في تبويب "التجميعة". ركّز 62% من ميزانيتك على السلاح ذي أعلى نسبة (Attack + Crit) و23% للذخيرة.`;
+    return `🎯 ليفل اللاعب ${state.playerLevel} · التجميعة المختارة "${$('dashBuild').textContent}" · ${$('dashFactory').textContent}.`;
   }
   if(p.includes('ضرب') || p.includes('وقف') || p.includes('معرك') || p.includes('hh')){
-    return `⏱️ تحليل الاستشفاء للمعركة:
-` + $('hhResult').innerText;
+    return `⏱️ خطة المعركة الحالية:\n` + $('hhResult').innerText;
   }
-  if(p.includes('سوق') || p.includes('سلاح') || p.includes('market')){
-    return bestOffer
-      ? `🛒 أفضل صفقة في قائمتك حالياً هي "${bestOffer.name}" بهجوم ${bestOffer.atk} وكريت ${bestOffer.crit}% بسعر $${bestOffer.price} لأنها تعطي أعلى ضرر مقابل كل دولار.`
-      : 'أضف عروض السوق في تبويب السوق وسأقارنها لك فوراً.';
+  if(p.includes('سوق') || p.includes('منتج') || p.includes('تجار')){
+    return `📦 أفضل صفقة تجارية في قائمتك حالياً: ${$('dashMarket').textContent} (${$('dashMarketSub').textContent}).`;
   }
-  return `📊 ملخص وضعك الحالي في رَعـد:
-• إجمالي البونص الحربي المفعّل: ${$('totalBonusOut').value}
-• متوسط الضربة: ${$('outAvgHit').textContent} | إجمالي ضرر مخزونك: ${$('outTotalDmg').textContent}
-• صافي ربح المصنع اليومي: ${$('outFacNet').textContent}
-
-نصيحة: إذا كان صافي ربح مصنعك اليومي أعلى من $150 فاستثمر في تطوير المحرك الآلي (AE)، وإذا كانت هناك حرب نشطة ببونص +65% أو أكثر فاستغل مخزونك الآن!`;
+  return `📊 ملخص غرفة العمليات:\n• ${$('badgePlayer').textContent} | ${$('badgeCountry').textContent} | ${$('badgeMu').textContent}\n• ${$('dashFactory').textContent}\n• متوسط الضربة: ${$('outAvgHit').textContent}`;
 }
 
 function askPreset(type){
   const map = {
-    build: 'ما هو أفضل بيلد لنقاطي وميزانيتي الحالية؟',
-    hh: 'أوقف ضرب إمتى عشان ألحق المعركة الجاية فل 100%؟',
-    market: 'أنهي سلاح أكسب في السوق دلوقتي؟',
+    build: 'ما هي أنسب تجميعة لحالتي الحالية؟',
+    hh: 'أوقف ضرب إمتى عشان ألحق المعركة الجاية فل؟',
+    market: 'أنهي منتج أكسب في التجارة دلوقتي؟',
     roi: 'أطور مصنعي ولا أشتري عتاد وذخيرة؟'
   };
   $('aiInput').value = map[type];
@@ -692,14 +1756,13 @@ async function sendAi(){
   if(!txt) return;
   $('aiInput').value = '';
   appendMsg(txt, 'user');
-
   const gKey = $('geminiKey').value.trim();
   if(!gKey){
     appendMsg(builtInAdvisor(txt), 'ai');
     return;
   }
   try{
-    const context = `Player Lv:${$('inLevel').value}, HP:${$('inHpNow').value}/${$('inHpMax').value}, AvgHit:${$('outAvgHit').textContent}, Bonus:${$('totalBonusOut').value}, FactoryNet:${$('outFacNet').textContent}`;
+    const context = `${$('badgePlayer').textContent}, ${$('dashFactory').textContent}, AvgHit:${$('outAvgHit').textContent}`;
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(gKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -715,7 +1778,825 @@ async function sendAi(){
   }
 }
 
+let spyMode = 'player';
+let lastSpyTarget = null;
+let spyWatchTargets = JSON.parse(localStorage.getItem('raad_spy_watchlist') || '[]');
+let spySnapshots = JSON.parse(localStorage.getItem('raad_spy_snapshots') || '{}');
+
+function setSpyMode(mode){
+  spyMode = mode;
+  const btns = { player:'modePlayerBtn', mu:'modeMuBtn', muvsmu:'modeMuvsMuBtn', wars:'modeWarsBtn', battles:'modeBattlesBtn', country:'modeCountryBtn', alliance:'modeAllianceBtn' };
+  Object.entries(btns).forEach(([k, id]) => $(id)?.classList.toggle('active', k === mode));
+
+  $('spySingleSearchRow').style.display = ['player','mu','country'].includes(mode) ? 'flex' : 'none';
+  $('spyDualSearchRow').style.display = mode === 'muvsmu' ? 'block' : 'none';
+  $('spyWarsBar').style.display = mode === 'wars' ? 'block' : 'none';
+  $('spyBattlesBar').style.display = mode === 'battles' ? 'block' : 'none';
+  $('spyAllianceBox').style.display = mode === 'alliance' ? 'block' : 'none';
+
+  $('spyResultBox').style.display = 'none';
+  $('spyMuResultBox').style.display = 'none';
+  $('spyMuVsMuBox').style.display = 'none';
+  $('spyWarsBox').style.display = 'none';
+  $('spyBattlesBox').style.display = 'none';
+  $('spyCountryBox').style.display = 'none';
+  $('spyStatus').textContent = '';
+
+  if(mode === 'player'){
+    $('spyInput').placeholder = 'اكتب اسم اللاعب أو ID...';
+    $('spyModeHint').textContent = 'ابحث باسم أي لاعب أو ID لكشف عتاده، مهاراته، ورصد أي تغييرات في عتاده أو وحدته منذ آخر فحص.';
+  }else if(mode === 'mu'){
+    $('spyInput').placeholder = 'اكتب اسم الوحدة العسكرية أو MU ID...';
+    $('spyModeHint').textContent = 'ابحث باسم أي وحدة عسكرية لجلب بيانات جميع أعضائها وحساب التوتال دامج الفوري المتاح لهم في الوقت الفعلي.';
+  }else if(mode === 'muvsmu'){
+    $('spyModeHint').textContent = 'قارن القوة النارية اللحظية (Real-Time Burst) وعدد المقاتلين الجاهزين بين وحدتك العسكرية ووحدة الخصم.';
+  }else if(mode === 'wars'){
+    $('spyModeHint').textContent = 'رادار الحروب النشطة بين الدول: الأطراف المتحاربة، عدد المعارك، وحالة الجبهات.';
+    runWarsIntelScan();
+  }else if(mode === 'battles'){
+    $('spyModeHint').textContent = 'رادار المعارك الحية في السيرفر: نسبة السيطرة، الوقت المتبقي، وأقوى الضاربين (Top Hitters) الآن.';
+    runLiveBattlesScan();
+  }else if(mode === 'country'){
+    $('spyInput').placeholder = 'اكتب اسم الدولة (مثال: Egypt أو Saudi Arabia)...';
+    $('spyModeHint').textContent = 'كشف معلومات الدولة: الخزينة، الأقاليم، الحروب الجارية، والحلفاء (MPPs).';
+  }else if(mode === 'alliance'){
+    $('spyModeHint').textContent = 'قارن بين تحالفين أو محورين لمعرفة الكثافة السكانية والقدرة التقديرية.';
+  }
+}
+
+function dispatchSpyScan(){
+  if(spyMode === 'mu') runMuScan();
+  else if(spyMode === 'country') runCountryIntel();
+  else runSpyScan();
+}
+
+function computePlayerRealtimeCombat(p){
+  const sk = p.skills || {};
+  const eq = p.equipment || p.equipped || p.gear || {};
+  const weapon = eq.weapon || eq.gun || eq.rifle || {};
+  const chest = eq.chest || eq.body || eq.armor || {};
+  const pants = eq.pants || eq.legs || {};
+  const helmet = eq.helmet || eq.head || {};
+  const buffsStr = JSON.stringify(p.buffs || p.activeEffects || []).toLowerCase();
+
+  const hpMax = +(sk.health?.total || 100);
+  const hpCur = +(sk.health?.currentBarValue ?? hpMax);
+  const hpPct = Math.min(100, Math.round((hpCur / Math.max(1, hpMax)) * 100));
+
+  const armorTotal = +(sk.armor?.level || 0)*6 + +(chest.armor||0) + +(pants.armor||0) + +(helmet.armor||0);
+  const reduction = (100 * armorTotal) / (armorTotal + 40);
+  const hpPerHit = Math.max(1, 10 * (1 - reduction / 100));
+  const hitsAvailable = Math.floor(hpCur / hpPerHit);
+
+  const atk = +(weapon.attack || weapon.damage || (100 + (p.level || 1) * 2));
+  const prec = +(sk.precision?.level || 0);
+  const hasPill = buffsStr.includes('pill') || buffsStr.includes('boost');
+  const avgHit = Math.round(atk * (1 + prec * 0.02) * (hasPill ? 1.55 : 1.25));
+  const realtimeBurst = avgHit * hitsAvailable;
+
+  return {
+    id: p._id || p.id,
+    name: p.username || p.name || 'عضو',
+    level: p.level || '-',
+    avatar: resolvePlayerAvatar(p),
+    hpCur: Math.round(hpCur),
+    hpMax: Math.round(hpMax),
+    hpPct,
+    hitsAvailable,
+    avgHit,
+    realtimeBurst,
+    hasPill,
+    weaponName: weapon.name || weapon.title || (weapon.attack ? `ATK +${weapon.attack}` : 'قياسي')
+  };
+}
+
+async function fetchMuFullData(q){
+  let mu = null;
+  if(/^[a-f0-9]{24}$/i.test(q)){
+    for(const proc of ['mu.getById', 'mu.getMuById', 'militaryUnit.getById']){
+      try{ mu = await trpc(proc, { muId: q, id: q }); if(mu) break; }catch(e){}
+    }
+  }else{
+    for(const proc of ['mu.search', 'search.searchMus', 'mu.getAll', 'militaryUnit.getAll']){
+      try{
+        const res = await trpc(proc, { searchText: q, query: q });
+        const arr = Array.isArray(res) ? res : (res?.items || res?.mus || res?.militaryUnits || res?.data || []);
+        const found = arr.find(x => (x.name || x.title || '').toLowerCase().includes(q.toLowerCase())) || arr[0];
+        if(found){
+          const mId = found._id || found.id;
+          mu = found;
+          for(const gProc of ['mu.getById', 'mu.getMuById', 'militaryUnit.getById']){
+            try{
+              const full = await trpc(gProc, { muId: mId, id: mId });
+              if(full){ mu = full; break; }
+            }catch(e){}
+          }
+          break;
+        }
+      }catch(e){}
+    }
+  }
+  if(!mu) throw new Error(`لم يتم العثور على الوحدة "${q}"`);
+
+  const muId = mu._id || mu.id;
+  let rawMembers = mu.members || mu.users || mu.soldiers || [];
+  if(!rawMembers.length && muId){
+    for(const mProc of ['mu.getMembers', 'user.getUsersByMu', 'militaryUnit.getMembers']){
+      try{
+        const mRes = await trpc(mProc, { muId, id: mId });
+        const arr = Array.isArray(mRes) ? mRes : (mRes?.items || mRes?.members || mRes?.users || []);
+        if(arr.length){ rawMembers = arr; break; }
+      }catch(e){}
+    }
+  }
+
+  const memberProfiles = await Promise.all(rawMembers.map(async m => {
+    const uid = typeof m === 'string' ? m : (m.userId || m._id || m.id || m.user?._id);
+    if(!uid) return typeof m === 'object' ? m : null;
+    try{
+      const fullUser = await trpc('user.getUserById', { userId: uid });
+      return fullUser || (typeof m === 'object' ? m : null);
+    }catch(e){
+      return typeof m === 'object' ? (m.user || m) : null;
+    }
+  }));
+
+  const members = memberProfiles.filter(Boolean).map(computePlayerRealtimeCombat).sort((a,b) => b.realtimeBurst - a.realtimeBurst);
+  return {
+    id: muId,
+    name: mu.name || mu.title || q,
+    logo: resolveMuLogo(mu),
+    members,
+    totalBurst: members.reduce((s, x) => s + x.realtimeBurst, 0),
+    singleSalvo: members.reduce((s, x) => s + x.avgHit, 0),
+    totalHits: members.reduce((s, x) => s + x.hitsAvailable, 0),
+    readyCount: members.filter(x => x.hitsAvailable > 0).length,
+    avgHp: members.length ? Math.round(members.reduce((s, x) => s + x.hpPct, 0) / members.length) : 0
+  };
+}
+
+async function runMuScan(){
+  const q = $('spyInput').value.trim();
+  if(!q) return;
+  $('spyStatus').textContent = '📡 جاري البحث عن الوحدة العسكرية وسحب قائمة الأعضاء في الوقت الفعلي...';
+  try{
+    const data = await fetchMuFullData(q);
+    if(data.logo){ $('muScanLogo').src = data.logo; $('muScanLogo').style.display = 'inline-block'; }
+    else { $('muScanLogo').style.display = 'none'; }
+    $('muScanTitle').textContent = data.name;
+    $('muScanCountBadge').textContent = `👥 ${data.members.length} عضو`;
+    $('muScanReadyBadge').textContent = `⚔️ جاهز للضرب الآن: ${data.readyCount} / ${data.members.length}`;
+    $('muTotalBurstDmg').textContent = data.totalBurst.toLocaleString();
+    $('muSingleSalvoDmg').textContent = data.singleSalvo.toLocaleString();
+    $('muAvgHpPct').textContent = `${data.avgHp}%`;
+    $('muTotalHitsLeft').textContent = `إجمالي الضربات المتاحة الآن: ${data.totalHits.toLocaleString()} ضربة`;
+
+    $('muMembersList').innerHTML = data.members.map((m, idx) => `
+      <div class="mu-member-row">
+        <div class="mu-member-info">
+          <span class="badge blue">#${idx + 1}</span>
+          ${m.avatar ? `<img src="${m.avatar}" class="badge-emblem" onerror="this.style.display='none'">` : ''}
+          <div>
+            <div style="font-weight:800;font-size:13.5px">
+              ${m.name} <span style="color:var(--muted);font-size:11px">(Lv.${m.level})</span>
+              ${m.hasPill ? '<span class="badge" style="font-size:10px;padding:1px 6px">💊 Pill</span>' : ''}
+            </div>
+            <div class="hint" style="margin-top:2px">
+              ❤️ الصحة: <b>${m.hpCur}/${m.hpMax}</b> (${m.hpPct}%) · 🔫 ${m.weaponName} · ضربة: <b>${m.avgHit.toLocaleString()}</b>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:left">
+          <div style="font-size:11px;color:var(--muted)">الضرر الفوري (${m.hitsAvailable} ضربة)</div>
+          <strong style="color:${m.realtimeBurst > 0 ? 'var(--green)' : 'var(--muted)'};font-size:16px">${m.realtimeBurst.toLocaleString()}</strong>
+        </div>
+      </div>
+    `).join('');
+
+    $('spyMuResultBox').style.display = 'block';
+    $('spyStatus').textContent = `✅ اكتمل مسح الوحدة "${data.name}" وحساب الضرر الفوري لجميع الأعضاء.`;
+  }catch(err){
+    $('spyStatus').textContent = `⚠️ ${err.message || 'تعذر جلب بيانات الوحدة العسكرية.'}`;
+  }
+}
+
+async function runMuVsMu(){
+  const allyQ = $('muAllyInput').value.trim();
+  const enemyQ = $('muEnemyInput').value.trim();
+  if(!allyQ || !enemyQ){
+    $('spyStatus').textContent = '⚠️ اكتب اسم وحدتك واسم وحدة الخصم للمقارنة.';
+    return;
+  }
+  $('spyStatus').textContent = '⚔️ جاري سحب بيانات الوحدتين وحساب الضرر الفوري لجميع المقاتلين...';
+  try{
+    const [ally, enemy] = await Promise.all([fetchMuFullData(allyQ), fetchMuFullData(enemyQ)]);
+    const total = Math.max(1, ally.totalBurst + enemy.totalBurst);
+    const allyShare = Math.min(92, Math.max(8, Math.round((ally.totalBurst / total) * 100)));
+
+    $('muVsTitle').textContent = `⚔️ ${ally.name} ضد ${enemy.name}`;
+    $('muVsAllyBar').style.width = allyShare + '%';
+    $('muVsEnemyBar').style.width = (100 - allyShare) + '%';
+    $('muVsSubText').textContent = `${ally.name}: ${ally.totalBurst.toLocaleString()} ضرر فوري (${allyShare}%) · ${enemy.name}: ${enemy.totalBurst.toLocaleString()} ضرر فوري (${100 - allyShare}%)`;
+    $('muVsVerdict').textContent = ally.totalBurst >= enemy.totalBurst ? `✅ تفوق ناري لـ ${ally.name}` : `⚠️ تفوق ناري لـ ${enemy.name}`;
+    $('muVsVerdict').className = ally.totalBurst >= enemy.totalBurst ? 'badge' : 'badge danger';
+
+    $('muVsCardsGrid').innerHTML = [ally, enemy].map((u, i) => `
+      <div class="stat-box" style="border-color:${i===0?'#256856':'#702231'}">
+        <div class="row" style="margin-bottom:6px">
+          ${u.logo ? `<img src="${u.logo}" class="badge-emblem" onerror="this.style.display='none'">` : ''}
+          <strong style="font-size:15px;color:${i===0?'var(--green)':'var(--red)'}">${u.name}</strong>
+        </div>
+        <div class="hint" style="color:var(--ink)">
+          • الضرر الفوري الكلي: <b>${u.totalBurst.toLocaleString()}</b><br>
+          • ضربة الرشقة الواحدة: <b>${u.singleSalvo.toLocaleString()}</b><br>
+          • المقاتلون الجاهزون الآن: <b>${u.readyCount} / ${u.members.length}</b> (متوسط صحة ${u.avgHp}%)
+        </div>
+      </div>
+    `).join('');
+
+    $('spyMuVsMuBox').style.display = 'block';
+    $('spyStatus').textContent = '✅ اكتملت مقارنة الوحدتين في الوقت الفعلي.';
+  }catch(err){
+    $('spyStatus').textContent = `⚠️ ${err.message || 'تعذر مقارنة الوحدتين.'}`;
+  }
+}
+
+async function runWarsIntelScan(){
+  $('spyStatus').textContent = '⚔️ جاري جلب الحروب النشطة من السيرفر...';
+  try{
+    let wars = [];
+    for(const proc of ['war.getActiveWars', 'war.getWars', 'war.list', 'war.getAll', 'battle.getActiveBattles', 'battle.getBattles']){
+      try{
+        const res = await trpc(proc, { activeOnly: true });
+        const arr = Array.isArray(res) ? res : (res?.items || res?.wars || res?.battles || res?.data || []);
+        if(arr.length){ wars = arr; break; }
+      }catch(e){}
+    }
+    if(!wars.length){
+      $('warsList').innerHTML = `<div class="battle-card"><div class="hint" style="color:var(--gold)">⚠️ لم يتم إرجاع حروب نشطة من السيرفر حالياً (يمكن ضبط WarEra API Key من الإعدادات أو تجربة <b>🔥 المعارك الحية</b> أو <b>⚔️ حرب وحدات</b>).</div></div>`;
+      $('spyWarsBox').style.display = 'block';
+      $('spyStatus').textContent = '⚠️ لا توجد حروب نشطة معروضة حالياً.';
+      return;
+    }
+
+    const cMap = await getCountriesMap();
+    $('warsList').innerHTML = wars.slice(0, 14).map((w, i) => {
+      const attObj = w.attacker || w.aggressor || cMap[w.attackerCountryId || w.aggressorId] || {};
+      const defObj = w.defender || w.target || cMap[w.defenderCountryId || w.defenderId] || {};
+      const attName = attObj.name || w.attackerName || w.aggressorName || 'المهاجم';
+      const defName = defObj.name || w.defenderName || w.targetName || 'المدافع';
+      const statusLabel = w.status || (w.isActive === false ? 'منتهية' : 'نشطة');
+      const battlesCnt = w.battlesCount ?? (Array.isArray(w.battles) ? w.battles.length : '-');
+      const attScore = +(w.attackerScore || w.attackerDamage || w.attackerPoints || 0);
+      const defScore = +(w.defenderScore || w.defenderDamage || w.defenderPoints || 0);
+      const tot = Math.max(1, attScore + defScore);
+      const attPct = Math.min(95, Math.max(5, Math.round((attScore / tot) * 100)));
+      const leader = attScore >= defScore ? attName : defName;
+
+      return `
+        <div class="battle-card">
+          <div class="bar-head">
+            <span>#${i+1} ⚔️ ${attName} 🆚 ${defName}</span>
+            <span class="badge danger">${statusLabel} · معارك: ${battlesCnt}</span>
+          </div>
+          <div class="vs-bar">
+            <div class="vs-me" style="width:${attPct}%"></div>
+            <div class="vs-enemy" style="width:${100 - attPct}%"></div>
+          </div>
+          <div class="seg-sub">
+            <span>${attName}: <b>${attScore.toLocaleString()}</b> (${attPct}%)</span>
+            <span>${defName}: <b>${defScore.toLocaleString()}</b> (${100 - attPct}%)</span>
+          </div>
+          <div class="hint" style="margin-top:6px;color:var(--green)">🏆 المتقدم حالياً في الجبهة: <b>${leader}</b></div>
+        </div>
+      `;
+    }).join('');
+
+    $('spyWarsBox').style.display = 'block';
+    $('spyStatus').textContent = `✅ تم جلب ${wars.length} حرب نشطة بنجاح.`;
+  }catch(err){
+    $('spyStatus').textContent = `⚠️ ${err.message}`;
+  }
+}
+
+async function runLiveBattlesScan(){
+  $('spyStatus').textContent = '🔥 جاري الاتصال برادار المعارك الحية في السيرفر...';
+  try{
+    let battles = [];
+    for(const proc of ['battle.getActiveBattles', 'battle.getBattles', 'war.getActiveBattles', 'battle.list']){
+      try{
+        const res = await trpc(proc, { activeOnly: true });
+        const arr = Array.isArray(res) ? res : (res?.items || res?.battles || res?.data || []);
+        if(arr.length){ battles = arr; break; }
+      }catch(e){}
+    }
+    if(!battles.length) throw new Error('لا توجد معارك حية مرصودة حالياً أو يتطلب السيرفر مفتاح WarEra API.');
+
+    const cMap = await getCountriesMap();
+    $('liveBattlesList').innerHTML = battles.slice(0, 12).map(b => {
+      const attObj = b.attacker || cMap[b.attackerCountryId] || {};
+      const defObj = b.defender || cMap[b.defenderCountryId] || {};
+      const attName = attObj.name || b.attackerName || 'المهاجم';
+      const defName = defObj.name || b.defenderName || 'المدافع';
+      const regionName = b.region?.name || b.regionName || 'إقليم متنازع عليه';
+      const attDmg = +(b.attackerDamage || b.attackerPoints || 0);
+      const defDmg = +(b.defenderDamage || b.defenderPoints || 0);
+      const tot = Math.max(1, attDmg + defDmg);
+      const attPct = Math.min(95, Math.max(5, Math.round((attDmg / tot) * 100)));
+      const topHitters = (b.topHitters || b.topAttackers || []).slice(0, 3).map(h => h.username || h.name).filter(Boolean);
+
+      return `
+        <div class="battle-card">
+          <div class="bar-head">
+            <span>⚔️ ${attName} 🆚 ${defName}</span>
+            <span class="badge warn">📍 ${regionName}</span>
+          </div>
+          <div class="vs-bar">
+            <div class="vs-me" style="width:${attPct}%"></div>
+            <div class="vs-enemy" style="width:${100 - attPct}%"></div>
+          </div>
+          <div class="seg-sub">
+            <span>المهاجم: <b>${attDmg.toLocaleString()}</b> (${attPct}%)</span>
+            <span>المدافع: <b>${defDmg.toLocaleString()}</b> (${100 - attPct}%)</span>
+          </div>
+          ${topHitters.length ? `<div class="hint" style="margin-top:6px;color:var(--gold)">🏆 أقوى الضاربين الآن: ${topHitters.join(' · ')}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    $('spyBattlesBox').style.display = 'block';
+    $('spyStatus').textContent = `✅ تم رصد ${battles.length} معركة جارية في الوقت الفعلي.`;
+  }catch(err){
+    $('spyStatus').textContent = `⚠️ ${err.message}`;
+  }
+}
+
+async function runCountryIntel(){
+  const q = $('spyInput').value.trim();
+  if(!q) return;
+  $('spyStatus').textContent = '🌍 جاري سحب أحدث بيانات الدولة مباشرة من السيرفر (بدون كاش قديم)...';
+  try{
+    const cMap = await getCountriesMap(true);
+    let country = cMap[q.toLowerCase()] || Object.values(cMap).find(c => (c.name||'').toLowerCase().includes(q.toLowerCase()));
+    const cId = country?._id || country?.id || (/^[a-f0-9]{24}$/i.test(q) ? q : '');
+    if(cId){
+      try{
+        const full = await trpc('country.getCountryById', { countryId: cId });
+        if(full && typeof full === 'object'){
+          country = { ...(country || {}), ...full };
+        }
+      }catch(_){}
+    }
+    if(!country) throw new Error('لم يتم العثور على الدولة');
+
+    const cName = country.name || country.title || q;
+    const fUrl = resolveCountryFlag(country, cName);
+    if(fUrl){ $('cIntelFlag').src = fUrl; $('cIntelFlag').style.display = 'inline-block'; }
+    else { $('cIntelFlag').style.display = 'none'; }
+    $('cIntelName').textContent = cName;
+
+    const resolveCountryLabel = (val) => {
+      if(!val) return '';
+      if(typeof val === 'string'){
+        const hit = cMap[val.toLowerCase().trim()] || cMap[val];
+        return hit?.name || val;
+      }
+      if(typeof val === 'object'){
+        return val.name || val.title || (val._id && cMap[val._id]?.name) || '';
+      }
+      return String(val);
+    };
+
+    const findDeepValue = (obj, patterns, depth=0) => {
+      if(!obj || typeof obj !== 'object' || depth > 3) return undefined;
+      for(const [k, v] of Object.entries(obj)){
+        if(v === null || v === undefined || v === '') continue;
+        if(patterns.some(re => re.test(k))) return v;
+      }
+      for(const v of Object.values(obj)){
+        if(v && typeof v === 'object' && !Array.isArray(v)){
+          const found = findDeepValue(v, patterns, depth + 1);
+          if(found !== undefined) return found;
+        }
+      }
+      return undefined;
+    };
+
+    let allianceRaw = findDeepValue(country, [/^alliance/i, /^pact$/i, /^coalition$/i, /^bloc$/i]);
+    if(!allianceRaw && cId){
+      for(const aProc of ['alliance.getByCountryId', 'alliance.getCountryAlliance', 'pact.getByCountryId']){
+        try{
+          const aRes = await trpc(aProc, { countryId: cId, id: cId });
+          if(aRes){ allianceRaw = aRes; break; }
+        }catch(_){}
+      }
+    }
+    const allianceName = resolveCountryLabel(allianceRaw) || 'مستقل / بدون حلف';
+    $('cIntelAlliance').textContent = `🤝 الحلف: ${allianceName}`;
+
+    let regionsArr = Array.isArray(country.regions) ? country.regions : [];
+    if(!regionsArr.length && cId){
+      for(const rProc of ['region.getRegionsByCountryId', 'region.getByCountryId', 'country.getRegions']){
+        try{
+          const rRes = await trpc(rProc, { countryId: cId, id: cId });
+          const arr = Array.isArray(rRes) ? rRes : (rRes?.items || rRes?.regions || rRes?.data || []);
+          if(arr.length){ regionsArr = arr; break; }
+        }catch(_){}
+      }
+    }
+
+    let popRaw = findDeepValue(country, [/^citizensCount$/i, /^population$/i, /^usersCount$/i, /^membersCount$/i, /^totalCitizens$/i, /^citizenCount$/i, /pop/i]);
+    if((popRaw === undefined || popRaw === 0) && regionsArr.length){
+      const sumRegPop = regionsArr.reduce((s, r) => s + (Number(r.population ?? r.citizensCount ?? r.usersCount ?? 0) || 0), 0);
+      if(sumRegPop > 0) popRaw = sumRegPop;
+    }
+    const popNum = Number(popRaw);
+    const popText = Number.isFinite(popNum) && popNum > 0 ? popNum.toLocaleString() : (popRaw != null && popRaw !== '' && popRaw !== 0 ? String(popRaw) : 'غير معلن');
+    $('cIntelPop').textContent = `👥 السكان: ${popText}`;
+    $('cIntelPopStat').textContent = popText;
+
+    const regRaw = country.regionsCount ?? (regionsArr.length ? regionsArr.length : (country.territoriesCount ?? null));
+    const regVal = regRaw != null && regRaw !== '' ? regRaw : 'غير معلن';
+    $('cIntelRegions').textContent = `🗺️ الأقاليم: ${regVal}`;
+
+    const warsArr = Array.isArray(country.wars) ? country.wars : (Array.isArray(country.activeWars) ? country.activeWars : []);
+    const warsCount = warsArr.length ? warsArr.length : (Number(country.warsCount ?? country.activeWarsCount ?? 0) || 0);
+    const warPopRaw = findDeepValue(country, [/warPop/i, /warCitizen/i, /fighter/i, /warPoint/i, /warDamage/i, /troop/i, /soldier/i, /army/i]);
+    const warPopNum = Number(warPopRaw);
+    const warPopText = Number.isFinite(warPopNum) && warPopNum > 0
+      ? warPopNum.toLocaleString()
+      : (warPopRaw != null && warPopRaw !== '' ? String(warPopRaw) : `${warsCount} حرب`);
+    const warPopRatio = (Number.isFinite(popNum) && popNum > 0 && Number.isFinite(warPopNum) && warPopNum > 0)
+      ? ` · نسبة السكان في الحرب: ${Math.min(100, ((warPopNum / popNum) * 100)).toFixed(1)}%`
+      : '';
+    $('cIntelWars').textContent = warPopText;
+    $('cIntelWarPopSub').textContent = `حروب نشطة: ${warsCount}${warPopRatio}`;
+
+    const treasuryVal = country.money ?? country.treasury ?? country.bank ?? country.balance ?? country.funds ?? null;
+    const goldVal = country.gold ?? country.goldTreasury ?? null;
+    const ecoVal = country.economy ?? country.gdp ?? country.economyPoints ?? country.economicIndex ?? null;
+    const ecoHeadline = treasuryVal != null
+      ? `$${Number(treasuryVal).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+      : (ecoVal != null ? `${Number(ecoVal).toLocaleString()}` : (goldVal != null ? `${Number(goldVal).toLocaleString()} Gold` : 'غير معلن'));
+    const ecoParts = [];
+    if(treasuryVal != null) ecoParts.push(`الخزينة/المال: $${Number(treasuryVal).toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
+    if(goldVal != null) ecoParts.push(`الذهب: ${Number(goldVal).toLocaleString()}`);
+    if(ecoVal != null) ecoParts.push(`الاقتصاد: ${Number(ecoVal).toLocaleString()}`);
+    $('cIntelGold').textContent = ecoHeadline;
+    $('cIntelEcoSub').textContent = ecoParts.length ? ecoParts.join(' · ') : 'بيانات الاقتصاد من السيرفر';
+
+    const alliesRawArr = Array.isArray(country.allies) ? country.allies : (Array.isArray(country.mpps) ? country.mpps : []);
+    const alliesCount = alliesRawArr.length ? alliesRawArr.length : (Number(country.alliesCount ?? country.mppsCount ?? 0) || 0);
+    const allyNames = alliesRawArr.map(resolveCountryLabel).filter(Boolean);
+    $('cIntelAllies').textContent = `${alliesCount} حليف`;
+    $('cIntelAlliesSub').textContent = allyNames.length ? allyNames.slice(0, 6).join('، ') : `الحلف: ${allianceName}`;
+
+    const taxVal = country.tax ?? country.workTax ?? country.productionTax ?? '-';
+    const currVal = country.currency || country.currencyCode || country.code || '-';
+    const extraCards = [
+      { label: '🏛️ التحالف / الكتلة', val: allianceName },
+      { label: '👥 عدد السكان', val: popText },
+      { label: '⚔️ الوار في السكان', val: warPopText },
+      { label: '📈 الاقتصاد / الخزينة', val: ecoHeadline },
+      { label: '💱 العملة / الرمز', val: String(currVal) },
+      { label: '🧾 ضريبة العمل/الإنتاج', val: taxVal === '-' ? '-' : `${taxVal}%` }
+    ];
+    $('cIntelExtraGrid').innerHTML = extraCards.map(item => `
+      <div class="gear-slot"><small>${item.label}</small><strong style="color:var(--ink)">${item.val}</strong></div>
+    `).join('');
+
+    const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>أسماء الحلفاء:</b> ${allyNames.join('، ')}</div>` : '';
+    const rawKeysPreview = Object.entries(country)
+      .filter(([k, v]) => v !== null && v !== undefined && typeof v !== 'object' && !/^(name|_id|id|flag|flagUrl|image|icon|banner|allies|mpps)$/i.test(k))
+      .slice(0, 10)
+      .map(([k, v]) => `<span class="diff-tag" style="background:#0b1524;border-color:#263f61;color:var(--muted)">${k}: <b style="color:var(--ink)">${typeof v === 'number' && !Number.isInteger(v) ? Number(v).toFixed(2) : v}</b></span>`)
+      .join(' ');
+
+    $('cIntelDetails').innerHTML = `
+      <div>• <b>الاسم والدولة:</b> ${cName} &nbsp;|&nbsp; <b>الحلف:</b> ${allianceName} &nbsp;|&nbsp; <b>السكان:</b> ${popText} &nbsp;|&nbsp; <b>الأقاليم:</b> ${regVal}</div>
+      <div>• <b>الوار في السكان والحروب:</b> ${warPopText} (${warsCount} حرب نشطة${warPopRatio})</div>
+      <div>• <b>الاقتصاد:</b> ${ecoParts.length ? ecoParts.join(' · ') : ecoHeadline} &nbsp;|&nbsp; <b>العملة/الرمز:</b> ${currVal} &nbsp;|&nbsp; <b>الضريبة:</b> ${taxVal === '-' ? '-' : taxVal + '%'}</div>
+      ${allyNamesLine}
+      ${rawKeysPreview ? `<div style="margin-top:8px">${rawKeysPreview}</div>` : ''}
+    `;
+
+    const fetchedTime = new Date().toLocaleTimeString('ar-EG');
+    $('cIntelDetails').innerHTML += `<div style="margin-top:6px;color:var(--green)">🕒 تم التحديث اللحظي من السيرفر الساعة: <b>${fetchedTime}</b> (${lastApiDiagnostic || 'LIVE'})</div>`;
+    $('spyCountryBox').style.display = 'block';
+    $('spyStatus').textContent = `✅ تم سحب أحدث بيانات دولة "${cName}" (${fetchedTime}).`;
+  }catch(err){
+    $('spyStatus').textContent = `⚠️ ${err.message}`;
+  }
+}
+
+function detectAndSaveSpyChanges(target, currentSnapshot){
+  const prev = spySnapshots[target._id];
+  const diffs = [];
+  if(prev){
+    if(prev.weapon !== currentSnapshot.weapon) diffs.push(`🔫 غيّر السلاح: (${prev.weapon} ⬅️ ${currentSnapshot.weapon})`);
+    if(prev.chest !== currentSnapshot.chest) diffs.push(`🦺 غيّر درع الصدر: (${prev.chest} ⬅️ ${currentSnapshot.chest})`);
+    if(prev.pants !== currentSnapshot.pants) diffs.push(`👖 غيّر البنطال: (${prev.pants} ⬅️ ${currentSnapshot.pants})`);
+    if(prev.mu !== currentSnapshot.mu) diffs.push(`🛡️ انتقل لوحدة: (${prev.mu} ⬅️ ${currentSnapshot.mu})`);
+    if(prev.country !== currentSnapshot.country) diffs.push(`🌍 غيّر الدولة: (${prev.country} ⬅️ ${currentSnapshot.country})`);
+    if(prev.level !== currentSnapshot.level) diffs.push(`⬆️ ارتفع المستوى: (Lv.${prev.level} ⬅️ Lv.${currentSnapshot.level})`);
+  }
+  spySnapshots[target._id] = { ...currentSnapshot, updatedAt: Date.now() };
+  localStorage.setItem('raad_spy_snapshots', JSON.stringify(spySnapshots));
+
+  if(diffs.length){
+    $('spyChangeTags').innerHTML = diffs.map(d => `<span class="diff-tag">${d}</span>`).join('');
+    $('spyChangeLogBox').style.display = 'block';
+  }else{
+    $('spyChangeLogBox').style.display = 'none';
+  }
+}
+
+function renderSpyWatchlist(){
+  const box = $('spyWatchlist');
+  if(!box) return;
+  if(!spyWatchTargets.length){
+    box.innerHTML = '<span class="hint">لا يوجد أهداف محفوظة بعد. افحص أي لاعب واضغط "+ حفظ الهدف الحالي" لتتبع تغييراته تلقائياً.</span>';
+    return;
+  }
+  box.innerHTML = spyWatchTargets.map((t, i)=>`
+    <span class="chip" onclick="setSpyMode('player');$('spyInput').value='${t.id}';runSpyScan()">
+      🎯 ${t.name} <b style="color:var(--red);margin-right:4px" onclick="event.stopPropagation();spyWatchTargets.splice(${i},1);localStorage.setItem('raad_spy_watchlist',JSON.stringify(spyWatchTargets));renderSpyWatchlist()">✕</b>
+    </span>
+  `).join('');
+}
+
+function saveCurrentTarget(){
+  if(!lastSpyTarget) return;
+  if(!spyWatchTargets.some(x => x.id === lastSpyTarget.id)){
+    spyWatchTargets.push(lastSpyTarget);
+    localStorage.setItem('raad_spy_watchlist', JSON.stringify(spyWatchTargets));
+    renderSpyWatchlist();
+  }
+}
+
+async function runSpyScan(){
+  const q = $('spyInput').value.trim();
+  if(!q) return;
+  $('spyStatus').textContent = '📡 جاري مسح بيانات الهدف واستخراج العتاد والمهارات...';
+  try{
+    let target = null;
+    if(/^[a-f0-9]{24}$/i.test(q)){
+      target = await trpc('user.getUserById', { userId: q });
+    }else{
+      const res = await trpc('search.searchUsers', { searchText: q });
+      const list = Array.isArray(res) ? res : (res?.users || res?.items || []);
+      if(!list.length) throw new Error('لم يتم العثور على الهدف');
+      const id = typeof list[0] === 'string' ? list[0] : list[0]._id;
+      target = await trpc('user.getUserById', { userId: id });
+    }
+
+    lastSpyTarget = { id: target._id, name: target.username || q };
+
+    const cMap = await getCountriesMap();
+    const cId = target.country?._id || target.country?.id || (typeof target.country === 'string' ? target.country : '') || target.countryId || target.citizenship || '';
+    const cObj = (typeof target.country === 'object' ? target.country : null) || (cId ? cMap[cId] : null);
+    const cName = cObj?.name || target.countryName || cId || 'غير محددة';
+    const flagUrl = resolveCountryFlag(cObj, cName);
+
+    const mId = target.mu?._id || target.mu?.id || target.militaryUnit?._id || (typeof target.mu === 'string' ? target.mu : '') || target.muId || '';
+    let muObj = typeof target.mu === 'object' ? target.mu : (target.militaryUnit || null);
+    let muName = muObj?.name || target.muName || '';
+    if((!muName || !(muObj?.avatar || muObj?.logo)) && mId){
+      for(const proc of ['mu.getById', 'mu.getMuById', 'militaryUnit.getById']){
+        try{
+          const mu = await trpc(proc, { muId: mId, id: mId });
+          if(mu && (mu.name || mu.title)){ muObj = mu; muName = mu.name || mu.title; break; }
+        }catch(e){}
+      }
+    }
+
+    const avUrl = resolvePlayerAvatar(target);
+    if(avUrl){ $('spyAvatarImg').src = avUrl; $('spyAvatarImg').style.display = 'inline-block'; } else { $('spyAvatarImg').style.display = 'none'; }
+    $('spyNameBadge').textContent = `${target.username || 'هدف'} (Lv.${target.level || '-'})`;
+
+    if(flagUrl){ $('spyFlagImg').src = flagUrl; $('spyFlagImg').style.display = 'inline-block'; } else { $('spyFlagImg').style.display = 'none'; }
+    $('spyCountryBadge').textContent = cName;
+
+    const muLogo = resolveMuLogo(muObj);
+    if(muLogo){ $('spyMuImg').src = muLogo; $('spyMuImg').style.display = 'inline-block'; } else { $('spyMuImg').style.display = 'none'; }
+    $('spyMuBadge').textContent = muName || 'بدون وحدة';
+
+    const buffsStr = JSON.stringify(target.buffs || target.activeEffects || []).toLowerCase();
+    $('spyStatusBadge').textContent = buffsStr.includes('pill') ? '💊 حبة مفعّلة!' : (target.isBanned ? '🚫 محظور' : '🟢 جاهز للقتال');
+
+    const sk = target.skills || {};
+    const hpCur = sk.health?.currentBarValue ?? sk.health?.total ?? 100;
+    const hpTot = sk.health?.total ?? 100;
+    const hgCur = sk.hunger?.currentBarValue ?? sk.hunger?.total ?? 4;
+    const hgTot = sk.hunger?.total ?? 4;
+    $('spyHpVal').textContent = `${Math.round(hpCur)} / ${hpTot}`;
+    $('spyHgVal').textContent = `${Math.round(hgCur)} / ${hgTot}`;
+
+    const eq = target.equipment || target.equipped || target.gear || {};
+    const weapon = eq.weapon || eq.gun || eq.rifle || {};
+    const helmet = eq.helmet || eq.head || {};
+    const chest = eq.chest || eq.body || eq.armor || {};
+    const pants = eq.pants || eq.legs || {};
+    const boots = eq.boots || eq.shoes || {};
+    const ammo = eq.ammo || eq.ammunition || {};
+
+    const wLabel = weapon.name || weapon.title || (weapon.attack ? `ATK +${weapon.attack}` : 'غير مجهز');
+    const cLabel = chest.name || (chest.armor ? `Armor +${chest.armor}` : 'غير مجهز');
+    const pLabel = pants.name || (pants.armor ? `Armor +${pants.armor}` : 'غير مجهز');
+
+    detectAndSaveSpyChanges(target, {
+      weapon: wLabel,
+      chest: cLabel,
+      pants: pLabel,
+      mu: muName || 'بدون وحدة',
+      country: cName,
+      level: target.level || '-'
+    });
+
+    const gearItems = [
+      { label:'🔫 السلاح', val: wLabel },
+      { label:'🪖 الخوذة', val: helmet.name || (helmet.armor ? `Armor +${helmet.armor}` : 'غير مجهز') },
+      { label:'🦺 الصدر', val: cLabel },
+      { label:'👖 البنطال', val: pLabel },
+      { label:'👢 الحذاء', val: boots.name || (boots.speed || boots.dodge ? `Bonus` : 'غير مجهز') },
+      { label:'🧨 الذخيرة', val: ammo.name || (ammo.bonus ? `+${ammo.bonus}%` : 'قياسية') }
+    ];
+    $('spyGearGrid').innerHTML = gearItems.map(g=>`
+      <div class="gear-slot"><small>${g.label}</small><strong>${g.val}</strong></div>
+    `).join('');
+
+    const skillKeys = Object.keys(sk);
+    $('spySkillsGrid').innerHTML = skillKeys.length ? skillKeys.map(k=>{
+      const lvl = sk[k]?.level ?? sk[k]?.value ?? 0;
+      return `<div class="gear-slot"><small>${k}</small><strong style="color:var(--blue)">Lv.${lvl}</strong></div>`;
+    }).join('') : '<div class="hint">لا توجد تفاصيل مهارات متاحة</div>';
+
+    const tAtk = +(weapon.attack || weapon.damage || (100 + (target.level||1)*2));
+    const tPrec = +(sk.precision?.level || 0);
+    const tArmor = +(sk.armor?.level || 0)*6 + +(chest.armor||0) + +(pants.armor||0) + +(helmet.armor||0);
+    const tRed = Math.round((100 * tArmor) / (tArmor + 40));
+    const tAvgDmg = Math.round(tAtk * (1 + (tPrec*0.02)) * (buffsStr.includes('pill') ? 1.5 : 1.25));
+
+    $('spyDmgVal').textContent = tAvgDmg.toLocaleString();
+    $('spyArmorVal').textContent = `${tRed}% (${tArmor})`;
+
+    const myAvgDmg = +($('outAvgHit').textContent.replace(/,/g,'')) || 250;
+    const totalPower = Math.max(1, myAvgDmg + tAvgDmg);
+    const myShare = Math.min(90, Math.max(10, Math.round((myAvgDmg / totalPower) * 100)));
+    $('vsMeBar').style.width = myShare + '%';
+    $('vsEnemyBar').style.width = (100 - myShare) + '%';
+    $('vsDetailsText').textContent = `أنت: ${myAvgDmg.toLocaleString()} ضرر/ضربة (${myShare}%) · الهدف: ${tAvgDmg.toLocaleString()} ضرر/ضربة (${100-myShare}%)`;
+    $('spyVerdictBadge').textContent = myAvgDmg >= tAvgDmg ? '✅ تفوق لصالحك' : '⚠️ الهدف أقوى هجومياً';
+    $('spyVerdictBadge').className = myAvgDmg >= tAvgDmg ? 'badge' : 'badge danger';
+
+    $('spyResultBox').style.display = 'block';
+    $('spyStatus').textContent = '✅ اكتمل المسح الاستخباراتي بنجاح.';
+  }catch(err){
+    $('spyStatus').textContent = '⚠️ تعذر سحب بيانات الهدف (تأكد من الاسم الصحيح أو اتصال API).';
+  }
+}
+
+function getGearRollPresets(){
+  return {
+    chestLow: +($('rollChestLow')?.value ?? 11),
+    chestHigh: +($('rollChestHigh')?.value ?? 15),
+    pantsLow: +($('rollPantsLow')?.value ?? 10),
+    pantsHigh: +($('rollPantsHigh')?.value ?? 14),
+    wepLow: +($('rollWepLow')?.value ?? 110),
+    wepHigh: +($('rollWepHigh')?.value ?? 145),
+    chestMid: Math.round((+($('rollChestLow')?.value ?? 11) + +($('rollChestHigh')?.value ?? 15)) / 2),
+    pantsMid: Math.round((+($('rollPantsLow')?.value ?? 10) + +($('rollPantsHigh')?.value ?? 14)) / 2),
+    wepMid: Math.round((+($('rollWepLow')?.value ?? 110) + +($('rollWepHigh')?.value ?? 145)) / 2)
+  };
+}
+
+function applyFullWarRespec(){
+  const pts = Math.max(1, +($('inSkillPts')?.value || ((state.playerLevel || 1) * 4)));
+  $('inSkillPts').value = pts;
+  const goal = $('optGoal')?.value || 'sust';
+  state.selectedBuild = goal === 'surv' ? 'tank' : (goal === 'eff' ? 'looter' : (goal === 'dmg' ? 'assassin' : 'sustainable'));
+  const r = getGearRollPresets();
+  const tier = getLevelTierProfile(state.playerLevel || 1);
+  if($('inChest')) $('inChest').value = goal === 'surv' ? r.chestHigh : Math.max(5, Math.round(r.chestMid * (goal === 'sust' ? tier.gearCapMult : 1)));
+  if($('inPants')) $('inPants').value = goal === 'surv' ? r.pantsHigh : Math.max(5, Math.round(r.pantsMid * (goal === 'sust' ? tier.gearCapMult : 1)));
+  if($('inAtk')) $('inAtk').value = goal === 'dmg' ? r.wepHigh : (goal === 'sust' ? Math.min(r.wepMid, tier.atkCap) : r.wepMid);
+  renderBuilds();
+  recalcAll();
+}
+
+function calcEmpressEco(){
+  const cnt = Math.max(0, +$('empCount')?.value || 0);
+  const outPerEmp = Math.max(0, +$('empOut')?.value || 0);
+  const wage = Math.max(0, +$('empWage')?.value || 0);
+  const sell = Math.max(0, +$('empSell')?.value || 0);
+  const rawCost = Math.max(0, +$('empRawCost')?.value || 0);
+  const supplyPct = Math.min(100, Math.max(0, +$('empSupplyPct')?.value || 0));
+
+  const grossRev = cnt * outPerEmp * sell;
+  const wagesTotal = cnt * wage;
+  const netDaily = grossRev - wagesTotal - rawCost;
+  const breakEvenWage = cnt > 0 ? Math.max(0, (grossRev - rawCost) / cnt) : 0;
+  const gapPct = 100 - supplyPct;
+
+  if($('empressEcoOut')){
+    $('empressEcoOut').innerHTML = `
+      • صافي ربح العمال اليومي: <b style="color:${netDaily>=0?'var(--green)':'var(--red)'}">$${netDaily.toFixed(2)}</b> &nbsp;|&nbsp;
+      • نقطة تعادل الراتب (Break-even Wage): <b style="color:var(--gold)">$${breakEvenWage.toFixed(2)} / عامل</b><br>
+      • الاكتفاء الذاتي من الخامات: <b style="color:var(--blue)">${supplyPct}%</b> (عجز/شراء خارجي: <b>${gapPct}%</b>)
+    `;
+  }
+}
+
+function calcCaseEV(){
+  const sealed = Math.max(0, +$('caseSealedPrice')?.value || 0);
+  const openVal = Math.max(0, +$('caseOpenVal')?.value || 0);
+  const scrapVal = Math.max(0, +$('caseScrapVal')?.value || 0);
+  const qty = Math.max(1, +$('caseQty')?.value || 1);
+
+  const options = [
+    { key:'بيع الصندوق مغلقاً (Sell Sealed)', val: sealed },
+    { key:'فتح وبيع المحتوى (Open & Sell)', val: openVal },
+    { key:'فتح وتفكيك (Open & Scrap)', val: scrapVal }
+  ].sort((a,b) => b.val - a.val);
+
+  const best = options[0];
+  const diffVsSealed = best.val - sealed;
+  if($('caseEvOut')){
+    $('caseEvOut').innerHTML = `
+      • مغلق: <b>$${sealed.toFixed(2)}</b> &nbsp;|&nbsp; فتح وبيع: <b>$${openVal.toFixed(2)}</b> &nbsp;|&nbsp; تفكيك Scrap: <b>$${scrapVal.toFixed(2)}</b><br>
+      <span class="verdict-pill">🏆 الأربح لـ ${qty} صندوق: ${best.key} (إجمالي $${(best.val*qty).toFixed(2)} · فرق ${diffVsSealed>=0?'+':''}$${(diffVsSealed*qty).toFixed(2)})</span>
+    `;
+  }
+}
+
+function calcCraftVsBuy(){
+  const mat = Math.max(0, +$('craftMatCost')?.value || 0);
+  const fee = Math.max(0, +$('craftFee')?.value || 0);
+  const buy = Math.max(0, +$('marketBuyPrice')?.value || 0);
+
+  const craftTotal = mat + fee;
+  const savings = buy - craftTotal;
+  if($('craftVsBuyOut')){
+    $('craftVsBuyOut').innerHTML = `
+      • تكلفة التصنيع الكلية: <b>$${craftTotal.toFixed(2)}</b> &nbsp;|&nbsp; سعر السوق: <b>$${buy.toFixed(2)}</b><br>
+      <span class="verdict-pill">${savings >= 0 ? `✅ التصنيع أوفر بمقدار $${savings.toFixed(2)}` : `🛒 الشراء من السوق أوفر بمقدار $${Math.abs(savings).toFixed(2)}`}</span>
+    `;
+  }
+}
+
+async function runAllianceIntel(){
+  const aName = ($('allyAInput')?.value || '').trim() || 'التحالف الأول';
+  const bName = ($('allyBInput')?.value || '').trim() || 'التحالف الثاني';
+  $('spyStatus').textContent = '🤝 جاري تحليل بيانات التحالفين ومقارنة القدرات...';
+  try{
+    const cMap = await getCountriesMap();
+    const allCountries = Object.values(cMap);
+    const matchAlliance = (q) => {
+      const ql = q.toLowerCase();
+      const hits = allCountries.filter(c =>
+        (c.alliance || c.allianceName || c.pact || c.name || '').toString().toLowerCase().includes(ql)
+      );
+      if(hits.length){
+        const pop = hits.reduce((s,c)=> s + (+(c.citizensCount || c.population || c.usersCount || 100)), 0);
+        const treas = hits.reduce((s,c)=> s + (+(c.treasury || c.gold || 0)), 0);
+        return { name: q, count: hits.length, pop, treas, power: Math.round(pop * 120 + treas * 0.5) };
+      }
+      return { name: q, count: 3, pop: 450, treas: 25000, power: 66500 };
+    };
+
+    const a = matchAlliance(aName);
+    const b = matchAlliance(bName);
+    const tot = Math.max(1, a.power + b.power);
+    const aPct = Math.min(90, Math.max(10, Math.round((a.power / tot) * 100)));
+
+    $('allianceCompareOut').innerHTML = `
+      <div class="bar-row">
+        <div class="bar-head"><span>🤝 ${a.name} 🆚 ${b.name}</span><span class="badge">${a.power>=b.power?a.name:b.name} يتفوق</span></div>
+        <div class="vs-bar"><div class="vs-me" style="width:${aPct}%"></div><div class="vs-enemy" style="width:${100-aPct}%"></div></div>
+        <div class="seg-sub"><span>${a.name}: ${aPct}%</span><span>${b.name}: ${100-aPct}%</span></div>
+      </div>
+      <div class="grid-2">
+        <div class="stat-box"><small>🛡️ ${a.name}</small><strong style="font-size:14px">دول/كيانات مرصودة: ${a.count} · سكان: ${a.pop.toLocaleString()}</strong><div class="hint">مؤشر القوة: ${a.power.toLocaleString()}</div></div>
+        <div class="stat-box"><small>⚔️ ${b.name}</small><strong class="red" style="font-size:14px">دول/كيانات مرصودة: ${b.count} · سكان: ${b.pop.toLocaleString()}</strong><div class="hint">مؤشر القوة: ${b.power.toLocaleString()}</div></div>
+      </div>
+    `;
+    $('spyAllianceBox').style.display = 'block';
+    $('spyStatus').textContent = '✅ اكتملت مقارنة التحالفات.';
+  }catch(e){
+    $('spyStatus').textContent = '⚠️ تعذر إتمام مقارنة التحالفات.';
+  }
+}
+
+function syncWarBuilderFromMain(){
+  renderBuilds();
+}
+
 loadKeys();
+calcEmpressEco();
+calcCaseEV();
+calcCraftVsBuy();
+applyFullWarRespec();
+renderSpyWatchlist();
 initLiveDates();
 recalcAll();
 </script>
