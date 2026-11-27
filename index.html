@@ -364,6 +364,8 @@ nav.bottom-nav{
         <div class="stat-box"><small>إجمالي ضرر المخزون الحالي</small><strong id="outTotalDmg" class="blue">0</strong></div>
         <div class="stat-box"><small>إجمالي الضرر اليومي (24 ساعة)</small><strong id="outDailyDmg" class="gold">0</strong></div>
       </div>
+      <div style="margin-top:10px;max-width:340px"><label>حالة الحبة للحساب (Pill)</label><select id="inPillCalc" onchange="recalcAll()"><option value="live" selected>الحالة الحية من الـAPI</option><option value="buff">حبة مفعّلة (+60%)</option><option value="none">بدون حبة (0%)</option><option value="debuff">فترة الديبف (-60%)</option></select></div>
+      <div class="hint" id="pillCompare" style="margin-top:6px"></div>
       <div class="hint" id="dailyDmgHint" style="margin-top:8px">بافتراض 0 ضربة في اليوم</div>
 
       <div class="sus-box" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border,#2a3441)">
@@ -1490,6 +1492,27 @@ function renderSegmentedBars(hpPct, hgPct, hgMax, hitsAvailable){
   $('hgBlocksInfo').textContent = `${hgFilled} / ${totalHgBlocks} وجبات متاحة`;
 }
 
+// صيغة الضرر الموحدة (مطابقة لتلميح اللعبة ولـ warera-war-planner):
+// الهجوم = المسطّح × (1+ذخيرة) × (1+رتبة) × (1+حبة/ديبف) ثم × عامل بونص المعركة. الدقة = احتمال الإصابة، والكريت = × (1 + ضرر الكريت).
+function calcHitDamage(o){
+  const atkEff = o.atk * (1 + (o.ammo||0)/100) * (1 + (o.rank||0)/100) * (1 + (o.pill||0)/100);
+  const hit = Math.min(1, Math.max(0, (o.prc||0)/100));
+  const critDmg = (o.critMult||0)/100 + Math.max(0, (o.crit||0) - 100) * 0.04;
+  const critCh = Math.min(100, Math.max(0, o.crit||0)) / 100;
+  const battle = 1 + (o.battle||0)/100;
+  const avg = (atkEff * hit * (1 + critCh * critDmg) + (atkEff / 2) * (1 - hit)) * battle;
+  return { avg, crit: atkEff * (1 + critDmg) * battle, atkEff };
+}
+// الخسارة المتوقعة من الصحة لكل ضربة: الدرع (حد أدنى 1) ثم احتمال المراوغة
+function calcHpPerHit(totalArmor, dodgeTotal){
+  const dodgeEff = Math.max(0, dodgeTotal||0) / (Math.max(0, dodgeTotal||0) + 40);
+  return Math.max(0.1, Math.round(Math.max(1, 10 * (1 - totalArmor / (totalArmor + 40))) * (1 - dodgeEff) * 100) / 100);
+}
+function selectedPillPct(liveMerc){
+  const m = ($('inPillCalc') && $('inPillCalc').value) || 'live';
+  return m === 'buff' ? 60 : m === 'none' ? 0 : m === 'debuff' ? -60 : liveMerc;
+}
+
 function recalcAll(){
   { const SA0 = window.susAuto; if(SA0 && SA0.debuffEnd && !SA0.expired && Date.now() > SA0.debuffEnd){ SA0.expired = true; if($('inMerc')) $('inMerc').value = SA0.buff || 0; } }
   const hpPct = Math.min(100, Math.max(0, +$('inHpPct').value || 0));
@@ -1540,10 +1563,9 @@ function recalcAll(){
   const totalArmor = armorSkillVal + gearArmor;
   const reduction = Math.round((100 * totalArmor) / (totalArmor + 40));
   const SA = window.susAuto || {};
-  // الدرع يقلل الخسارة (حد أدنى 1 HP)، والمراوغة تلغي الضربة باحتمال dodge/(dodge+40): الخسارة المتوقعة = 10 × (1-درع) × (1-مراوغة)
   const dodgeTot = Math.max(0, +SA.dodge || 0);
   const dodgeEff = dodgeTot / (dodgeTot + 40);
-  const hpPerHit = Math.max(0.1, Math.round(Math.max(1, 10 * (1 - totalArmor / (totalArmor + 40))) * (1 - dodgeEff) * 100) / 100);
+  const hpPerHit = calcHpPerHit(totalArmor, dodgeTot);
   $('outArmorInfo').textContent = `${reduction}% تقليل · مراوغة ${Math.round(dodgeEff*100)}% · ${hpPerHit} HP/ضربة`;
 
   const hpNow = hpMax * (hpPct / 100);
@@ -1568,16 +1590,11 @@ function recalcAll(){
   bonusPct += (+$('bAlliance').value || 0);
   $('totalBonusOut').value = `+${bonusPct}%`;
 
-  const atkEff = atk * (1 + ammo/100) * (1 + rankPct/100) * (1 + merc/100);
   const prcPct = (window.susAuto && window.susAuto.prc) ? window.susAuto.prc : (50 + 5 * (+$('inPrec').value || 0));
-  const hitChance = Math.min(1, prcPct / 100);
-  const critOver = Math.max(0, crit - 100);
-  const critDmg = critMult / 100 + critOver * 0.04;
-  const critCh = Math.min(100, crit) / 100;
-  const baseAvg = atkEff * hitChance * (1 + critCh * critDmg) + (atkEff / 2) * (1 - hitChance);
-  const battleMul = 1 + bonusPct / 100;
-  const finalAvg = baseAvg * battleMul;
-  const finalCrit = atkEff * (1 + critDmg) * battleMul;
+  const dmgIn = { atk, ammo, rank: rankPct, crit, critMult, prc: prcPct, battle: bonusPct };
+  const dmgSel = calcHitDamage({ ...dmgIn, pill: selectedPillPct(merc) });
+  const finalAvg = dmgSel.avg;
+  const finalCrit = dmgSel.crit;
   const totalDmg = finalAvg * hitsAvailable;
 
   $('outAvgHit').textContent = Math.round(finalAvg).toLocaleString();
@@ -1600,6 +1617,8 @@ function recalcAll(){
   const dayHealthTotal = hpNow + dayHealthRegen + dayFoodHealth;
   const dayHits = Math.floor(dayHealthTotal / hpPerHit);
   const dayDmg = dayHits * finalAvg;
+  { const f = v => Math.round(v).toLocaleString(); const st = [['بدون حبة',0],['حبة مفعّلة',60],['فترة الديبف',-60]].map(([n,p]) => { const d = calcHitDamage({ ...dmgIn, pill: p }).avg; return `${n}: ${f(d)} / ضربة · ${f(d * dayHits)} / يوم`; });
+    $('pillCompare').textContent = `${dayHits.toLocaleString()} ضربة في اليوم في كل الحالات. ${st.join(' | ')}`; }
   $('outDailyDmg').textContent = Math.round(dayDmg).toLocaleString();
   $('dailyDmgHint').textContent = `بافتراض ${dayHits.toLocaleString()} ضربة في اليوم · ${Math.round(dayHealthTotal).toLocaleString()} HP متاحة (${Math.round(dayHealthRegen).toLocaleString()} من تجديد الصحة + ${Math.round(dayFoodHealth).toLocaleString()} من ${Math.round(dayHungerPortions)} وجبة) ÷ ${hpPerHit} HP لكل ضربة`;
   {
@@ -1743,11 +1762,10 @@ function renderBuilds(){
   const hpPct = Math.min(100, Math.max(0, +($('inHpPct')?.value || 100)));
   const hpCur = hpMax * (hpPct / 100);
 
-  const armorSkillVal = (+(pointAlloc.Armor || $('inArmorSkill')?.value || 0)) * 5;
+  const armorSkillVal = (+(pointAlloc.Armor || $('inArmorSkill')?.value || 0)) * 6;
   const gearArmor = ((+($('inPants')?.value || r.pantsMid)) + (+($('inChest')?.value || r.chestMid))) * plan.efficiencyFactor;
   const totalArmor = armorSkillVal + gearArmor;
-  const reduction = (100 * totalArmor) / (totalArmor + 40);
-  const hpPerHit = Math.max(1, 10 * (1 - reduction / 100));
+  const hpPerHit = calcHpPerHit(totalArmor, (window.susAuto && window.susAuto.dodge) || 0);
 
   const hgMax = Math.max(4, +($('inHgMax')?.value || (4 + Math.floor((pointAlloc.Hunger || 0) / 4))));
   const foodHealPct = (+($('inFoodType')?.value || 15)) / 100;
@@ -1759,17 +1777,14 @@ function renderBuilds(){
 
   const baseAtk = Math.max(20, (+($('inAtk')?.value || r.wepMid)) * plan.efficiencyFactor);
   const precLvl = +(pointAlloc.Precision || $('inPrec')?.value || 0);
-  const critChance = Math.min(0.85, ((+($('inCrit')?.value || 25)) + precLvl * 1.5) / 100);
-  const critMult = (+($('inCritMult')?.value || 150)) / 100;
-
-  let bonusPct = (+($('inAmmo')?.value || 20)) + (+($('inMerc')?.value || 0));
-  if($('bMuOrder')?.checked) bonusPct += 15;
-  if($('bMuHq')?.checked) bonusPct += 20;
-  if($('bMpp')?.checked) bonusPct += 10;
-  if($('bHome')?.checked) bonusPct += 20;
-  bonusPct += (+($('bAlliance')?.value || 20));
-
-  const avgHit = baseAtk * ((1 - critChance) + critChance * critMult) * (1 + bonusPct / 100);
+  const bldPrc = (window.susAuto && window.susAuto.prc) ? window.susAuto.prc : (50 + 5 * (+$('inPrec')?.value || 0));
+  let bldBattle = 0;
+  if($('bMuOrder')?.checked) bldBattle += 15;
+  if($('bMuHq')?.checked) bldBattle += 20;
+  if($('bMpp')?.checked) bldBattle += 10;
+  if($('bHome')?.checked) bldBattle += 20;
+  bldBattle += (+($('bAlliance')?.value || 20));
+  const avgHit = calcHitDamage({ atk: baseAtk, ammo: +($('inAmmo')?.value || 20), rank: (window.susAuto && window.susAuto.rank) || 0, pill: selectedPillPct(+($('inMerc')?.value || 0)), crit: +($('inCrit')?.value || 25), critMult: +($('inCritMult')?.value || 150), prc: bldPrc, battle: bldBattle }).avg;
   const totalDamage = Math.round(avgHit * totalHits);
 
   const mkt = getMarketPrices();
@@ -2028,14 +2043,16 @@ function computePlayerRealtimeCombat(p){
   const hpPct = Math.min(100, Math.round((hpCur / Math.max(1, hpMax)) * 100));
 
   const armorTotal = +(sk.armor?.level || 0)*6 + +(chest.armor||0) + +(pants.armor||0) + +(helmet.armor||0);
-  const reduction = (100 * armorTotal) / (armorTotal + 40);
-  const hpPerHit = Math.max(1, 10 * (1 - reduction / 100));
+  const armorReal = sk.armor?.total != null ? +sk.armor.total : armorTotal;
+  const hpPerHit = calcHpPerHit(armorReal, +(sk.dodge?.total || 0));
   const hitsAvailable = Math.floor(hpCur / hpPerHit);
 
   const atk = +(weapon.attack || weapon.damage || (100 + (p.level || 1) * 2));
   const prec = +(sk.precision?.level || 0);
   const hasPill = buffsStr.includes('pill') || buffsStr.includes('boost');
-  const avgHit = Math.round(atk * (1 + prec * 0.02) * (hasPill ? 1.55 : 1.25));
+  const avgHit = sk.attack?.total != null
+    ? Math.round(calcHitDamage({ atk: +sk.attack.total, crit: +(sk.criticalChance?.total || 0), critMult: +(sk.criticalDamages?.total || 100), prc: +(sk.precision?.total || 50) }).avg)
+    : Math.round(atk * (1 + prec * 0.02) * (hasPill ? 1.55 : 1.25));
   const realtimeBurst = avgHit * hitsAvailable;
 
   return {
