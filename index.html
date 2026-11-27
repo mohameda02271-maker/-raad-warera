@@ -368,26 +368,6 @@ nav.bottom-nav{
 
       <div class="sus-box" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border,#2a3441)">
         <div class="card-title" style="margin-bottom:10px"><span>🌿 الاستدامة: صافي تكلفة كل 1000 ضرر</span></div>
-        <div class="grid-4" style="margin-bottom:10px">
-<div><label>السلاح (فئة)</label><select class="sus-in" id="susTier_weapon" onchange="recalcAll()"><option value="0">none</option><option value="1">knife</option><option value="2">gun</option><option value="3">rifle</option><option value="4">sniper</option><option value="5">tank</option><option value="6">jet</option></select></div>
-<div><label>الخوذة (فئة)</label><select class="sus-in" id="susTier_helmet" onchange="recalcAll()"><option value="0">بدون</option><option value="1">رمادي</option><option value="2">أخضر</option><option value="3">أزرق</option><option value="4">بنفسجي</option><option value="5">ذهبي</option><option value="6">أحمر</option></select></div>
-<div><label>القفازات (فئة)</label><select class="sus-in" id="susTier_gloves" onchange="recalcAll()"><option value="0">بدون</option><option value="1">رمادي</option><option value="2">أخضر</option><option value="3">أزرق</option><option value="4">بنفسجي</option><option value="5">ذهبي</option><option value="6">أحمر</option></select></div>
-<div><label>الصدر (فئة)</label><select class="sus-in" id="susTier_chest" onchange="recalcAll()"><option value="0">بدون</option><option value="1">رمادي</option><option value="2">أخضر</option><option value="3">أزرق</option><option value="4">بنفسجي</option><option value="5">ذهبي</option><option value="6">أحمر</option></select></div>
-<div><label>البنطال (فئة)</label><select class="sus-in" id="susTier_pants" onchange="recalcAll()"><option value="0">بدون</option><option value="1">رمادي</option><option value="2">أخضر</option><option value="3">أزرق</option><option value="4">بنفسجي</option><option value="5">ذهبي</option><option value="6">أحمر</option></select></div>
-<div><label>الحذاء (فئة)</label><select class="sus-in" id="susTier_boots" onchange="recalcAll()"><option value="0">بدون</option><option value="1">رمادي</option><option value="2">أخضر</option><option value="3">أزرق</option><option value="4">بنفسجي</option><option value="5">ذهبي</option><option value="6">أحمر</option></select></div>
-        </div>
-        <div class="grid-4" style="margin-bottom:10px">
-          <div><label>سعر الوجبة ($)</label><input type="number" class="sus-in" id="susFood" value="3.70" min="0" step="0.01" oninput="this.dataset.manual='1';recalcAll()"></div>
-          <div><label>سعر الطلقة ($)</label><input type="number" class="sus-in" id="susAmmo" value="0.70" min="0" step="0.01" oninput="this.dataset.manual='1';recalcAll()"></div>
-          <div><label>سعر السكراب ($)</label><input type="number" class="sus-in" id="susScrapP" value="0.25" min="0" step="0.01" oninput="recalcAll()"></div>
-          <div><label>سعر الكيس Case1 ($)</label><input type="number" class="sus-in" id="susCase1" value="3.93" min="0" step="0.01" oninput="recalcAll()"></div>
-          <div><label>سعر الكيس Case2 ($)</label><input type="number" class="sus-in" id="susCase2" value="29.86" min="0" step="0.01" oninput="recalcAll()"></div>
-          <div><label>المراوغة Dodge (تلقائي)</label><input type="number" class="sus-in" id="susDodge" value="0" min="0" step="0.01" oninput="recalcAll()"></div>
-          <div><label>فرصة الغنيمة Loot % (تلقائي)</label><input type="number" class="sus-in" id="susLoot" value="12" min="0" step="0.01" oninput="recalcAll()"></div>
-          <div><label>الدقة Precision % (تلقائي)</label><input type="number" class="sus-in" id="susPrc" value="100" min="0" step="0.01" oninput="recalcAll()"></div>
-          <div><label>دخل الشركات ($/يوم)</label><input type="number" class="sus-in" id="susCompany" value="0" min="0" step="0.01" oninput="recalcAll()"></div>
-          <div><label>دخل الأساس Base ($/يوم)</label><input type="number" class="sus-in" id="susBase" value="0" min="0" step="0.01" oninput="recalcAll()"></div>
-        </div>
         <div class="grid-4">
           <div class="stat-box"><small>صافي التكلفة اليومية</small><strong id="outSusNet">$0.00</strong></div>
           <div class="stat-box"><small>صافي تكلفة كل 1000 ضرر</small><strong id="outSus1k" class="gold">$0.00</strong></div>
@@ -395,7 +375,9 @@ nav.bottom-nav{
           <div class="stat-box"><small>إجمالي الدخل</small><strong id="outSusInc" class="green">$0.00</strong></div>
         </div>
         <div class="hint" id="susHint" style="margin-top:8px"></div>
-        <div class="hint" style="margin-top:4px">ملاحظة: المعادلة مطابقة لـ warera-war-planner. الأسعار تُجلب تلقائياً من API السوق (ويمكن تعديلها). الـAPI لا يعرض فئة الجير ولا دخل الشركات والأساس، فاختر فئة كل قطعة وأدخل الدخل مرة واحدة وسيُحفظ في المتصفح. تكلفة الجير = سعر القطعة ÷ 100 لكل ضربة. غنيمة المعارك = 0.13$ لكل 1000 ضرر. الصافي السالب يعني ربح.</div>
+        <div class="hint" id="susGearHint" style="margin-top:4px"></div>
+        <div style="margin-top:10px;max-width:320px"><label>دخل الشركات + الأساس ($/يوم) - الـAPI لا يعرضه</label><input type="number" class="sus-in" id="susCompany" value="0" min="0" step="0.01" oninput="recalcAll()"></div>
+        <div class="hint" style="margin-top:4px">ملاحظة: كل شيء تلقائي من ملف اللاعب (الجير المُجهَّز وأسعاره الحية، الذخيرة، المراوغة، فرصة الغنيمة، الدقة، أسعار الأكل والسكراب والأكياس) بنفس معادلة warera-war-planner. الأكل يُحسب حسب نوع الطعام المختار في مخطط H&H لأن مخزونك غير متاح بدون مفتاح. الوحيد اليدوي هو دخل الشركات والأساس (الـAPI العام لا يعرض أرباحها ولا الرواتب)، تدخله مرة وتتحفظ في المتصفح. غنيمة المعارك = 0.13$ لكل 1000 ضرر. الصافي السالب يعني ربح.</div>
       </div>
     </div>
 
@@ -1237,9 +1219,21 @@ async function fetchPlayer(){
     if(sk.criticalChance?.total != null) setNum('inCrit', sk.criticalChance.total);
     if(sk.criticalDamages?.total != null) setNum('inCritMult', sk.criticalDamages.total);
     if(sk.precision?.level != null) setNum('inPrec', Math.min(10, sk.precision.level));
-    if(sk.dodge?.total != null) setNum('susDodge', sk.dodge.total);
-    if(sk.lootChance?.total != null) setNum('susLoot', sk.lootChance.total);
-    if(sk.precision?.total != null) setNum('susPrc', sk.precision.total);
+    window.susAuto = { dodge: +sk.dodge?.total || 0, loot: +sk.lootChance?.total || 0, prc: +sk.precision?.total || 0, ammoCode: '', gear: {} };
+    try {
+      const eq = await trpc('inventory.fetchCurrentEquipment', { userId: state.userId });
+      const WT = ['knife','gun','rifle','sniper','tank','jet'];
+      window.susAuto.ammoCode = typeof eq.ammo === 'string' ? eq.ammo : (eq.ammo?.code || '');
+      for(const slot of ['weapon','helmet','gloves','chest','pants','boots']){
+        const it = eq[slot]; const code = typeof it === 'string' ? it : it?.code;
+        if(!code) continue;
+        const tier = slot === 'weapon' ? WT.indexOf(code) + 1 : (parseInt(code.replace(/\D/g,''), 10) || 0);
+        if(tier < 1) continue;
+        let price = 0;
+        try { price = Number(await trpc('gameStat.getEquipmentAvgByCode', { itemCode: code })) || 0; } catch(e) {}
+        window.susAuto.gear[slot] = { code, tier, price };
+      }
+    } catch(e) { window.susAuto.gear = null; }
     if(atkSk.ammoPercent != null){
       const ammoSel = $('inAmmo');
       if(ammoSel && [...ammoSel.options].some(o => +o.value === Number(atkSk.ammoPercent))) ammoSel.value = String(Number(atkSk.ammoPercent));
@@ -1596,34 +1590,30 @@ function recalcAll(){
   $('outDailyDmg').textContent = Math.round(dayDmg).toLocaleString();
   $('dailyDmgHint').textContent = `بافتراض ${dayHits.toLocaleString()} ضربة في اليوم · ${Math.round(dayHealthTotal).toLocaleString()} HP متاحة (${Math.round(dayHealthRegen).toLocaleString()} من تجديد الصحة + ${Math.round(dayFoodHealth).toLocaleString()} من ${Math.round(dayHungerPortions)} وجبة) ÷ ${hpPerHit} HP لكل ضربة`;
   {
-    const n = id => Math.max(0, +($(id).value) || 0);
-    const COSTS = { weapon:[0,2,8,27,70,200,650], helmet:[0,2,7,27,70,210,650], gloves:[0,2,7,27,70,210,650], chest:[0,2,7,27,70,240,650], pants:[0,2,7,27,70,240,650], boots:[0,2,7,27,70,240,650] };
-    const SCRAP = [0,6,18,54,162,486,1458];
+    const A = window.susAuto || {};
     const P = window.susPrices || {};
+    const SCRAP = [0,6,18,54,162,486,1458];
+    const ddg = Math.max(0, +A.dodge || 0);
     const foodKey = {10:'bread',15:'steak',20:'cookedFish'}[+$('inFoodType').value];
-    const ammoKey = {10:'lightAmmo',20:'ammo',40:'heavyAmmo'}[ammo];
-    const autoSet = (id, v) => { const el = $(id); if(el && v != null && !el.dataset.manual && localStorage.getItem('raad_sus_manual_' + id) == null && document.activeElement !== el) el.value = Math.round(v*100)/100; };
-    autoSet('susFood', P[foodKey]); autoSet('susAmmo', ammo > 0 ? P[ammoKey] : null);
-    autoSet('susScrapP', P.scraps); autoSet('susCase1', P.case1); autoSet('susCase2', P.case2);
-    const ddg = n('susDodge');
+    const foodPrice = +P[foodKey] || 0;
+    const ammoPrice = ammo > 0 ? (+P[A.ammoCode] || +P[{10:'lightAmmo',20:'ammo',40:'heavyAmmo'}[ammo]] || 0) : 0;
     let gearCost = 0, scrapQty = 0;
-    Object.keys(COSTS).forEach(slot => {
-      const t = +$('susTier_' + slot).value || 0;
+    Object.entries(A.gear || {}).forEach(([slot, g]) => {
       const decay = slot === 'weapon' ? 1 : 1 - ddg / (ddg + 40);
-      gearCost += (COSTS[slot][t] / 100) * dayHits * decay;
+      gearCost += (g.price / 100) * dayHits * decay;
       const q = Math.max(0.01, Math.round((dayHits * decay / 100) * 100) / 100);
-      scrapQty += (SCRAP[t] / 3) * q;
+      scrapQty += (SCRAP[g.tier] / 3) * q;
     });
-    const foodCost = n('susFood') * 24 * hgRate;
-    const ammoCost = ammo > 0 ? n('susAmmo') * dayHits : 0;
+    const foodCost = foodPrice * 24 * hgRate;
+    const ammoCost = ammoPrice * dayHits;
     const consumables = foodCost + ammoCost;
-    const loot = n('susLoot') / 100, prc = Math.min(1, n('susPrc') / 100);
+    const loot = (+A.loot || 0) / 100, prc = Math.min(1, (+A.prc || 0) / 100);
     const cases = loot * dayHits * prc, elite = (loot / 100) * dayHits * prc;
-    const scrapInc = scrapQty * n('susScrapP');
-    const caseInc = cases * n('susCase1') + elite * n('susCase2');
+    const scrapInc = scrapQty * (+P.scraps || 0);
+    const caseInc = cases * (+P.case1 || 0) + elite * (+P.case2 || 0);
     const lootInc = dayDmg / 1000 * 0.13;
-    const compInc = n('susCompany'), baseInc = n('susBase');
-    const income = scrapInc + caseInc + lootInc + compInc + baseInc;
+    const compInc = Math.max(0, +$('susCompany').value || 0);
+    const income = scrapInc + caseInc + lootInc + compInc;
     const netCost = gearCost + consumables - income;
     const per1k = dayDmg > 0 ? netCost / (dayDmg / 1000) : 0;
     const money = v => (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1632,8 +1622,10 @@ function recalcAll(){
     $('outSus1k').style.color = per1k <= 0 ? 'var(--green)' : '';
     $('outSusCost').textContent = money(gearCost + consumables);
     $('outSusInc').textContent = money(income);
-    $('susHint').textContent = `الحساب: (استهلاك الجير ${money(gearCost)} + مستهلكات ${money(consumables)} [أكل ${money(foodCost)} + طلقات ${money(ammoCost)}]) - (سكراب ${money(scrapInc)} + أكياس ${money(caseInc)} + غنيمة المعارك ${money(lootInc)} + شركات ${money(compInc)} + أساس ${money(baseInc)}) = ${money(netCost)} ÷ (${Math.round(dayDmg).toLocaleString()} ÷ 1000) · ${dayHits.toLocaleString()} ضربة`;
-    document.querySelectorAll('.sus-in').forEach(el => { localStorage.setItem('raad_sus_' + el.id, el.value); if(el.dataset.manual) localStorage.setItem('raad_sus_manual_' + el.id, '1'); });
+    $('susHint').textContent = `الحساب: (استهلاك الجير ${money(gearCost)} + مستهلكات ${money(consumables)} [أكل ${money(foodCost)} + طلقات ${money(ammoCost)}]) - (سكراب ${money(scrapInc)} + أكياس ${money(caseInc)} + غنيمة المعارك ${money(lootInc)} + شركات/أساس ${money(compInc)}) = ${money(netCost)} ÷ (${Math.round(dayDmg).toLocaleString()} ÷ 1000) · ${dayHits.toLocaleString()} ضربة`;
+    const gl = Object.entries(A.gear || {}).map(([slot, g]) => `${slot}: ${g.code} ($${g.price.toFixed(2)})`).join(' · ');
+    $('susGearHint').textContent = A.gear ? `الجير المُجهَّز (تلقائي): ${gl || 'لا يوجد'} · ذخيرة: ${A.ammoCode || 'لا يوجد'} · مراوغة ${ddg} · فرصة غنيمة ${A.loot}% · دقة ${A.prc}%` : 'اجلب بيانات لاعب ليُحسب الجير والمهارات تلقائياً.';
+    localStorage.setItem('raad_sus_susCompany', $('susCompany').value);
   }
   const regenTotal = hrs * hpRate;
   const stopNoFood = Math.max(0, Math.ceil((hpMax - regenTotal) * 10) / 10);
@@ -3077,7 +3069,7 @@ function syncWarBuilderFromMain(){
 }
 
 loadKeys();
-document.querySelectorAll('.sus-in').forEach(el => { const v = localStorage.getItem('raad_sus_' + el.id); if(v !== null) el.value = v; if(localStorage.getItem('raad_sus_manual_' + el.id)) el.dataset.manual = '1'; });
+document.querySelectorAll('.sus-in').forEach(el => { const v = localStorage.getItem('raad_sus_' + el.id); if(v !== null) el.value = v; });
 fetch('https://api2.warera.io/trpc/itemTrading.getPrices').then(r => r.json()).then(j => { window.susPrices = j?.result?.data || {}; recalcAll(); }).catch(() => {});
 calcEmpressEco();
 calcCaseEV();
