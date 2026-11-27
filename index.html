@@ -1630,16 +1630,21 @@ async function runGearOpt(){
       res.push({ t: [w.g.tier, h.g.tier, gl.g.tier, ch.g.tier, pa.g.tier, bo.g.tier], hit: r.hit, hits: r.hits, dmg: r.dmg, cost: r.cost, net: r.net, per1k: r.per1k });
     }
     const pick = (arr, fn) => arr.slice().sort(fn);
-    const byK = pick(res, (a, b) => a.per1k - b.per1k).slice(0, 4);
     const maxD = pick(res, (a, b) => b.dmg - a.dmg || a.cost - b.cost)[0];
     const cheap = pick(res, (a, b) => a.cost - b.cost)[0];
+    const strong = res.filter(r => r.dmg >= cur.dmg);
+    const bestK = strong.length ? pick(strong, (a, b) => a.per1k - b.per1k)[0] : null;
+    const bestPerD = pick(res, (a, b) => b.dmg / b.cost - a.dmg / a.cost)[0];
     let marg = null; res.forEach(r => { const dc = r.cost - cur.cost, dd = r.dmg - cur.dmg; if(dc > 0.01 && dd > 0){ const v = dd / dc; if(!marg || v > marg.v) marg = { ...r, v, dd, dc }; } });
+    const sorted = pick(res, (a, b) => a.cost - b.cost || b.dmg - a.dmg); const front = []; let bd = -1;
+    sorted.forEach(r => { if(r.dmg > bd){ front.push(r); bd = r.dmg; } });
+    const fr = []; const nF = Math.min(6, front.length); for(let i = 0; i < nF; i++){ fr.push(front[Math.round(i * (front.length - 1) / Math.max(1, nF - 1))]); }
     const f = v => Math.round(v).toLocaleString(); const m = v => (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2);
     const nm = t => `${GEAR_NAMES.weapon[t[0]]} · h${t[1]} g${t[2]} c${t[3]} p${t[4]} b${t[5]}`;
     const th = 'style="padding:4px 6px;text-align:right;border-bottom:1px solid #2a3441;white-space:nowrap"';
     const row = (lab, r, extra) => `<tr><td ${th}>${lab}</td><td ${th} dir="ltr">${nm(r.t)}</td><td ${th}>${f(r.hit)}</td><td ${th}>${f(r.hits)}</td><td ${th}>${f(r.dmg)}</td><td ${th}>${m(r.cost)}</td><td ${th}>${m(r.per1k)}</td><td ${th}>${extra || ''}<button class="btn btn-sm" onclick="applyGearTiers([${r.t}])">طبّق</button></td></tr>`;
     const curRow = `<tr style="opacity:.8"><td ${th}>جيرك الحالي</td><td ${th} dir="ltr">${GEAR_SLOTS.map(sl => eff[sl] ? eff[sl].code : '-').join(' · ')}</td><td ${th}>${f(cur.hit)}</td><td ${th}>${f(cur.hits)}</td><td ${th}>${f(cur.dmg)}</td><td ${th}>${m(cur.cost)}</td><td ${th}>${m(cur.per1k)}</td><td ${th}></td></tr>`;
-    out.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${th}>الترتيب</th><th ${th}>التوليفة</th><th ${th}>ضرر/ضربة</th><th ${th}>ضربات/يوم</th><th ${th}>ضرر يومي</th><th ${th}>تكلفة/يوم (جير+مستهلكات)</th><th ${th}>صافي لكل 1000 ضرر</th><th ${th}></th></tr></thead><tbody>${curRow}${byK.map((r, i) => row('#' + (i + 1) + ' أقل تكلفة/1000 ضرر', r, 'ضرر لكل $: ' + (r.dmg / r.cost).toFixed(0) + ' ')).join('')}${row('🥇 أعلى ضرر', maxD)}${row('💲 أرخص خيار', cheap)}${marg ? row('📈 أكبر زيادة ضرر لكل $ إضافي', marg, `+${f(marg.dd)} ضرر لـ +${m(marg.dc)} (${f(marg.v)} ضرر/$) `) : ''}</tbody></table></div><div class="hint" style="margin-top:4px">${res.length.toLocaleString()} توليفة · الأرقام بنموذج "${mode}" · قطعك الفعلية تحتفظ بأرقامها الفعلية، وباقي المستويات بالمتوسط (مثل الـbuilder). h=خوذة g=قفازات c=صدر p=بنطلون b=حذاء، الرقم = المستوى (T).</div>`;
+    out.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${th}>الترتيب</th><th ${th}>التوليفة</th><th ${th}>ضرر/ضربة</th><th ${th}>ضربات/يوم</th><th ${th}>ضرر يومي</th><th ${th}>تكلفة/يوم (جير+مستهلكات)</th><th ${th}>صافي لكل 1000 ضرر</th><th ${th}></th></tr></thead><tbody>${curRow}${bestK ? row('⚖️ أقل تكلفة/1000 ضرر بضرر ≥ جيرك', bestK) : ''}${row('🎯 أعلى ضرر لكل $', bestPerD, 'ضرر لكل $: ' + (bestPerD.dmg / bestPerD.cost).toFixed(0) + ' ')}${row('🥇 أعلى ضرر', maxD)}${row('💲 أرخص خيار', cheap)}${marg ? row('📈 أكبر زيادة ضرر لكل $ إضافي', marg, `+${f(marg.dd)} ضرر لـ +${m(marg.dc)} (${f(marg.v)} ضرر/$) `) : ''}${fr.map((r, i) => row('منحنى الكفاءة ' + (i + 1) + '/' + fr.length, r)).join('')}</tbody></table></div><div class="hint" style="margin-top:4px">${res.length.toLocaleString()} توليفة · الأرقام بنموذج "${mode}" · قطعك الفعلية تحتفظ بأرقامها الفعلية، وباقي المستويات بالمتوسط (مثل الـbuilder). h=خوذة g=قفازات c=صدر p=بنطلون b=حذاء، الرقم = المستوى (T).</div>`;
   }catch(e){ out.textContent = 'تعذّر الحساب: ' + e.message; }
   btn.disabled = false;
 }
