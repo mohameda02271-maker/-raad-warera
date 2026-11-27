@@ -1215,11 +1215,11 @@ async function fetchPlayer(){
     const sk = user.skills || {};
     const setNum = (id, v) => { const el = $(id); if(el && v != null && Number.isFinite(Number(v))) el.value = Math.round(Number(v) * 100) / 100; };
     const atkSk = sk.attack || {};
-    if(atkSk.value != null) setNum('inAtk', Number(atkSk.value) + Number(atkSk.weapon || 0));
+    if(atkSk.value != null) setNum('inAtk', Number(atkSk.value) + Number(atkSk.weapon || 0) + Number(atkSk.overflow || 0));
     if(sk.criticalChance?.total != null) setNum('inCrit', sk.criticalChance.total);
     if(sk.criticalDamages?.total != null) setNum('inCritMult', sk.criticalDamages.total);
     if(sk.precision?.level != null) setNum('inPrec', Math.min(10, sk.precision.level));
-    window.susAuto = { dodge: +sk.dodge?.total || 0, loot: +sk.lootChance?.total || 0, prc: +sk.precision?.total || 0, ammoCode: '', gear: {} };
+    window.susAuto = { rank: Number(atkSk.militaryRankPercent || 0), buff: Number(atkSk.buffsPercent || 0), debuff: Number(atkSk.debuffsPercent || 0), debuffEnd: user.buffs?.debuffEndAt ? Date.parse(user.buffs.debuffEndAt) : 0, dodge: +sk.dodge?.total || 0, loot: +sk.lootChance?.total || 0, prc: +sk.precision?.total || 0, ammoCode: '', gear: {} };
     try {
       const eq = await trpc('inventory.fetchCurrentEquipment', { userId: state.userId });
       const WT = ['knife','gun','rifle','sniper','tank','jet'];
@@ -1240,7 +1240,7 @@ async function fetchPlayer(){
     }
     // Military rank + buffs - debuffs are real percentages from the API; put the net into the extra bonus box.
     if(atkSk.value != null){
-      setNum('inMerc', Number(atkSk.militaryRankPercent || 0) + Number(atkSk.buffsPercent || 0) - Number(atkSk.debuffsPercent || 0));
+      setNum('inMerc', Number(atkSk.buffsPercent || 0) - Number(atkSk.debuffsPercent || 0));
     }
     // Armour: the game's armor total = skill part (level*6, already used by the calculator) + equipment part.
     if(sk.armor?.equipment != null){
@@ -1491,6 +1491,7 @@ function renderSegmentedBars(hpPct, hgPct, hgMax, hitsAvailable){
 }
 
 function recalcAll(){
+  { const SA0 = window.susAuto; if(SA0 && SA0.debuffEnd && !SA0.expired && Date.now() > SA0.debuffEnd){ SA0.expired = true; if($('inMerc')) $('inMerc').value = SA0.buff || 0; } }
   const hpPct = Math.min(100, Math.max(0, +$('inHpPct').value || 0));
   const hpMax = Math.max(1, +$('inHpMax').value || 100);
   const hgPct = Math.min(100, Math.max(0, +$('inHgPct').value || 0));
@@ -1538,8 +1539,12 @@ function recalcAll(){
   const gearArmor = (+$('inPants').value || 0) + (+$('inChest').value || 0);
   const totalArmor = armorSkillVal + gearArmor;
   const reduction = Math.round((100 * totalArmor) / (totalArmor + 40));
-  const hpPerHit = Math.max(1, Math.round(10 * (1 - reduction/100) * 10) / 10);
-  $('outArmorInfo').textContent = `${reduction}% تقليل · ${hpPerHit} HP/ضربة`;
+  const SA = window.susAuto || {};
+  // الدرع يقلل الخسارة (حد أدنى 1 HP)، والمراوغة تلغي الضربة باحتمال dodge/(dodge+40): الخسارة المتوقعة = 10 × (1-درع) × (1-مراوغة)
+  const dodgeTot = Math.max(0, +SA.dodge || 0);
+  const dodgeEff = dodgeTot / (dodgeTot + 40);
+  const hpPerHit = Math.max(0.1, Math.round(Math.max(1, 10 * (1 - totalArmor / (totalArmor + 40))) * (1 - dodgeEff) * 100) / 100);
+  $('outArmorInfo').textContent = `${reduction}% تقليل · مراوغة ${Math.round(dodgeEff*100)}% · ${hpPerHit} HP/ضربة`;
 
   const hpNow = hpMax * (hpPct / 100);
   const hgNow = hgMax * (hgPct / 100);
@@ -1553,7 +1558,9 @@ function recalcAll(){
   const ammo = +$('inAmmo').value || 0;
   const merc = +$('inMerc').value || 0;
 
-  let bonusPct = ammo + merc;
+  // الهجوم = (مهارة + سلاح + overflow الدقة) × (1+ذخيرة) × (1+رتبة) × (1+حبة/ديبف)، كلها مضاعفة. بونص المعركة عامل واحد مجمّع.
+  const rankPct = (window.susAuto && window.susAuto.rank) || 0;
+  let bonusPct = 0;
   if($('bMuOrder').checked) bonusPct += 15;
   if($('bMuHq').checked) bonusPct += 20;
   if($('bMpp').checked) bonusPct += 10;
@@ -1561,10 +1568,16 @@ function recalcAll(){
   bonusPct += (+$('bAlliance').value || 0);
   $('totalBonusOut').value = `+${bonusPct}%`;
 
-  const effCrit = Math.min(100, crit + prec * 1.5) / 100;
-  const baseAvg = atk * (1 - effCrit) + (atk * (critMult/100)) * effCrit;
-  const finalAvg = baseAvg * (1 + bonusPct/100);
-  const finalCrit = atk * (critMult/100) * (1 + bonusPct/100);
+  const atkEff = atk * (1 + ammo/100) * (1 + rankPct/100) * (1 + merc/100);
+  const prcPct = (window.susAuto && window.susAuto.prc) ? window.susAuto.prc : (50 + 5 * (+$('inPrec').value || 0));
+  const hitChance = Math.min(1, prcPct / 100);
+  const critOver = Math.max(0, crit - 100);
+  const critDmg = critMult / 100 + critOver * 0.04;
+  const critCh = Math.min(100, crit) / 100;
+  const baseAvg = atkEff * hitChance * (1 + critCh * critDmg) + (atkEff / 2) * (1 - hitChance);
+  const battleMul = 1 + bonusPct / 100;
+  const finalAvg = baseAvg * battleMul;
+  const finalCrit = atkEff * (1 + critDmg) * battleMul;
   const totalDmg = finalAvg * hitsAvailable;
 
   $('outAvgHit').textContent = Math.round(finalAvg).toLocaleString();
@@ -3070,6 +3083,7 @@ function syncWarBuilderFromMain(){
 
 loadKeys();
 document.querySelectorAll('.sus-in').forEach(el => { const v = localStorage.getItem('raad_sus_' + el.id); if(v !== null) el.value = v; });
+setInterval(() => { const S = window.susAuto; if(S && S.debuffEnd && !S.expired && Date.now() > S.debuffEnd) recalcAll(); }, 30000);
 fetch('https://api2.warera.io/trpc/itemTrading.getPrices').then(r => r.json()).then(j => { window.susPrices = j?.result?.data || {}; recalcAll(); }).catch(() => {});
 calcEmpressEco();
 calcCaseEV();
