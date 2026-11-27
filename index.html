@@ -362,9 +362,9 @@ nav.bottom-nav{
         <div class="stat-box"><small>متوسط ضرر الضربة</small><strong id="outAvgHit">0</strong></div>
         <div class="stat-box"><small>الضربة الحرجة (Crit)</small><strong id="outCritHit" class="gold">0</strong></div>
         <div class="stat-box"><small>إجمالي ضرر المخزون الحالي</small><strong id="outTotalDmg" class="blue">0</strong></div>
-        <div class="stat-box"><small>إجمالي الضرر اليومي (24 ساعة)</small><strong id="outDailyDmg" class="gold">0</strong></div>
+        <div class="stat-box"><small>إجمالي الضرر اليومي (حسب حالة الحبة)</small><strong id="outDailyDmg" class="gold">0</strong></div>
       </div>
-      <div style="margin-top:10px;max-width:340px"><label>حالة الحبة للحساب (Pill)</label><select id="inPillCalc" onchange="recalcAll()"><option value="live" selected>الحالة الحية من الـAPI</option><option value="buff">حبة مفعّلة (+60%)</option><option value="none">بدون حبة (0%)</option><option value="debuff">فترة الديبف (-60%)</option></select></div>
+      <div style="margin-top:10px;max-width:340px"><label>حالة الحبة للحساب (Pill)</label><select id="inPillCalc" onchange="recalcAll()"><option value="cycle" selected>دورة الحبة اليومية (8 س بفّ + 16 س ديبف)</option><option value="live">الحالة الحية من الـAPI (24 س)</option><option value="buff">نافذة البفّ فقط (8 ساعات، +60%)</option><option value="none">بدون حبة (0%)</option><option value="debuff">ديبف فقط (24 س، -60%)</option></select></div>
       <div class="hint" id="pillCompare" style="margin-top:6px"></div>
       <div class="hint" id="dailyDmgHint" style="margin-top:8px">بافتراض 0 ضربة في اليوم</div>
 
@@ -379,7 +379,7 @@ nav.bottom-nav{
         <div class="hint" id="susHint" style="margin-top:8px"></div>
         <div class="hint" id="susGearHint" style="margin-top:4px"></div>
         <div style="margin-top:10px;max-width:320px"><label>دخل الشركات + الأساس ($/يوم) - الـAPI لا يعرضه</label><input type="number" class="sus-in" id="susCompany" value="0" min="0" step="0.01" oninput="recalcAll()"></div>
-        <div class="hint" style="margin-top:4px">ملاحظة: كل شيء تلقائي من ملف اللاعب (الجير المُجهَّز وأسعاره الحية، الذخيرة، المراوغة، فرصة الغنيمة، الدقة، أسعار الأكل والسكراب والأكياس) بنفس معادلة warera-war-planner. الأكل يُحسب حسب نوع الطعام المختار في مخطط H&H لأن مخزونك غير متاح بدون مفتاح. الوحيد اليدوي هو دخل الشركات والأساس (الـAPI العام لا يعرض أرباحها ولا الرواتب)، تدخله مرة وتتحفظ في المتصفح. غنيمة المعارك = 0.17$ لكل 1000 ضرر. الصافي السالب يعني ربح.</div>
+        <div class="hint" style="margin-top:4px">ملاحظة: كل شيء تلقائي من ملف اللاعب (الجير المُجهَّز وأسعاره الحية، الذخيرة، المراوغة، فرصة الغنيمة، الدقة، أسعار الأكل والسكراب والأكياس) بنفس معادلة warera-war-planner. الأكل يُحسب حسب نوع الطعام المختار في مخطط H&H لأن مخزونك غير متاح بدون مفتاح. الوحيد اليدوي هو دخل الشركات والأساس (الـAPI العام لا يعرض أرباحها ولا الرواتب)، تدخله مرة وتتحفظ في المتصفح. الحبة: بفّ +60% لمدة 8 ساعات ثم ديبف -60% لمدة 18 ساعة، والدورة اليومية الافتراضية = 8 ساعات بفّ + 16 ساعة ديبف وتكلفة الحبة مرة واحدة. غنيمة المعارك = 0.17$ لكل 1000 ضرر. الصافي السالب يعني ربح.</div>
       </div>
     </div>
 
@@ -1509,7 +1509,7 @@ function calcHpPerHit(totalArmor, dodgeTotal){
   return Math.max(0.1, Math.round(Math.max(1, 10 * (1 - totalArmor / (totalArmor + 40))) * (1 - dodgeEff) * 100) / 100);
 }
 function selectedPillPct(liveMerc){
-  const m = ($('inPillCalc') && $('inPillCalc').value) || 'live';
+  const m = ($('inPillCalc') && $('inPillCalc').value) || 'cycle';
   return m === 'buff' ? 60 : m === 'none' ? 0 : m === 'debuff' ? -60 : liveMerc;
 }
 
@@ -1611,18 +1611,27 @@ function recalcAll(){
   // إجمالي الضرر اليومي (نافذة 24 ساعة من الآن):
   // كل ضربة تستهلك صحة (10 HP قبل الدرع)، والصحة تتجدد 10% من الحد الأقصى كل ساعة،
   // والجوع يتجدد 10% من الحد الأقصى كل ساعة ويُحوَّل إلى صحة عن طريق الطعام (كل وجبة = 1 جوع).
-  // نفس قاعدة reference calculator (intel.warera.wiki/builder): حالة مستقرة، بدون مخزون الصحة/الجوع الحالي.
-  // مع الحبة المفعّلة: 18 ساعة فعّالة في اليوم + تكلفة الحبة تُضاف للمستهلكات.
-  const pillOn = selectedPillPct(+($('inMerc') ? $('inMerc').value : 0)) > 0;
-  const dayHours = pillOn ? 18 : 24;
+  // حالة مستقرة (بدون مخزون الصحة/الجوع الحالي) مثل reference calculator.
+  // الحبة: بفّ +60% لمدة 8 ساعات ثم ديبف -60% لمدة 18 ساعة. الدورة اليومية = 8 ساعات بفّ + 16 ساعة ديبف، وتكلفة الحبة مرة واحدة.
+  const hitsPerHour = (hpRate + hgRate * healPerFood) / hpPerHit;
+  const pillMode = ($('inPillCalc') && $('inPillCalc').value) || 'cycle';
+  const liveP = +($('inMerc') ? $('inMerc').value : 0);
+  const SEG = {
+    cycle: { seg: [[8, 60], [16, -60]], pill: true },
+    buff: { seg: [[8, 60]], pill: true },
+    none: { seg: [[24, 0]], pill: false },
+    debuff: { seg: [[24, -60]], pill: false },
+    live: { seg: [[24, liveP]], pill: false }
+  };
+  const evalMode = k => { const m = SEG[k]; let hrs = 0, hits = 0, dmg = 0; m.seg.forEach(([h, p]) => { const hh = h * hitsPerHour; hrs += h; hits += hh; dmg += hh * calcHitDamage({ ...dmgIn, pill: p }).avg; }); return { hrs, hits, dmg, pill: m.pill }; };
+  const cur = evalMode(SEG[pillMode] ? pillMode : 'cycle');
+  const pillOn = cur.pill, dayHours = cur.hrs, dayHits = cur.hits, dayDmg = cur.dmg;
   const dayHungerPortions = dayHours * hgRate;
   const dayFoodHealth = dayHungerPortions * healPerFood;
   const dayHealthRegen = dayHours * hpRate;
   const dayHealthTotal = dayHealthRegen + dayFoodHealth;
-  const dayHits = dayHealthTotal / hpPerHit;
-  const dayDmg = dayHits * finalAvg;
-  { const f = v => Math.round(v).toLocaleString(); const st = [['بدون حبة',0],['حبة مفعّلة',60],['فترة الديبف',-60]].map(([n,p]) => { const d = calcHitDamage({ ...dmgIn, pill: p }).avg; return `${n}: ${f(d)} / ضربة · ${f(d * dayHits * (p > 0 ? 18 : 24) / dayHours)} / يوم`; });
-    $('pillCompare').textContent = `${st.join(' | ')}`; }
+  { const f = v => Math.round(v).toLocaleString(); const st = [['بدون حبة (24 س)','none'],['نافذة البفّ فقط (8 س)','buff'],['الدورة اليومية (8 س بفّ + 16 س ديبف)','cycle']].map(([n,k]) => { const e = evalMode(k); return `${n}: ${f(e.hits)} ضربة · ${f(e.dmg)} ضرر`; });
+    $('pillCompare').textContent = st.join(' | '); }
   $('outDailyDmg').textContent = Math.round(dayDmg).toLocaleString();
   $('dailyDmgHint').textContent = `بافتراض ${Math.round(dayHits).toLocaleString()} ضربة في اليوم · ${Math.round(dayHealthTotal).toLocaleString()} HP متاحة (${Math.round(dayHealthRegen).toLocaleString()} من تجديد الصحة + ${Math.round(dayFoodHealth).toLocaleString()} من ${Math.round(dayHungerPortions)} وجبة) ÷ ${hpPerHit} HP لكل ضربة`;
   {
