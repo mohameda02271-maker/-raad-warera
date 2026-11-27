@@ -1525,7 +1525,7 @@ function gearCodeOf(slot, t){ return slot === 'weapon' ? GEAR_NAMES.weapon[t] : 
 function loadGearPrice(code){
   if(window.gearPriceCache[code] != null || window.gearPricePending[code]) return;
   window.gearPricePending[code] = true;
-  trpc('gameStat.getEquipmentAvgByCode', { itemCode: code }).then(v => { window.gearPriceCache[code] = Number(v) || 0; }).catch(() => { window.gearPriceCache[code] = 0; }).finally(() => { delete window.gearPricePending[code]; recalcAll(); });
+  trpc('gameStat.getEquipmentAvgByCode', { itemCode: code }).then(v => { if(Number(v) > 0) window.gearPriceCache[code] = Number(v); }).catch(() => {}).finally(() => { delete window.gearPricePending[code]; recalcAll(); });
 }
 function gearEffective(){
   const A = window.susAuto || {}; const base = A.gear || {};
@@ -1611,7 +1611,16 @@ async function runGearOpt(){
   btn.disabled = true; out.textContent = 'جاري جلب أسعار القطع وحساب التوليفات…';
   try{
     const codes = []; GEAR_SLOTS.forEach(sl => { for(let t = 1; t <= 6; t++) codes.push([sl, t, gearCodeOf(sl, t)]); });
-    await Promise.all(codes.map(async ([sl, t, c]) => { if(window.gearPriceCache[c] == null){ try{ window.gearPriceCache[c] = Number(await trpc('gameStat.getEquipmentAvgByCode', { itemCode: c })) || 0; }catch(e){ window.gearPriceCache[c] = 0; } } }));
+    for(let attempt = 0; attempt < 4; attempt++){
+      const missing = codes.filter(([sl, t, c]) => !(window.gearPriceCache[c] > 0));
+      if(!missing.length) break;
+      if(attempt) await new Promise(r => setTimeout(r, 600 * attempt));
+      for(let i = 0; i < missing.length; i += 6){
+        await Promise.all(missing.slice(i, i + 6).map(async ([sl, t, c]) => { try{ const v = Number(await trpc('gameStat.getEquipmentAvgByCode', { itemCode: c })) || 0; if(v > 0) window.gearPriceCache[c] = v; }catch(e){} }));
+      }
+    }
+    const stillMissing = codes.filter(([sl, t, c]) => !(window.gearPriceCache[c] > 0)).map(x => x[2]);
+    if(stillMissing.length){ out.textContent = 'تعذّر جلب سعر بعض القطع (' + stillMissing.slice(0, 6).join(', ') + '). أعد المحاولة بعد قليل حتى لا تظهر نتائج خاطئة.'; btn.disabled = false; return; }
     await new Promise(r => setTimeout(r, 30));
     const { ctx, st, eff, mode } = G;
     const base = (window.susAuto && window.susAuto.gear) || {};
