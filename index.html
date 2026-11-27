@@ -358,11 +358,13 @@ nav.bottom-nav{
         <div><label>إجمالي البونص المفعّل</label><input id="totalBonusOut" readonly style="color:var(--green);font-weight:800"></div>
       </div>
 
-      <div class="grid-3">
+      <div class="grid-4">
         <div class="stat-box"><small>متوسط ضرر الضربة</small><strong id="outAvgHit">0</strong></div>
         <div class="stat-box"><small>الضربة الحرجة (Crit)</small><strong id="outCritHit" class="gold">0</strong></div>
         <div class="stat-box"><small>إجمالي ضرر المخزون الحالي</small><strong id="outTotalDmg" class="blue">0</strong></div>
+        <div class="stat-box"><small>إجمالي الضرر اليومي (24 ساعة)</small><strong id="outDailyDmg" class="gold">0</strong></div>
       </div>
+      <div class="hint" id="dailyDmgHint" style="margin-top:8px">بافتراض 0 ضربة في اليوم</div>
     </div>
 
     <div class="card">
@@ -1546,6 +1548,18 @@ function recalcAll(){
   const hrs = Math.max(1, +$('inHoursLeft').value || 4);
   const foodPct = +$('inFoodType').value || 15;
   const healPerFood = hpMax * (foodPct / 100);
+
+  // إجمالي الضرر اليومي (نافذة 24 ساعة من الآن):
+  // كل ضربة تستهلك صحة (10 HP قبل الدرع)، والصحة تتجدد 10% من الحد الأقصى كل ساعة،
+  // والجوع يتجدد 10% من الحد الأقصى كل ساعة ويُحوَّل إلى صحة عن طريق الطعام (كل وجبة = 1 جوع).
+  const dayHungerPortions = hgNow + 24 * hgRate;          // وجبات متاحة خلال 24 ساعة
+  const dayFoodHealth = dayHungerPortions * healPerFood;   // صحة مستعادة من الطعام
+  const dayHealthRegen = 24 * hpRate;                      // صحة من التجديد
+  const dayHealthTotal = hpNow + dayHealthRegen + dayFoodHealth;
+  const dayHits = Math.floor(dayHealthTotal / hpPerHit);
+  const dayDmg = dayHits * finalAvg;
+  $('outDailyDmg').textContent = Math.round(dayDmg).toLocaleString();
+  $('dailyDmgHint').textContent = `بافتراض ${dayHits.toLocaleString()} ضربة في اليوم · ${Math.round(dayHealthTotal).toLocaleString()} HP متاحة (${Math.round(dayHealthRegen).toLocaleString()} من تجديد الصحة + ${Math.round(dayFoodHealth).toLocaleString()} من ${Math.round(dayHungerPortions)} وجبة) ÷ ${hpPerHit} HP لكل ضربة`;
   const regenTotal = hrs * hpRate;
   const stopNoFood = Math.max(0, Math.ceil((hpMax - regenTotal) * 10) / 10);
   const stopNoFoodBlocks = Math.ceil((stopNoFood / hpMax) * 10);
