@@ -379,7 +379,7 @@ nav.bottom-nav{
         <div class="hint" id="susHint" style="margin-top:8px"></div>
         <div class="hint" id="susGearHint" style="margin-top:4px"></div>
         <div style="margin-top:10px;max-width:320px"><label>دخل الشركات + الأساس ($/يوم) - الـAPI لا يعرضه</label><input type="number" class="sus-in" id="susCompany" value="0" min="0" step="0.01" oninput="recalcAll()"></div>
-        <div class="hint" style="margin-top:4px">ملاحظة: كل شيء تلقائي من ملف اللاعب (الجير المُجهَّز وأسعاره الحية، الذخيرة، المراوغة، فرصة الغنيمة، الدقة، أسعار الأكل والسكراب والأكياس) بنفس معادلة warera-war-planner. الأكل يُحسب حسب نوع الطعام المختار في مخطط H&H لأن مخزونك غير متاح بدون مفتاح. الوحيد اليدوي هو دخل الشركات والأساس (الـAPI العام لا يعرض أرباحها ولا الرواتب)، تدخله مرة وتتحفظ في المتصفح. غنيمة المعارك = 0.13$ لكل 1000 ضرر. الصافي السالب يعني ربح.</div>
+        <div class="hint" style="margin-top:4px">ملاحظة: كل شيء تلقائي من ملف اللاعب (الجير المُجهَّز وأسعاره الحية، الذخيرة، المراوغة، فرصة الغنيمة، الدقة، أسعار الأكل والسكراب والأكياس) بنفس معادلة warera-war-planner. الأكل يُحسب حسب نوع الطعام المختار في مخطط H&H لأن مخزونك غير متاح بدون مفتاح. الوحيد اليدوي هو دخل الشركات والأساس (الـAPI العام لا يعرض أرباحها ولا الرواتب)، تدخله مرة وتتحفظ في المتصفح. غنيمة المعارك = 0.17$ لكل 1000 ضرر. الصافي السالب يعني ربح.</div>
       </div>
     </div>
 
@@ -1611,16 +1611,20 @@ function recalcAll(){
   // إجمالي الضرر اليومي (نافذة 24 ساعة من الآن):
   // كل ضربة تستهلك صحة (10 HP قبل الدرع)، والصحة تتجدد 10% من الحد الأقصى كل ساعة،
   // والجوع يتجدد 10% من الحد الأقصى كل ساعة ويُحوَّل إلى صحة عن طريق الطعام (كل وجبة = 1 جوع).
-  const dayHungerPortions = hgNow + 24 * hgRate;          // وجبات متاحة خلال 24 ساعة
-  const dayFoodHealth = dayHungerPortions * healPerFood;   // صحة مستعادة من الطعام
-  const dayHealthRegen = 24 * hpRate;                      // صحة من التجديد
-  const dayHealthTotal = hpNow + dayHealthRegen + dayFoodHealth;
-  const dayHits = Math.floor(dayHealthTotal / hpPerHit);
+  // نفس قاعدة reference calculator (intel.warera.wiki/builder): حالة مستقرة، بدون مخزون الصحة/الجوع الحالي.
+  // مع الحبة المفعّلة: 18 ساعة فعّالة في اليوم + تكلفة الحبة تُضاف للمستهلكات.
+  const pillOn = selectedPillPct(+($('inMerc') ? $('inMerc').value : 0)) > 0;
+  const dayHours = pillOn ? 18 : 24;
+  const dayHungerPortions = dayHours * hgRate;
+  const dayFoodHealth = dayHungerPortions * healPerFood;
+  const dayHealthRegen = dayHours * hpRate;
+  const dayHealthTotal = dayHealthRegen + dayFoodHealth;
+  const dayHits = dayHealthTotal / hpPerHit;
   const dayDmg = dayHits * finalAvg;
-  { const f = v => Math.round(v).toLocaleString(); const st = [['بدون حبة',0],['حبة مفعّلة',60],['فترة الديبف',-60]].map(([n,p]) => { const d = calcHitDamage({ ...dmgIn, pill: p }).avg; return `${n}: ${f(d)} / ضربة · ${f(d * dayHits)} / يوم`; });
-    $('pillCompare').textContent = `${dayHits.toLocaleString()} ضربة في اليوم في كل الحالات. ${st.join(' | ')}`; }
+  { const f = v => Math.round(v).toLocaleString(); const st = [['بدون حبة',0],['حبة مفعّلة',60],['فترة الديبف',-60]].map(([n,p]) => { const d = calcHitDamage({ ...dmgIn, pill: p }).avg; return `${n}: ${f(d)} / ضربة · ${f(d * dayHits * (p > 0 ? 18 : 24) / dayHours)} / يوم`; });
+    $('pillCompare').textContent = `${st.join(' | ')}`; }
   $('outDailyDmg').textContent = Math.round(dayDmg).toLocaleString();
-  $('dailyDmgHint').textContent = `بافتراض ${dayHits.toLocaleString()} ضربة في اليوم · ${Math.round(dayHealthTotal).toLocaleString()} HP متاحة (${Math.round(dayHealthRegen).toLocaleString()} من تجديد الصحة + ${Math.round(dayFoodHealth).toLocaleString()} من ${Math.round(dayHungerPortions)} وجبة) ÷ ${hpPerHit} HP لكل ضربة`;
+  $('dailyDmgHint').textContent = `بافتراض ${Math.round(dayHits).toLocaleString()} ضربة في اليوم · ${Math.round(dayHealthTotal).toLocaleString()} HP متاحة (${Math.round(dayHealthRegen).toLocaleString()} من تجديد الصحة + ${Math.round(dayFoodHealth).toLocaleString()} من ${Math.round(dayHungerPortions)} وجبة) ÷ ${hpPerHit} HP لكل ضربة`;
   {
     const A = window.susAuto || {};
     const P = window.susPrices || {};
@@ -1636,14 +1640,15 @@ function recalcAll(){
       const q = Math.max(0.01, Math.round((dayHits * decay / 100) * 100) / 100);
       scrapQty += (SCRAP[g.tier] / 3) * q;
     });
-    const foodCost = foodPrice * 24 * hgRate;
+    const foodCost = foodPrice * dayHours * hgRate;
+    const pillCost = pillOn ? (+P.cocain || 35) : 0;
     const ammoCost = ammoPrice * dayHits;
-    const consumables = foodCost + ammoCost;
+    const consumables = foodCost + ammoCost + pillCost;
     const loot = (+A.loot || 0) / 100, prc = Math.min(1, (+A.prc || 0) / 100);
     const cases = loot * dayHits * prc, elite = (loot / 100) * dayHits * prc;
     const scrapInc = scrapQty * (+P.scraps || 0);
     const caseInc = cases * (+P.case1 || 0) + elite * (+P.case2 || 0);
-    const lootInc = dayDmg / 1000 * 0.13;
+    const lootInc = dayDmg / 1000 * 0.17;
     const compInc = Math.max(0, +$('susCompany').value || 0);
     const income = scrapInc + caseInc + lootInc + compInc;
     const netCost = gearCost + consumables - income;
@@ -1654,7 +1659,7 @@ function recalcAll(){
     $('outSus1k').style.color = per1k <= 0 ? 'var(--green)' : '';
     $('outSusCost').textContent = money(gearCost + consumables);
     $('outSusInc').textContent = money(income);
-    $('susHint').textContent = `الحساب: (استهلاك الجير ${money(gearCost)} + مستهلكات ${money(consumables)} [أكل ${money(foodCost)} + طلقات ${money(ammoCost)}]) - (سكراب ${money(scrapInc)} + أكياس ${money(caseInc)} + غنيمة المعارك ${money(lootInc)} + شركات/أساس ${money(compInc)}) = ${money(netCost)} ÷ (${Math.round(dayDmg).toLocaleString()} ÷ 1000) · ${dayHits.toLocaleString()} ضربة`;
+    $('susHint').textContent = `الحساب: (استهلاك الجير ${money(gearCost)} + مستهلكات ${money(consumables)} [أكل ${money(foodCost)} + طلقات ${money(ammoCost)} + حبة ${money(pillCost)}]) - (سكراب ${money(scrapInc)} + أكياس ${money(caseInc)} + غنيمة المعارك ${money(lootInc)} + شركات/أساس ${money(compInc)}) = ${money(netCost)} ÷ (${Math.round(dayDmg).toLocaleString()} ÷ 1000) · ${Math.round(dayHits).toLocaleString()} ضربة`;
     const gl = Object.entries(A.gear || {}).map(([slot, g]) => `${slot}: ${g.code} ($${g.price.toFixed(2)})`).join(' · ');
     $('susGearHint').textContent = A.gear ? `الجير المُجهَّز (تلقائي): ${gl || 'لا يوجد'} · ذخيرة: ${A.ammoCode || 'لا يوجد'} · مراوغة ${ddg} · فرصة غنيمة ${A.loot}% · دقة ${A.prc}%` : 'اجلب بيانات لاعب ليُحسب الجير والمهارات تلقائياً.';
     localStorage.setItem('raad_sus_susCompany', $('susCompany').value);
