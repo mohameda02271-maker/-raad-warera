@@ -364,7 +364,8 @@ nav.bottom-nav{
         <div class="stat-box"><small>إجمالي ضرر المخزون الحالي</small><strong id="outTotalDmg" class="blue">0</strong></div>
         <div class="stat-box"><small>إجمالي الضرر اليومي (حسب حالة الحبة)</small><strong id="outDailyDmg" class="gold">0</strong></div>
       </div>
-      <div style="margin-top:10px;max-width:340px"><label>حالة الحبة للحساب (Pill)</label><select id="inPillCalc" onchange="recalcAll()"><option value="cycle" selected>دورة الحبة اليومية (8 س بفّ + 16 س ديبف)</option><option value="live">الحالة الحية من الـAPI (24 س)</option><option value="buff">نافذة البفّ فقط (8 ساعات، +60%)</option><option value="none">بدون حبة (0%)</option><option value="debuff">ديبف فقط (24 س، -60%)</option></select></div>
+      <div style="margin-top:10px;max-width:340px"><label>حالة الحبة للحساب (Pill)</label><select id="inPillCalc" onchange="recalcAll()"><option value="cycle" selected>يوم الحبة: كل ضربات اليوم داخل نافذة البفّ 8 س</option><option value="spread">للمقارنة: ضربات موزعة 8 س بفّ + 16 س ديبف</option><option value="live">الحالة الحية من الـAPI (24 س)</option><option value="buff">نافذة البفّ فقط (8 ساعات، +60%)</option><option value="none">بدون حبة (0%)</option><option value="debuff">ديبف فقط (24 س، -60%)</option></select></div>
+      <div class="hint" id="gearOvrNote" style="margin-top:6px;color:var(--gold,#f5b942)"></div>
       <div class="hint" id="pillCompare" style="margin-top:6px"></div>
       <div class="hint" id="dailyDmgHint" style="margin-top:8px">بافتراض 0 ضربة في اليوم</div>
 
@@ -378,6 +379,7 @@ nav.bottom-nav{
         </div>
         <div class="hint" id="susHint" style="margin-top:8px"></div>
         <div class="hint" id="susGearHint" style="margin-top:4px"></div>
+        <div id="gearRows"></div>
         <div style="margin-top:10px;max-width:320px"><label>دخل الشركات + الأساس ($/يوم) - الـAPI لا يعرضه</label><input type="number" class="sus-in" id="susCompany" value="0" min="0" step="0.01" oninput="recalcAll()"></div>
         <div class="hint" style="margin-top:4px">ملاحظة: كل شيء تلقائي من ملف اللاعب (الجير المُجهَّز وأسعاره الحية، الذخيرة، المراوغة، فرصة الغنيمة، الدقة، أسعار الأكل والسكراب والأكياس) بنفس معادلة warera-war-planner. الأكل يُحسب حسب نوع الطعام المختار في مخطط H&H لأن مخزونك غير متاح بدون مفتاح. الوحيد اليدوي هو دخل الشركات والأساس (الـAPI العام لا يعرض أرباحها ولا الرواتب)، تدخله مرة وتتحفظ في المتصفح. الحبة: بفّ +60% لمدة 8 ساعات ثم ديبف -60% لمدة 18 ساعة، والدورة اليومية الافتراضية = 8 ساعات بفّ + 16 ساعة ديبف وتكلفة الحبة مرة واحدة. غنيمة المعارك = 0.17$ لكل 1000 ضرر. الصافي السالب يعني ربح.</div>
       </div>
@@ -411,6 +413,17 @@ nav.bottom-nav{
 
   <!-- TAB 3: MULTIPLE BUILDS & FACTORIES -->
   <section id="tab-build" class="tab-view">
+    <div class="card" id="gearCard">
+      <div class="card-title"><span>🎒 جير مخصص (What-if) · نفس تسميات intel.warera.wiki/builder</span><button class="btn btn-sm" onclick="resetGearOvr()">↩️ رجوع لجيري من الملف</button></div>
+      <p class="hint" style="margin-bottom:10px">الافتراضي هو الجير المُجهَّز فعلاً من ملفك. اختر سلاحاً أو قطعة بمستوى مختلف لتجربة ماذا لو: يتبدّل أثر القطعة في الضرر لكل ضربة (سلاح: هجوم + فرصة كريت، خوذة: ضرر الكريت، قفازات: دقة، صدر/بنطلون: درع، حذاء: مراوغة) ويُحسب استهلاك الجير والسكراب بسعر القطعة الحي. أرقام كل مستوى هي المتوسط عند المبنى (الـbuilder)، وعند اختيار نفس مستوى قطعتك المُجهَّزة تبقى أرقامها الفعلية.</p>
+      <div class="grid-3" id="gearSelects"></div>
+      <div class="hint" id="gearSummary" style="margin-top:10px"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border,#2a3441)">
+        <div class="card-title" style="margin-bottom:8px"><span>🏆 محسّن الجير: أعلى ضرر بأقل تكلفة</span><button class="btn btn-blue btn-sm" id="gearOptBtn" onclick="runGearOpt()">🔍 ابحث عن أفضل جير</button></div>
+        <p class="hint">يجرّب كل توليفة (سلاح + خوذة + قفازات + صدر + بنطلون + حذاء) من T1 إلى T6 (6^6 = 46,656 توليفة) بمهاراتك الحالية وأسعار السوق الحية ونفس نموذج يوم الحبة المختار أعلاه. الهدف مثل الـbuilder: أقل صافي تكلفة لكل 1000 ضرر مقابل أعلى ضرر (frontier)، مع أعلى ضرر وأرخص خيار وأكبر زيادة ضرر لكل دولار إضافي مقارنة بجيرك الحالي.</p>
+        <div id="gearOptOut"></div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-title">
         <span dir="ltr">⚔️ Build &amp; Gear Optimizer (Budget + Income Driven)</span>
@@ -1233,7 +1246,7 @@ async function fetchPlayer(){
         if(tier < 1) continue;
         let price = 0;
         try { price = Number(await trpc('gameStat.getEquipmentAvgByCode', { itemCode: code })) || 0; } catch(e) {}
-        window.susAuto.gear[slot] = { code, tier, price };
+        window.susAuto.gear[slot] = { code, tier, price, skills: (typeof it === 'object' && it.skills) || null };
       }
     } catch(e) { window.susAuto.gear = null; }
     if(atkSk.ammoPercent != null){
@@ -1492,6 +1505,181 @@ function renderSegmentedBars(hpPct, hgPct, hgMax, hitsAvailable){
   $('hgBlocksInfo').textContent = `${hgFilled} / ${totalHgBlocks} وجبات متاحة`;
 }
 
+// ===== جير مخصص (What-if): نفس جدول مستويات intel.warera.wiki/builder =====
+const GEAR_SLOTS = ['weapon','helmet','gloves','chest','pants','boots'];
+const GEAR_NAMES = { weapon: ['none','knife','gun','rifle','sniper','tank','jet'], armor: ['none','grey','green','blue','purple','gold','red'] };
+const GEAR_SLOT_AR = { weapon:'السلاح (Weapon)', helmet:'الخوذة (Helmet)', gloves:'القفازات (Gloves)', chest:'الصدر (Chest)', pants:'البنطلون (Pants)', boots:'الحذاء (Boots)' };
+const GEAR_MODS = {
+  weapon: [null,{atk:31,critc:3},{atk:56,critc:8},{atk:81,critc:13},{atk:116,critc:18},{atk:161,critc:31},{atk:261,critc:46}],
+  helmet: [null,{critd:8},{critd:23},{critd:41},{critd:81},{critd:101},{critd:136}],
+  gloves: [null,{prc:3},{prc:8},{prc:13},{prc:23},{prc:36},{prc:56}],
+  chest:  [null,{arm:3},{arm:8},{arm:13},{arm:26},{arm:43},{arm:63}],
+  pants:  [null,{arm:3},{arm:8},{arm:13},{arm:26},{arm:43},{arm:63}],
+  boots:  [null,{ddg:3},{ddg:8},{ddg:13},{ddg:23},{ddg:36},{ddg:56}]
+};
+const SKILL_KEY = { attack:'atk', criticalChance:'critc', criticalDamages:'critd', precision:'prc', armor:'arm', dodge:'ddg' };
+window.gearOvr = window.gearOvr || {};
+window.gearPriceCache = window.gearPriceCache || {};
+window.gearPricePending = window.gearPricePending || {};
+function gearCodeOf(slot, t){ return slot === 'weapon' ? GEAR_NAMES.weapon[t] : slot + t; }
+function loadGearPrice(code){
+  if(window.gearPriceCache[code] != null || window.gearPricePending[code]) return;
+  window.gearPricePending[code] = true;
+  trpc('gameStat.getEquipmentAvgByCode', { itemCode: code }).then(v => { window.gearPriceCache[code] = Number(v) || 0; }).catch(() => { window.gearPriceCache[code] = 0; }).finally(() => { delete window.gearPricePending[code]; recalcAll(); });
+}
+function gearEffective(){
+  const A = window.susAuto || {}; const base = A.gear || {};
+  const d = { atk:0, critc:0, critd:0, prc:0, arm:0, ddg:0 }; const eff = {}; let changed = false;
+  GEAR_SLOTS.forEach(slot => {
+    const cur = base[slot]; const o = window.gearOvr[slot];
+    if(cur && cur.price) window.gearPriceCache[cur.code] = cur.price;
+    if(o == null || (cur && cur.tier === o) || (!cur && o === 0)){ if(cur) eff[slot] = cur; return; }
+    changed = true;
+    if(cur){
+      if(cur.skills){ Object.entries(cur.skills).forEach(([k, v]) => { if(SKILL_KEY[k]) d[SKILL_KEY[k]] -= Number(v) || 0; }); }
+      else { const m = GEAR_MODS[slot][cur.tier] || {}; Object.entries(m).forEach(([k, v]) => { d[k] -= v; }); }
+    }
+    if(o > 0){
+      Object.entries(GEAR_MODS[slot][o]).forEach(([k, v]) => { d[k] += v; });
+      const code = gearCodeOf(slot, o);
+      if(window.gearPriceCache[code] == null) loadGearPrice(code);
+      eff[slot] = { code, tier: o, price: window.gearPriceCache[code] || 0, skills: null };
+    }
+  });
+  return { d, eff, changed };
+}
+function setGearOvr(slot, v){ if(v === '') delete window.gearOvr[slot]; else window.gearOvr[slot] = +v; recalcAll(); }
+function resetGearOvr(){ window.gearOvr = {}; window.gearPanelSig = ''; recalcAll(); }
+function ensureGearPanel(){
+  const box = document.getElementById('gearSelects'); if(!box) return;
+  const A = window.susAuto || {}; const base = A.gear || {};
+  const sig = JSON.stringify(GEAR_SLOTS.map(s => base[s] ? base[s].code : '-')) + JSON.stringify(window.gearOvr);
+  if(window.gearPanelSig === sig) return;
+  window.gearPanelSig = sig;
+  box.innerHTML = GEAR_SLOTS.map(slot => `<div><label>${GEAR_SLOT_AR[slot]}</label>${gearSelectHTML(slot)}</div>`).join('');
+}
+
+
+function gearContribution(slot, g){
+  const d = { atk:0, critc:0, critd:0, prc:0, arm:0, ddg:0 };
+  if(!g) return d;
+  if(g.skills){ Object.entries(g.skills).forEach(([k, v]) => { if(SKILL_KEY[k]) d[SKILL_KEY[k]] += Number(v) || 0; }); }
+  else { const m = (GEAR_MODS[slot] && GEAR_MODS[slot][g.tier]) || {}; Object.entries(m).forEach(([k, v]) => { d[k] += v; }); }
+  return d;
+}
+function simulateGear(ctx, st, gear, mode){
+  const SCRAP = [0,6,18,54,162,486,1458];
+  const M = { none:{s:[[24,0]],pill:0}, live:{s:[[24,ctx.live]],pill:0}, debuff:{s:[[24,-60]],pill:0}, buff:{s:[[8,60]],pill:1}, cycle:{s:[[24,60]],pill:1}, spread:{s:[[8,60],[16,-60]],pill:1} }[mode] || { s:[[24,60]], pill:1 };
+  const hpPerHit = calcHpPerHit(st.arm, st.ddg);
+  const hph = (ctx.hpRate + ctx.hgRate * ctx.healPerFood) / hpPerHit;
+  let hrs = 0, hits = 0, dmg = 0, hit = 0, crit = 0;
+  M.s.forEach(([h, p], i) => {
+    const a = calcHitDamage({ atk: st.atk, ammo: ctx.ammo, rank: ctx.rank, crit: st.crit, critMult: st.critd, prc: st.prc, battle: ctx.battle, pill: p });
+    const n = h * hph; hrs += h; hits += n; dmg += n * a.avg;
+    if(i === 0){ hit = a.avg; crit = a.crit; }
+  });
+  const rows = []; let gearCost = 0, scrapQty = 0;
+  const armDecay = 1 - st.ddg / (st.ddg + 40);
+  for(const slot in gear){
+    const g = gear[slot]; const decay = slot === 'weapon' ? 1 : armDecay;
+    const cost = (g.price / 100) * hits * decay;
+    const q = Math.max(0.01, Math.round((hits * decay / 100) * 100) / 100);
+    const sq = (SCRAP[g.tier] / 3) * q;
+    gearCost += cost; scrapQty += sq;
+    rows.push({ slot, g, decay, dur: hits * decay, cost, scrapQty: sq });
+  }
+  const noAmmo = (ctx.hasGear && !gear.weapon) || (gear.weapon && gear.weapon.code === 'knife');
+  const ammoCost = noAmmo ? 0 : ctx.ammoPrice * hits;
+  const foodCost = ctx.foodPrice * hrs * ctx.hgRate;
+  const pillCost = M.pill ? ctx.pillPrice : 0;
+  const consumables = foodCost + ammoCost + pillCost;
+  const loot = ctx.loot / 100, prc = Math.min(1, Math.max(0, st.prc) / 100);
+  const cases = loot * hits * prc, elite = (loot / 100) * hits * prc;
+  const scrapInc = scrapQty * ctx.scrapPrice;
+  const caseInc = cases * ctx.case1 + elite * ctx.case2;
+  const lootInc = dmg / 1000 * ctx.lootPer1k;
+  const compInc = ctx.comp;
+  const income = scrapInc + caseInc + lootInc + compInc;
+  const cost = gearCost + consumables;
+  const net = cost - income;
+  return { hit, crit, hits, dmg, hrs, rows, gearCost, ammoCost, foodCost, pillCost, consumables, scrapInc, caseInc, lootInc, compInc, income, cost, net, per1k: dmg > 0 ? net / (dmg / 1000) : 0, hpPerHit };
+}
+
+async function runGearOpt(){
+  const out = document.getElementById('gearOptOut'); const btn = document.getElementById('gearOptBtn');
+  const G = window.gearCtx; if(!G){ out.textContent = 'اجلب بيانات لاعب أولاً.'; return; }
+  btn.disabled = true; out.textContent = 'جاري جلب أسعار القطع وحساب التوليفات…';
+  try{
+    const codes = []; GEAR_SLOTS.forEach(sl => { for(let t = 1; t <= 6; t++) codes.push([sl, t, gearCodeOf(sl, t)]); });
+    await Promise.all(codes.map(async ([sl, t, c]) => { if(window.gearPriceCache[c] == null){ try{ window.gearPriceCache[c] = Number(await trpc('gameStat.getEquipmentAvgByCode', { itemCode: c })) || 0; }catch(e){ window.gearPriceCache[c] = 0; } } }));
+    await new Promise(r => setTimeout(r, 30));
+    const { ctx, st, eff, mode } = G;
+    const base = (window.susAuto && window.susAuto.gear) || {};
+    // إحصائيات بدون أي جير
+    const st0 = { ...st };
+    GEAR_SLOTS.forEach(sl => { const c = gearContribution(sl, eff[sl]); st0.atk -= c.atk; st0.crit -= c.critc; st0.critd -= c.critd; st0.prc -= c.prc; st0.arm -= c.arm; st0.ddg -= c.ddg; });
+    const opts = {}; GEAR_SLOTS.forEach(sl => { opts[sl] = []; for(let t = 1; t <= 6; t++){ const code = gearCodeOf(sl, t); const pr = window.gearPriceCache[code] || 0; const own = base[sl] && base[sl].tier === t ? base[sl] : null; opts[sl].push({ g: own ? { ...own } : { code, tier: t, price: pr, skills: null }, c: gearContribution(sl, own || { tier: t, skills: null }) }); } });
+    const cctx = { ...ctx, hasGear: true };
+    const res = []; const cur = simulateGear(ctx, st, eff, mode);
+    for(const w of opts.weapon) for(const h of opts.helmet) for(const gl of opts.gloves) for(const ch of opts.chest) for(const pa of opts.pants) for(const bo of opts.boots){
+      const cs = [w, h, gl, ch, pa, bo];
+      const s2 = { atk: st0.atk, crit: st0.crit, critd: st0.critd, prc: st0.prc, arm: st0.arm, ddg: st0.ddg };
+      for(const x of cs){ s2.atk += x.c.atk; s2.crit += x.c.critc; s2.critd += x.c.critd; s2.prc += x.c.prc; s2.arm += x.c.arm; s2.ddg += x.c.ddg; }
+      const gear = { weapon: w.g, helmet: h.g, gloves: gl.g, chest: ch.g, pants: pa.g, boots: bo.g };
+      const r = simulateGear(cctx, s2, gear, mode);
+      res.push({ t: [w.g.tier, h.g.tier, gl.g.tier, ch.g.tier, pa.g.tier, bo.g.tier], hit: r.hit, hits: r.hits, dmg: r.dmg, cost: r.cost, net: r.net, per1k: r.per1k });
+    }
+    const pick = (arr, fn) => arr.slice().sort(fn);
+    const byK = pick(res, (a, b) => a.per1k - b.per1k).slice(0, 4);
+    const maxD = pick(res, (a, b) => b.dmg - a.dmg || a.cost - b.cost)[0];
+    const cheap = pick(res, (a, b) => a.cost - b.cost)[0];
+    let marg = null; res.forEach(r => { const dc = r.cost - cur.cost, dd = r.dmg - cur.dmg; if(dc > 0.01 && dd > 0){ const v = dd / dc; if(!marg || v > marg.v) marg = { ...r, v, dd, dc }; } });
+    const f = v => Math.round(v).toLocaleString(); const m = v => (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2);
+    const nm = t => `${GEAR_NAMES.weapon[t[0]]} · h${t[1]} g${t[2]} c${t[3]} p${t[4]} b${t[5]}`;
+    const th = 'style="padding:4px 6px;text-align:right;border-bottom:1px solid #2a3441;white-space:nowrap"';
+    const row = (lab, r, extra) => `<tr><td ${th}>${lab}</td><td ${th} dir="ltr">${nm(r.t)}</td><td ${th}>${f(r.hit)}</td><td ${th}>${f(r.hits)}</td><td ${th}>${f(r.dmg)}</td><td ${th}>${m(r.cost)}</td><td ${th}>${m(r.per1k)}</td><td ${th}>${extra || ''}<button class="btn btn-sm" onclick="applyGearTiers([${r.t}])">طبّق</button></td></tr>`;
+    const curRow = `<tr style="opacity:.8"><td ${th}>جيرك الحالي</td><td ${th} dir="ltr">${GEAR_SLOTS.map(sl => eff[sl] ? eff[sl].code : '-').join(' · ')}</td><td ${th}>${f(cur.hit)}</td><td ${th}>${f(cur.hits)}</td><td ${th}>${f(cur.dmg)}</td><td ${th}>${m(cur.cost)}</td><td ${th}>${m(cur.per1k)}</td><td ${th}></td></tr>`;
+    out.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${th}>الترتيب</th><th ${th}>التوليفة</th><th ${th}>ضرر/ضربة</th><th ${th}>ضربات/يوم</th><th ${th}>ضرر يومي</th><th ${th}>تكلفة/يوم (جير+مستهلكات)</th><th ${th}>صافي لكل 1000 ضرر</th><th ${th}></th></tr></thead><tbody>${curRow}${byK.map((r, i) => row('#' + (i + 1) + ' أقل تكلفة/1000 ضرر', r, 'ضرر لكل $: ' + (r.dmg / r.cost).toFixed(0) + ' ')).join('')}${row('🥇 أعلى ضرر', maxD)}${row('💲 أرخص خيار', cheap)}${marg ? row('📈 أكبر زيادة ضرر لكل $ إضافي', marg, `+${f(marg.dd)} ضرر لـ +${m(marg.dc)} (${f(marg.v)} ضرر/$) `) : ''}</tbody></table></div><div class="hint" style="margin-top:4px">${res.length.toLocaleString()} توليفة · الأرقام بنموذج "${mode}" · قطعك الفعلية تحتفظ بأرقامها الفعلية، وباقي المستويات بالمتوسط (مثل الـbuilder). h=خوذة g=قفازات c=صدر p=بنطلون b=حذاء، الرقم = المستوى (T).</div>`;
+  }catch(e){ out.textContent = 'تعذّر الحساب: ' + e.message; }
+  btn.disabled = false;
+}
+function applyGearTiers(t){ GEAR_SLOTS.forEach((sl, i) => { window.gearOvr[sl] = t[i]; }); recalcAll(); }
+
+function gearSelectHTML(slot){
+  const base = (window.susAuto && window.susAuto.gear) || {};
+  const names = slot === 'weapon' ? GEAR_NAMES.weapon : GEAR_NAMES.armor;
+  const cur = base[slot]; const sel = window.gearOvr[slot];
+  const opts = [`<option value=""${sel == null ? ' selected' : ''}>من ملفي: ${cur ? cur.code : 'لا يوجد'}</option>`].concat(names.map((n, i) => `<option value="${i}"${sel === i ? ' selected' : ''}>${n}${i ? ' (T' + i + ')' : ''}</option>`));
+  return `<select onchange="setGearOvr('${slot}', this.value)">${opts.join('')}</select>`;
+}
+function renderGearRows(ctx, st, GX, mode, sim, money){
+  const el = document.getElementById('gearRows'); if(!el) return;
+  const f = v => Math.round(v).toLocaleString();
+  const without = (slot) => {
+    const g = GX.eff[slot]; if(!g) return null;
+    const c = gearContribution(slot, g); const g2 = { ...GX.eff }; delete g2[slot];
+    const st2 = { atk: Math.max(0, st.atk - c.atk), crit: Math.max(0, st.crit - c.critc), critd: Math.max(0, st.critd - c.critd), prc: Math.max(0, st.prc - c.prc), arm: Math.max(0, st.arm - c.arm), ddg: Math.max(0, st.ddg - c.ddg) };
+    return simulateGear({ ...ctx, hasGear: true }, st2, g2, mode);
+  };
+  const th = 'style="padding:4px 6px;text-align:right;border-bottom:1px solid #2a3441;white-space:nowrap"';
+  const rowsHtml = [];
+  GEAR_SLOTS.forEach(slot => {
+    const g = GX.eff[slot]; const r = sim.rows.find(x => x.slot === slot);
+    if(!g || !r){ rowsHtml.push(`<tr><td ${th}>${GEAR_SLOT_AR[slot]}</td><td ${th}>${gearSelectHTML(slot)}</td><td ${th} colspan="5">لا توجد قطعة</td></tr>`); return; }
+    const w = without(slot);
+    const dHit = w ? sim.hit - w.hit : 0, dDay = w ? sim.dmg - w.dmg : 0;
+    const flag = window.gearOvr[slot] != null && (!(window.susAuto && window.susAuto.gear && window.susAuto.gear[slot]) || window.susAuto.gear[slot].tier !== window.gearOvr[slot]) ? ' ⚠️' : '';
+    rowsHtml.push(`<tr><td ${th}>${GEAR_SLOT_AR[slot]}${flag}</td><td ${th}>${g.code} (T${g.tier})<br>${gearSelectHTML(slot)}</td><td ${th}>${money(g.price)}</td><td ${th}>+${f(dHit)} / ضربة<br>+${f(dDay)} / يوم</td><td ${th}>${r.dur.toFixed(1)} نقطة متانة/يوم (${(r.decay * 100).toFixed(0)}% معدل)</td><td ${th}>${money(r.cost)}</td><td ${th}>${money(r.scrapQty * ctx.scrapPrice)}</td></tr>`);
+  });
+  const noA = simulateGear({ ...ctx, ammo: 0 }, st, GX.eff, mode);
+  rowsHtml.push(`<tr><td ${th}>الذخيرة</td><td ${th}>${(window.susAuto && window.susAuto.ammoCode) || '—'} (+${ctx.ammo}%)</td><td ${th}>${money(ctx.ammoPrice)} / وحدة</td><td ${th}>+${f(sim.hit - noA.hit)} / ضربة<br>+${f(sim.dmg - noA.dmg)} / يوم</td><td ${th}>${f(sim.hits)} وحدة/يوم</td><td ${th}>${money(sim.ammoCost)}</td><td ${th}>—</td></tr>`);
+  rowsHtml.push(`<tr><td ${th}>الأكل</td><td ${th}>${({10:'bread',15:'steak',20:'cookedFish'})[+$('inFoodType').value] || ''}</td><td ${th}>${money(ctx.foodPrice)} / وجبة</td><td ${th}>يحوّل الجوع لصحة: +${f(sim.dmg * (ctx.hgRate * ctx.healPerFood) / (ctx.hpRate + ctx.hgRate * ctx.healPerFood))} / يوم</td><td ${th}>${(sim.hrs * ctx.hgRate).toFixed(1)} وجبة/يوم</td><td ${th}>${money(sim.foodCost)}</td><td ${th}>—</td></tr>`);
+  const noP = simulateGear(ctx, st, GX.eff, 'none');
+  rowsHtml.push(`<tr><td ${th}>الحبة</td><td ${th}>cocain</td><td ${th}>${money(ctx.pillPrice)}</td><td ${th}>${sim.pillCost > 0 ? `+${f(sim.hit - noP.hit)} / ضربة<br>${sim.dmg - noP.dmg >= 0 ? '+' : ''}${f(sim.dmg - noP.dmg)} / يوم` : 'غير مستخدمة في هذه الحالة'}</td><td ${th}>مرة واحدة/يوم</td><td ${th}>${money(sim.pillCost)}</td><td ${th}>—</td></tr>`);
+  rowsHtml.push(`<tr style="font-weight:700"><td ${th}>المجموع</td><td ${th} colspan="2">${f(sim.hits)} ضربة/يوم</td><td ${th}>${f(sim.hit)} / ضربة<br>${f(sim.dmg)} / يوم</td><td ${th}></td><td ${th}>${money(sim.cost)}</td><td ${th}>${money(sim.scrapInc)}</td></tr>`);
+  el.innerHTML = `<div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${th}>البند</th><th ${th}>الكود / المستوى</th><th ${th}>السعر</th><th ${th}>أثره على الضرر</th><th ${th}>الاستهلاك</th><th ${th}>التكلفة/يوم</th><th ${th}>سكراب (دخل)</th></tr></thead><tbody>${rowsHtml.join('')}</tbody></table></div><div class="hint" style="margin-top:4px">كل صف يخص قطعة من جيرك الفعلي (من ملفك). أثر الضرر = الفرق عند إزالة القطعة وحدها. غيّر أي صف من القائمة لتجربة ماذا لو (⚠️ = معدّل).</div>`;
+}
+
 // صيغة الضرر الموحدة (مطابقة لتلميح اللعبة ولـ warera-war-planner):
 // الهجوم = المسطّح × (1+ذخيرة) × (1+رتبة) × (1+حبة/ديبف) ثم × عامل بونص المعركة. الدقة = احتمال الإصابة، والكريت = × (1 + ضرر الكريت).
 function calcHitDamage(o){
@@ -1510,7 +1698,7 @@ function calcHpPerHit(totalArmor, dodgeTotal){
 }
 function selectedPillPct(liveMerc){
   const m = ($('inPillCalc') && $('inPillCalc').value) || 'cycle';
-  return m === 'buff' ? 60 : m === 'none' ? 0 : m === 'debuff' ? -60 : liveMerc;
+  return (m === 'buff' || m === 'cycle' || m === 'spread') ? 60 : m === 'none' ? 0 : m === 'debuff' ? -60 : liveMerc;
 }
 
 function recalcAll(){
@@ -1558,12 +1746,13 @@ function recalcAll(){
     $('badgeDebuff').className = 'badge';
   }
 
+  const GX = gearEffective(); window.gearFx = GX; ensureGearPanel();
   const armorSkillVal = (+$('inArmorSkill').value || 0) * 6;
   const gearArmor = (+$('inPants').value || 0) + (+$('inChest').value || 0);
-  const totalArmor = armorSkillVal + gearArmor;
+  const totalArmor = Math.max(0, armorSkillVal + gearArmor + GX.d.arm);
   const reduction = Math.round((100 * totalArmor) / (totalArmor + 40));
   const SA = window.susAuto || {};
-  const dodgeTot = Math.max(0, +SA.dodge || 0);
+  const dodgeTot = Math.max(0, (+SA.dodge || 0) + GX.d.ddg);
   const dodgeEff = dodgeTot / (dodgeTot + 40);
   const hpPerHit = calcHpPerHit(totalArmor, dodgeTot);
   $('outArmorInfo').textContent = `${reduction}% تقليل · مراوغة ${Math.round(dodgeEff*100)}% · ${hpPerHit} HP/ضربة`;
@@ -1573,9 +1762,9 @@ function recalcAll(){
   const hitsAvailable = Math.floor(hpNow / hpPerHit);
   renderSegmentedBars(hpPct, hgPct, hgMax, hitsAvailable);
 
-  const atk = +$('inAtk').value || 0;
-  const crit = +$('inCrit').value || 0;
-  const critMult = +$('inCritMult').value || 150;
+  const atk = Math.max(0, (+$('inAtk').value || 0) + GX.d.atk);
+  const crit = Math.max(0, (+$('inCrit').value || 0) + GX.d.critc);
+  const critMult = Math.max(0, (+$('inCritMult').value || 150) + GX.d.critd);
   const prec = +$('inPrec').value || 0;
   const ammo = +$('inAmmo').value || 0;
   const merc = +$('inMerc').value || 0;
@@ -1590,7 +1779,7 @@ function recalcAll(){
   bonusPct += (+$('bAlliance').value || 0);
   $('totalBonusOut').value = `+${bonusPct}%`;
 
-  const prcPct = (window.susAuto && window.susAuto.prc) ? window.susAuto.prc : (50 + 5 * (+$('inPrec').value || 0));
+  const prcPct = Math.min(100, Math.max(0, ((window.susAuto && window.susAuto.prc) ? window.susAuto.prc : (50 + 5 * (+$('inPrec').value || 0))) + GX.d.prc));
   const dmgIn = { atk, ammo, rank: rankPct, crit, critMult, prc: prcPct, battle: bonusPct };
   const dmgSel = calcHitDamage({ ...dmgIn, pill: selectedPillPct(merc) });
   const finalAvg = dmgSel.avg;
@@ -1611,66 +1800,40 @@ function recalcAll(){
   // إجمالي الضرر اليومي (نافذة 24 ساعة من الآن):
   // كل ضربة تستهلك صحة (10 HP قبل الدرع)، والصحة تتجدد 10% من الحد الأقصى كل ساعة،
   // والجوع يتجدد 10% من الحد الأقصى كل ساعة ويُحوَّل إلى صحة عن طريق الطعام (كل وجبة = 1 جوع).
-  // حالة مستقرة (بدون مخزون الصحة/الجوع الحالي) مثل reference calculator.
-  // الحبة: بفّ +60% لمدة 8 ساعات ثم ديبف -60% لمدة 18 ساعة. الدورة اليومية = 8 ساعات بفّ + 16 ساعة ديبف، وتكلفة الحبة مرة واحدة.
-  const hitsPerHour = (hpRate + hgRate * healPerFood) / hpPerHit;
+  // ===== المحاكاة الموحدة (نفس قواعد reference calculator) =====
+  // يوم الحبة: كل ضربات اليوم (من 24 ساعة صحة وجوع مدّخرة) تُصرف داخل نافذة البفّ 8 ساعات، وتكلفة الحبة مرة واحدة.
   const pillMode = ($('inPillCalc') && $('inPillCalc').value) || 'cycle';
-  const liveP = +($('inMerc') ? $('inMerc').value : 0);
-  const SEG = {
-    cycle: { seg: [[8, 60], [16, -60]], pill: true },
-    buff: { seg: [[8, 60]], pill: true },
-    none: { seg: [[24, 0]], pill: false },
-    debuff: { seg: [[24, -60]], pill: false },
-    live: { seg: [[24, liveP]], pill: false }
-  };
-  const evalMode = k => { const m = SEG[k]; let hrs = 0, hits = 0, dmg = 0; m.seg.forEach(([h, p]) => { const hh = h * hitsPerHour; hrs += h; hits += hh; dmg += hh * calcHitDamage({ ...dmgIn, pill: p }).avg; }); return { hrs, hits, dmg, pill: m.pill }; };
-  const cur = evalMode(SEG[pillMode] ? pillMode : 'cycle');
-  const pillOn = cur.pill, dayHours = cur.hrs, dayHits = cur.hits, dayDmg = cur.dmg;
-  const dayHungerPortions = dayHours * hgRate;
-  const dayFoodHealth = dayHungerPortions * healPerFood;
+  const A = window.susAuto || {};
+  const P = window.susPrices || {};
+  const foodKey = {10:'bread',15:'steak',20:'cookedFish'}[+$('inFoodType').value];
+  const ctx = { ammo, rank: rankPct, battle: bonusPct, hpRate, hgRate, healPerFood, foodPrice: +P[foodKey] || 0,
+    ammoPrice: ammo > 0 ? (+P[A.ammoCode] || +P[{10:'lightAmmo',20:'ammo',40:'heavyAmmo'}[ammo]] || 0) : 0,
+    pillPrice: +P.cocain || 35, scrapPrice: +P.scraps || 0, case1: +P.case1 || 0, case2: +P.case2 || 0,
+    loot: +A.loot || 0, comp: Math.max(0, +$('susCompany').value || 0), live: merc, lootPer1k: 0.17, hasGear: !!(A.gear || GX.changed) };
+  const st = { atk, crit, critd: critMult, prc: prcPct, arm: totalArmor, ddg: dodgeTot };
+  const sim = simulateGear(ctx, st, GX.eff, pillMode);
+  const dayHours = sim.hrs, dayHits = sim.hits, dayDmg = sim.dmg;
   const dayHealthRegen = dayHours * hpRate;
+  const dayFoodHealth = dayHours * hgRate * healPerFood;
   const dayHealthTotal = dayHealthRegen + dayFoodHealth;
-  { const f = v => Math.round(v).toLocaleString(); const st = [['بدون حبة (24 س)','none'],['نافذة البفّ فقط (8 س)','buff'],['الدورة اليومية (8 س بفّ + 16 س ديبف)','cycle']].map(([n,k]) => { const e = evalMode(k); return `${n}: ${f(e.hits)} ضربة · ${f(e.dmg)} ضرر`; });
-    $('pillCompare').textContent = st.join(' | '); }
+  const dayHungerPortions = dayHours * hgRate;
+  window.gearCtx = { ctx, st, eff: GX.eff, mode: pillMode, sim };
+  { const f = v => Math.round(v).toLocaleString();
+    const st2 = [['بدون حبة (24 س)','none'],['نافذة البفّ فقط (8 س، ضربات 8 ساعات فقط)','buff'],['يوم الحبة (كل ضربات اليوم داخل نافذة 8 س)','cycle'],['للمقارنة فقط: ضربات موزعة 8 س بفّ + 16 س ديبف','spread']].map(([n,k]) => { const e = simulateGear(ctx, st, GX.eff, k); return `${n}: ${f(e.hits)} ضربة · ${f(e.dmg)} ضرر`; });
+    $('pillCompare').textContent = st2.join(' | '); }
   $('outDailyDmg').textContent = Math.round(dayDmg).toLocaleString();
-  $('dailyDmgHint').textContent = `بافتراض ${Math.round(dayHits).toLocaleString()} ضربة في اليوم · ${Math.round(dayHealthTotal).toLocaleString()} HP متاحة (${Math.round(dayHealthRegen).toLocaleString()} من تجديد الصحة + ${Math.round(dayFoodHealth).toLocaleString()} من ${Math.round(dayHungerPortions)} وجبة) ÷ ${hpPerHit} HP لكل ضربة`;
+  $('dailyDmgHint').textContent = `بافتراض ${Math.round(dayHits).toLocaleString()} ضربة · ${Math.round(dayHealthTotal).toLocaleString()} HP متاحة (${Math.round(dayHealthRegen).toLocaleString()} من تجديد الصحة + ${Math.round(dayFoodHealth).toLocaleString()} من ${Math.round(dayHungerPortions)} وجبة) ÷ ${calcHpPerHit(totalArmor, dodgeTot)} HP لكل ضربة`;
   {
-    const A = window.susAuto || {};
-    const P = window.susPrices || {};
-    const SCRAP = [0,6,18,54,162,486,1458];
-    const ddg = Math.max(0, +A.dodge || 0);
-    const foodKey = {10:'bread',15:'steak',20:'cookedFish'}[+$('inFoodType').value];
-    const foodPrice = +P[foodKey] || 0;
-    const ammoPrice = ammo > 0 ? (+P[A.ammoCode] || +P[{10:'lightAmmo',20:'ammo',40:'heavyAmmo'}[ammo]] || 0) : 0;
-    let gearCost = 0, scrapQty = 0;
-    Object.entries(A.gear || {}).forEach(([slot, g]) => {
-      const decay = slot === 'weapon' ? 1 : 1 - ddg / (ddg + 40);
-      gearCost += (g.price / 100) * dayHits * decay;
-      const q = Math.max(0.01, Math.round((dayHits * decay / 100) * 100) / 100);
-      scrapQty += (SCRAP[g.tier] / 3) * q;
-    });
-    const foodCost = foodPrice * dayHours * hgRate;
-    const pillCost = pillOn ? (+P.cocain || 35) : 0;
-    const ammoCost = ammoPrice * dayHits;
-    const consumables = foodCost + ammoCost + pillCost;
-    const loot = (+A.loot || 0) / 100, prc = Math.min(1, (+A.prc || 0) / 100);
-    const cases = loot * dayHits * prc, elite = (loot / 100) * dayHits * prc;
-    const scrapInc = scrapQty * (+P.scraps || 0);
-    const caseInc = cases * (+P.case1 || 0) + elite * (+P.case2 || 0);
-    const lootInc = dayDmg / 1000 * 0.17;
-    const compInc = Math.max(0, +$('susCompany').value || 0);
-    const income = scrapInc + caseInc + lootInc + compInc;
-    const netCost = gearCost + consumables - income;
-    const per1k = dayDmg > 0 ? netCost / (dayDmg / 1000) : 0;
     const money = v => (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-    $('outSusNet').textContent = money(netCost);
-    $('outSus1k').textContent = money(per1k);
-    $('outSus1k').style.color = per1k <= 0 ? 'var(--green)' : '';
-    $('outSusCost').textContent = money(gearCost + consumables);
-    $('outSusInc').textContent = money(income);
-    $('susHint').textContent = `الحساب: (استهلاك الجير ${money(gearCost)} + مستهلكات ${money(consumables)} [أكل ${money(foodCost)} + طلقات ${money(ammoCost)} + حبة ${money(pillCost)}]) - (سكراب ${money(scrapInc)} + أكياس ${money(caseInc)} + غنيمة المعارك ${money(lootInc)} + شركات/أساس ${money(compInc)}) = ${money(netCost)} ÷ (${Math.round(dayDmg).toLocaleString()} ÷ 1000) · ${Math.round(dayHits).toLocaleString()} ضربة`;
-    const gl = Object.entries(A.gear || {}).map(([slot, g]) => `${slot}: ${g.code} ($${g.price.toFixed(2)})`).join(' · ');
-    $('susGearHint').textContent = A.gear ? `الجير المُجهَّز (تلقائي): ${gl || 'لا يوجد'} · ذخيرة: ${A.ammoCode || 'لا يوجد'} · مراوغة ${ddg} · فرصة غنيمة ${A.loot}% · دقة ${A.prc}%` : 'اجلب بيانات لاعب ليُحسب الجير والمهارات تلقائياً.';
+    window.__susNet = sim.net; window.__sus1k = sim.per1k;
+    $('outSusNet').textContent = money(sim.net);
+    $('outSus1k').textContent = money(sim.per1k);
+    $('outSus1k').style.color = sim.per1k <= 0 ? 'var(--green)' : '';
+    $('outSusCost').textContent = money(sim.cost);
+    $('outSusInc').textContent = money(sim.income);
+    $('susHint').textContent = `الحساب: (استهلاك الجير ${money(sim.gearCost)} + مستهلكات ${money(sim.consumables)} [أكل ${money(sim.foodCost)} + طلقات ${money(sim.ammoCost)} + حبة ${money(sim.pillCost)}]) - (سكراب ${money(sim.scrapInc)} + أكياس ${money(sim.caseInc)} + غنيمة المعارك ${money(sim.lootInc)} + شركات/أساس ${money(sim.compInc)}) = ${money(sim.net)} ÷ (${Math.round(dayDmg).toLocaleString()} ÷ 1000) · ${Math.round(dayHits).toLocaleString()} ضربة`;
+    $('susGearHint').textContent = (A.gear || GX.changed) ? `ذخيرة: ${A.ammoCode || 'لا يوجد'} · مراوغة ${Math.round(dodgeTot)} · درع ${Math.round(totalArmor)} · فرصة غنيمة ${A.loot}% · دقة ${Math.round(prcPct)}%` : 'اجلب بيانات لاعب ليُحسب الجير والمهارات تلقائياً.';
+    renderGearRows(ctx, st, GX, pillMode, sim, money);
     localStorage.setItem('raad_sus_susCompany', $('susCompany').value);
   }
   const regenTotal = hrs * hpRate;
@@ -1688,6 +1851,15 @@ function recalcAll(){
   $('dashHh').textContent = `توقف عند ${stopWithFoodBlocks}/10 مربعات (مع ${maxFoodPortions} وجبة)`;
   $('dashHhSub').textContent = `أو عند ${stopNoFoodBlocks}/10 مربعات بدون أكل · بعد ${hrs} ساعات`;
 
+  {
+    const cur = { hit: finalAvg, hits: dayHits, dmg: dayDmg, net: window.__susNet, k: window.__sus1k };
+    if(!GX.changed){ window.gearBase = cur; }
+    const f = v => Math.round(v).toLocaleString(); const mny = v => (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2);
+    const dl = (a, b, fm) => { const x = a - b; return x === 0 ? '' : ` (${x > 0 ? '+' : '-'}${fm(Math.abs(x))})`; };
+    const gb = window.gearBase;
+    $('gearSummary').innerHTML = `ضرر الضربة: <b>${f(cur.hit)}</b>${gb && GX.changed ? dl(cur.hit, gb.hit, f) : ''} · ضربات/يوم: <b>${f(cur.hits)}</b>${gb && GX.changed ? dl(cur.hits, gb.hits, f) : ''} · ضرر يومي: <b>${f(cur.dmg)}</b>${gb && GX.changed ? dl(cur.dmg, gb.dmg, f) : ''} · صافي التكلفة/يوم: <b>${mny(cur.net)}</b>${gb && GX.changed ? dl(cur.net, gb.net, mny) : ''} · لكل 1000 ضرر: <b>${mny(cur.k)}</b>${gb && GX.changed ? dl(cur.k, gb.k, mny) : ''}<br>${GX.changed ? '⚠️ جير مخصص مفعّل (الفرق بين القوسين مقارنة بجيرك الفعلي من الملف).' : 'الجير الحالي = جيرك الفعلي من الملف.'}`;
+    $('gearOvrNote').textContent = GX.changed ? '🎒 جير مخصص مفعّل (ماذا لو) – الأرقام أدناه تخصه. غيّره من تبويب Build.' : '';
+  }
   renderBuilds();
   calcFactory();
   renderProducts();
@@ -1789,16 +1961,17 @@ function renderBuilds(){
   const totalHits = Math.max(1, Math.floor((hpCur + foodNeeded * healPerFood) / hpPerHit));
   const ammoNeeded = totalHits;
 
-  const baseAtk = Math.max(20, (+($('inAtk')?.value || r.wepMid)) * plan.efficiencyFactor);
+  const bGX = window.gearFx || { d:{atk:0,critc:0,critd:0,prc:0} };
+  const baseAtk = Math.max(20, (+($('inAtk')?.value || r.wepMid) + bGX.d.atk) * plan.efficiencyFactor);
   const precLvl = +(pointAlloc.Precision || $('inPrec')?.value || 0);
-  const bldPrc = (window.susAuto && window.susAuto.prc) ? window.susAuto.prc : (50 + 5 * (+$('inPrec')?.value || 0));
+  const bldPrc = Math.min(100, ((window.susAuto && window.susAuto.prc) ? window.susAuto.prc : (50 + 5 * (+$('inPrec')?.value || 0))) + bGX.d.prc);
   let bldBattle = 0;
   if($('bMuOrder')?.checked) bldBattle += 15;
   if($('bMuHq')?.checked) bldBattle += 20;
   if($('bMpp')?.checked) bldBattle += 10;
   if($('bHome')?.checked) bldBattle += 20;
   bldBattle += (+($('bAlliance')?.value || 20));
-  const avgHit = calcHitDamage({ atk: baseAtk, ammo: +($('inAmmo')?.value || 20), rank: (window.susAuto && window.susAuto.rank) || 0, pill: selectedPillPct(+($('inMerc')?.value || 0)), crit: +($('inCrit')?.value || 25), critMult: +($('inCritMult')?.value || 150), prc: bldPrc, battle: bldBattle }).avg;
+  const avgHit = calcHitDamage({ atk: baseAtk, ammo: +($('inAmmo')?.value || 20), rank: (window.susAuto && window.susAuto.rank) || 0, pill: selectedPillPct(+($('inMerc')?.value || 0)), crit: +($('inCrit')?.value || 25) + bGX.d.critc, critMult: +($('inCritMult')?.value || 150) + bGX.d.critd, prc: bldPrc, battle: bldBattle }).avg;
   const totalDamage = Math.round(avgHit * totalHits);
 
   const mkt = getMarketPrices();
