@@ -1182,7 +1182,7 @@ async function fetchPlayer(){
     const muImgUrl = resolveMuLogo(muObj);
     setIdentityDisplay(user.username || 'لاعب', state.playerLevel, playerImgUrl, countryName, flagUrl, muName, muImgUrl);
 
-    const totalWarPts = extractTotalPlayerPoints(user);
+    const totalWarPts = Number(user.leveling?.totalSkillPoints) > 0 ? Number(user.leveling.totalSkillPoints) : extractTotalPlayerPoints(user);
     $('inSkillPts').value = totalWarPts > 0 ? totalWarPts : (state.playerLevel * 4);
 
     const h = user.skills?.health || {};
@@ -1193,6 +1193,29 @@ async function fetchPlayer(){
     if(g.total != null) $('inHgMax').value = g.total;
     if(g.currentBarValue != null && g.total) $('inHgPct').value = Math.min(100, Math.round((g.currentBarValue/g.total)*100));
     if(a.level != null) $('inArmorSkill').value = a.level;
+
+    // Combat stats straight from the public user.getUserById payload (no key needed).
+    // Use != null checks so a real 0 stays 0 instead of falling back to a default.
+    const sk = user.skills || {};
+    const setNum = (id, v) => { const el = $(id); if(el && v != null && Number.isFinite(Number(v))) el.value = Math.round(Number(v) * 100) / 100; };
+    const atkSk = sk.attack || {};
+    if(atkSk.value != null) setNum('inAtk', Number(atkSk.value) + Number(atkSk.weapon || 0));
+    if(sk.criticalChance?.total != null) setNum('inCrit', sk.criticalChance.total);
+    if(sk.criticalDamages?.total != null) setNum('inCritMult', sk.criticalDamages.total);
+    if(sk.precision?.level != null) setNum('inPrec', Math.min(10, sk.precision.level));
+    if(atkSk.ammoPercent != null){
+      const ammoSel = $('inAmmo');
+      if(ammoSel && [...ammoSel.options].some(o => +o.value === Number(atkSk.ammoPercent))) ammoSel.value = String(Number(atkSk.ammoPercent));
+    }
+    // Military rank + buffs - debuffs are real percentages from the API; put the net into the extra bonus box.
+    if(atkSk.value != null){
+      setNum('inMerc', Number(atkSk.militaryRankPercent || 0) + Number(atkSk.buffsPercent || 0) - Number(atkSk.debuffsPercent || 0));
+    }
+    // Armour: the game's armor total = skill part (level*6, already used by the calculator) + equipment part.
+    if(sk.armor?.equipment != null){
+      setNum('inChest', sk.armor.equipment);
+      setNum('inPants', 0);
+    }
 
     const buffs = JSON.stringify(user.buffs || user.activeEffects || []).toLowerCase();
     $('inPillStatus').value = buffs.includes('pill') || buffs.includes('boost') ? '1' : '0';
