@@ -283,6 +283,7 @@ nav.bottom-nav{
           <input id="wareraKey" type="password" placeholder="WarEra API Key (اختياري)" onchange="saveKeys()" />
           <button class="btn btn-sec btn-sm" onclick="saveKeys()">حفظ</button>
         </div>
+        <div class="hint" style="margin-top:4px">المفاتيح اختيارية، تُحفظ في متصفحك فقط، ولا تُرسل إلا إلى WarEra API الرسمي (وإلى Google لمفتاح Gemini).</div>
         <div style="margin-top:10px">
           <label>لصق بيانات اللاعب (JSON جاهز من API أو أداة خارجية - اختياري)</label>
           <div class="row">
@@ -542,6 +543,7 @@ nav.bottom-nav{
             <input id="geminiKey" type="password" placeholder="AIzaSy..." onchange="saveKeys()" />
             <button class="btn btn-blue btn-sm" onclick="saveKeys()">تفعيل</button>
           </div>
+          <div class="hint" style="margin-top:4px">المفاتيح اختيارية، تُحفظ في متصفحك فقط، ولا تُرسل إلا إلى WarEra API الرسمي (وإلى Google لمفتاح Gemini).</div>
         </div>
       </details>
     </div>
@@ -830,6 +832,12 @@ const state = {
 };
 
 const $=id=>document.getElementById(id);
+function escapeHtml(v){
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function escapeJsStr(v){
+  return String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
 
 function normalizeAr(str){
   return String(str || '')
@@ -936,15 +944,13 @@ async function trpc(proc, input={}){
   };
   const key = $('wareraKey')?.value?.trim();
   if(key){
+    // Security: the WarEra API key is sent ONLY to the official WarEra API host.
     headers['x-api-key'] = key;
     headers['Authorization'] = 'Bearer ' + key;
   }
-  const bases = [
-    'https://api2.warera.io/trpc/',
-    'https://gateway.warerastats.io/trpc/'
-  ];
-  const allDirectUrls = bases
-    .flatMap(b => buildTrpcCandidateUrls(b, proc, input))
+  // gateway.warerastats.io requires its own API key (401 without one), so it was
+  // dropped from the fan-out: the WarEra key must never be sent to third parties.
+  const allDirectUrls = buildTrpcCandidateUrls('https://api2.warera.io/trpc/', proc, input)
     .map(appendCacheBust);
 
   const directTasks = allDirectUrls.map((url) =>
@@ -959,6 +965,15 @@ async function trpc(proc, input={}){
     return await Promise.any(directTasks);
   }catch(_){}
 
+  // Security: when a key is set, skip the CORS-proxy fallback entirely so the
+  // key can never leak to a third-party proxy. Without a key the headers carry
+  // no credentials, so the proxy path stays as harmless as before.
+  if(key){
+    lastApiDiagnostic = `${proc}: فشل الاتصال المباشر (تم تخطي البروكسي حمايةً للمفتاح)`;
+    const keyErr = new Error(lastApiDiagnostic);
+    keyErr.diagnostics = lastApiDiagnostic;
+    throw keyErr;
+  }
   const targetForProxy = allDirectUrls[0];
   const proxies = [
     { name: 'corsproxy.io', url: 'https://corsproxy.io/?' + encodeURIComponent(targetForProxy) },
@@ -1196,7 +1211,7 @@ async function fetchPlayer(){
     if($('homeLevelInput')) $('homeLevelInput').value = typedLv;
     setIdentityDisplay(q, typedLv, '', $('inManualCountry')?.value.trim() || '', '', $('inManualMu')?.value.trim() || '', '');
     const diag = err?.diagnostics || err?.message || 'حجب CORS أو انقطاع الشبكة أو تغيّر مسار الـ API';
-    $('profileMsg').innerHTML = `⚠️ <b>تعذر السحب المباشر من الـ API (${q}):</b> ${diag}<br>✅ تم تثبيت الاسم <b>${q}</b> و<b>Lv.${typedLv}</b> محلياً — يمكنك المتابعة بالضبط اليدوي أو إضافة <b>WarEra API Key</b> أو لصق JSON اللاعب من الإعدادات.`;
+    $('profileMsg').innerHTML = `⚠️ <b>تعذر السحب المباشر من الـ API (${escapeHtml(q)}):</b> ${escapeHtml(diag)}<br>✅ تم تثبيت الاسم <b>${escapeHtml(q)}</b> و<b>Lv.${typedLv}</b> محلياً — يمكنك المتابعة بالضبط اليدوي أو إضافة <b>WarEra API Key</b> أو لصق JSON اللاعب من الإعدادات.`;
     recalcAll();
   }
 }
@@ -1812,9 +1827,9 @@ async function sendAi(){
   }
   try{
     const context = `${$('badgePlayer').textContent}, ${$('dashFactory').textContent}, AvgHit:${$('outAvgHit').textContent}`;
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(gKey)}`, {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': gKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: `You are RAAD (رعد), an expert WarEra tactical & economic advisor. Answer concisely in Arabic based on player stats (${context}): ${txt}` }] }]
       })
@@ -2215,32 +2230,32 @@ async function runMuScan(){
     $('muTotalHitsLeft').textContent = `إجمالي الضربات المتاحة الآن: ${data.totalHits.toLocaleString()} ضربة`;
 
     const metaParts = [];
-    if(data.id) metaParts.push(`ID: <b>${data.id}</b>`);
-    if(data.hqLevel != null) metaParts.push(`مستوى المقر (HQ): <b>Lv.${data.hqLevel}</b>`);
+    if(data.id) metaParts.push(`ID: <b>${escapeHtml(data.id)}</b>`);
+    if(data.hqLevel != null) metaParts.push(`مستوى المقر (HQ): <b>Lv.${escapeHtml(data.hqLevel)}</b>`);
     if(data.totalDamageStat > 0) metaParts.push(`إجمالي ضرر الوحدة التراكمي: <b>${data.totalDamageStat.toLocaleString()}</b>`);
     $('muExtraMeta').innerHTML = metaParts.join(' &nbsp;•&nbsp; ');
 
     if(!data.members.length){
-      $('muMembersList').innerHTML = `<div class="battle-card"><div class="hint" style="color:var(--gold)">⚠️ تم العثور على الوحدة <b>${data.name}</b> (العدد المسجل: ${data.declaredCount}) ولكن قائمة الأعضاء التفصيلية غير متاحة من السيرفر حالياً.</div></div>`;
+      $('muMembersList').innerHTML = `<div class="battle-card"><div class="hint" style="color:var(--gold)">⚠️ تم العثور على الوحدة <b>${escapeHtml(data.name)}</b> (العدد المسجل: ${data.declaredCount}) ولكن قائمة الأعضاء التفصيلية غير متاحة من السيرفر حالياً.</div></div>`;
     }else{
       $('muMembersList').innerHTML = data.members.map((m, idx) => `
         <div class="mu-member-row">
           <div class="mu-member-info">
             <span class="badge blue">#${idx + 1}</span>
-            ${m.avatar ? `<img src="${m.avatar}" class="badge-emblem" onerror="this.style.display='none'">` : ''}
+            ${m.avatar ? `<img src="${escapeHtml(m.avatar)}" class="badge-emblem" onerror="this.style.display='none'">` : ''}
             <div>
               <div style="font-weight:800;font-size:13.5px">
-                ${m.name} <span style="color:var(--muted);font-size:11px">(Lv.${m.level})</span>
+                ${escapeHtml(m.name)} <span style="color:var(--muted);font-size:11px">(Lv.${escapeHtml(m.level)})</span>
                 ${m.hasPill ? '<span class="badge" style="font-size:10px;padding:1px 6px">💊 Pill</span>' : ''}
               </div>
               <div class="hint" style="margin-top:2px">
-                ❤️ الصحة: <b>${m.hpCur}/${m.hpMax}</b> (${m.hpPct}%) · 🔫 ${m.weaponName} · ضربة: <b>${m.avgHit.toLocaleString()}</b>
+                ❤️ الصحة: <b>${escapeHtml(m.hpCur)}/${escapeHtml(m.hpMax)}</b> (${escapeHtml(m.hpPct)}%) · 🔫 ${escapeHtml(m.weaponName)} · ضربة: <b>${escapeHtml(m.avgHit.toLocaleString())}</b>
               </div>
             </div>
           </div>
           <div style="text-align:left">
-            <div style="font-size:11px;color:var(--muted)">الضرر الفوري (${m.hitsAvailable} ضربة)</div>
-            <strong style="color:${m.realtimeBurst > 0 ? 'var(--green)' : 'var(--muted)'};font-size:16px">${m.realtimeBurst.toLocaleString()}</strong>
+            <div style="font-size:11px;color:var(--muted)">الضرر الفوري (${escapeHtml(m.hitsAvailable)} ضربة)</div>
+            <strong style="color:${m.realtimeBurst > 0 ? 'var(--green)' : 'var(--muted)'};font-size:16px">${escapeHtml(m.realtimeBurst.toLocaleString())}</strong>
           </div>
         </div>
       `).join('');
@@ -2278,8 +2293,8 @@ async function runMuVsMu(){
     $('muVsCardsGrid').innerHTML = [ally, enemy].map((u, i) => `
       <div class="stat-box" style="border-color:${i===0?'#256856':'#702231'}">
         <div class="row" style="margin-bottom:6px">
-          ${u.logo ? `<img src="${u.logo}" class="badge-emblem" onerror="this.style.display='none'">` : ''}
-          <strong style="font-size:15px;color:${i===0?'var(--green)':'var(--red)'}">${u.name}</strong>
+          ${u.logo ? `<img src="${escapeHtml(u.logo)}" class="badge-emblem" onerror="this.style.display='none'">` : ''}
+          <strong style="font-size:15px;color:${i===0?'var(--green)':'var(--red)'}">${escapeHtml(u.name)}</strong>
         </div>
         <div class="hint" style="color:var(--ink)">
           • الضرر الفوري الكلي: <b>${u.totalBurst.toLocaleString()}</b><br>
@@ -2331,18 +2346,18 @@ async function runWarsIntelScan(){
       return `
         <div class="battle-card">
           <div class="bar-head">
-            <span>#${i+1} ⚔️ ${attName} 🆚 ${defName}</span>
-            <span class="badge danger">${statusLabel} · معارك: ${battlesCnt}</span>
+            <span>#${i+1} ⚔️ ${escapeHtml(attName)} 🆚 ${escapeHtml(defName)}</span>
+            <span class="badge danger">${escapeHtml(statusLabel)} · معارك: ${escapeHtml(battlesCnt)}</span>
           </div>
           <div class="vs-bar">
             <div class="vs-me" style="width:${attPct}%"></div>
             <div class="vs-enemy" style="width:${100 - attPct}%"></div>
           </div>
           <div class="seg-sub">
-            <span>${attName}: <b>${attScore.toLocaleString()}</b> (${attPct}%)</span>
-            <span>${defName}: <b>${defScore.toLocaleString()}</b> (${100 - attPct}%)</span>
+            <span>${escapeHtml(attName)}: <b>${attScore.toLocaleString()}</b> (${attPct}%)</span>
+            <span>${escapeHtml(defName)}: <b>${defScore.toLocaleString()}</b> (${100 - attPct}%)</span>
           </div>
-          <div class="hint" style="margin-top:6px;color:var(--green)">🏆 المتقدم حالياً في الجبهة: <b>${leader}</b></div>
+          <div class="hint" style="margin-top:6px;color:var(--green)">🏆 المتقدم حالياً في الجبهة: <b>${escapeHtml(leader)}</b></div>
         </div>
       `;
     }).join('');
@@ -2383,8 +2398,8 @@ async function runLiveBattlesScan(){
       return `
         <div class="battle-card">
           <div class="bar-head">
-            <span>⚔️ ${attName} 🆚 ${defName}</span>
-            <span class="badge warn">📍 ${regionName}</span>
+            <span>⚔️ ${escapeHtml(attName)} 🆚 ${escapeHtml(defName)}</span>
+            <span class="badge warn">📍 ${escapeHtml(regionName)}</span>
           </div>
           <div class="vs-bar">
             <div class="vs-me" style="width:${attPct}%"></div>
@@ -2394,7 +2409,7 @@ async function runLiveBattlesScan(){
             <span>المهاجم: <b>${attDmg.toLocaleString()}</b> (${attPct}%)</span>
             <span>المدافع: <b>${defDmg.toLocaleString()}</b> (${100 - attPct}%)</span>
           </div>
-          ${topHitters.length ? `<div class="hint" style="margin-top:6px;color:var(--gold)">🏆 أقوى الضاربين الآن: ${topHitters.join(' · ')}</div>` : ''}
+          ${topHitters.length ? `<div class="hint" style="margin-top:6px;color:var(--gold)">🏆 أقوى الضاربين الآن: ${topHitters.map(escapeHtml).join(' · ')}</div>` : ''}
         </div>
       `;
     }).join('');
@@ -2615,28 +2630,28 @@ async function runCountryIntel(){
       { label: '🧾 ضريبة العمل/الإنتاج', val: taxVal === null ? '-' : `${taxVal}%` }
     ];
     $('cIntelExtraGrid').innerHTML = extraCards.map(item => `
-      <div class="gear-slot"><small>${item.label}</small><strong style="color:var(--ink)">${item.val}</strong></div>
+      <div class="gear-slot"><small>${item.label}</small><strong style="color:var(--ink)">${escapeHtml(item.val)}</strong></div>
     `).join('');
 
     const regionNamesLine = regionsArr.length
-      ? `<div style="margin-top:6px">• <b>الأقاليم (${regionsArr.length}):</b> ${regionsArr.slice(0, 14).map(r => r.name || r.title || r._id).filter(Boolean).join('، ')}</div>`
+      ? `<div style="margin-top:6px">• <b>الأقاليم (${regionsArr.length}):</b> ${regionsArr.slice(0, 14).map(r => r.name || r.title || r._id).filter(Boolean).map(escapeHtml).join('، ')}</div>`
       : '';
-    const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>أسماء الحلفاء:</b> ${allyNames.join('، ')}</div>` : '';
+    const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>أسماء الحلفاء:</b> ${allyNames.map(escapeHtml).join('، ')}</div>` : '';
     const rawKeysPreview = Object.entries(country)
       .filter(([k, v]) => v !== null && v !== undefined && typeof v !== 'object' && !/^(name|_id|id|flag|flagUrl|image|icon|banner|allies|mpps)$/i.test(k))
       .slice(0, 10)
-      .map(([k, v]) => `<span class="diff-tag" style="background:#0b1524;border-color:#263f61;color:var(--muted)">${k}: <b style="color:var(--ink)">${typeof v === 'number' && !Number.isInteger(v) ? Number(v).toFixed(2) : v}</b></span>`)
+      .map(([k, v]) => `<span class="diff-tag" style="background:#0b1524;border-color:#263f61;color:var(--muted)">${escapeHtml(k)}: <b style="color:var(--ink)">${escapeHtml(typeof v === 'number' && !Number.isInteger(v) ? Number(v).toFixed(2) : v)}</b></span>`)
       .join(' ');
 
     const fetchedTime = new Date().toLocaleTimeString('ar-EG');
     $('cIntelDetails').innerHTML = `
-      <div>• <b>الاسم والدولة:</b> ${cName} &nbsp;|&nbsp; <b>الحلف:</b> ${allianceName} &nbsp;|&nbsp; <b>السكان:</b> ${popText} &nbsp;|&nbsp; <b>الأقاليم:</b> ${regVal}</div>
+      <div>• <b>الاسم والدولة:</b> ${escapeHtml(cName)} &nbsp;|&nbsp; <b>الحلف:</b> ${escapeHtml(allianceName)} &nbsp;|&nbsp; <b>السكان:</b> ${popText} &nbsp;|&nbsp; <b>الأقاليم:</b> ${regVal}</div>
       <div>• <b>الوار في السكان والحروب:</b> ${warPopText} (${warsCount} حرب نشطة${warPopRatio})</div>
-      <div>• <b>الاقتصاد:</b> ${ecoParts.length ? ecoParts.join(' · ') : ecoHeadline} &nbsp;|&nbsp; <b>العملة/الرمز:</b> ${currVal} &nbsp;|&nbsp; <b>الضريبة:</b> ${taxVal === null ? '-' : taxVal + '%'}</div>
+      <div>• <b>الاقتصاد:</b> ${ecoParts.length ? ecoParts.join(' · ') : ecoHeadline} &nbsp;|&nbsp; <b>العملة/الرمز:</b> ${escapeHtml(currVal)} &nbsp;|&nbsp; <b>الضريبة:</b> ${taxVal === null ? '-' : taxVal + '%'}</div>
       ${regionNamesLine}
       ${allyNamesLine}
       ${rawKeysPreview ? `<div style="margin-top:8px">${rawKeysPreview}</div>` : ''}
-      <div style="margin-top:6px;color:var(--green)">🕒 تم التحديث اللحظي من السيرفر الساعة: <b>${fetchedTime}</b> (${lastApiDiagnostic})</div>
+      <div style="margin-top:6px;color:var(--green)">🕒 تم التحديث اللحظي من السيرفر الساعة: <b>${fetchedTime}</b> (${escapeHtml(lastApiDiagnostic)})</div>
     `;
 
     $('spyCountryBox').style.display = 'block';
@@ -2661,7 +2676,7 @@ function detectAndSaveSpyChanges(target, currentSnapshot){
   localStorage.setItem('raad_spy_snapshots', JSON.stringify(spySnapshots));
 
   if(diffs.length){
-    $('spyChangeTags').innerHTML = diffs.map(d => `<span class="diff-tag">${d}</span>`).join('');
+    $('spyChangeTags').innerHTML = diffs.map(d => `<span class="diff-tag">${escapeHtml(d)}</span>`).join('');
     $('spyChangeLogBox').style.display = 'block';
   }else{
     $('spyChangeLogBox').style.display = 'none';
@@ -2676,8 +2691,8 @@ function renderSpyWatchlist(){
     return;
   }
   box.innerHTML = spyWatchTargets.map((t, i)=>`
-    <span class="chip" onclick="setSpyMode('player');$('spyInput').value='${t.id}';runSpyScan()">
-      🎯 ${t.name} <b style="color:var(--red);margin-right:4px" onclick="event.stopPropagation();spyWatchTargets.splice(${i},1);localStorage.setItem('raad_spy_watchlist',JSON.stringify(spyWatchTargets));renderSpyWatchlist()">✕</b>
+    <span class="chip" onclick="setSpyMode('player');$('spyInput').value='${escapeHtml(escapeJsStr(t.id))}';runSpyScan()">
+      🎯 ${escapeHtml(t.name)} <b style="color:var(--red);margin-right:4px" onclick="event.stopPropagation();spyWatchTargets.splice(${i},1);localStorage.setItem('raad_spy_watchlist',JSON.stringify(spyWatchTargets));renderSpyWatchlist()">✕</b>
     </span>
   `).join('');
 }
@@ -2781,13 +2796,13 @@ async function runSpyScan(){
       { label:'🧨 الذخيرة', val: ammo.name || (ammo.bonus ? `+${ammo.bonus}%` : 'قياسية') }
     ];
     $('spyGearGrid').innerHTML = gearItems.map(g=>`
-      <div class="gear-slot"><small>${g.label}</small><strong>${g.val}</strong></div>
+      <div class="gear-slot"><small>${g.label}</small><strong>${escapeHtml(g.val)}</strong></div>
     `).join('');
 
     const skillKeys = Object.keys(sk);
     $('spySkillsGrid').innerHTML = skillKeys.length ? skillKeys.map(k=>{
       const lvl = sk[k]?.level ?? sk[k]?.value ?? 0;
-      return `<div class="gear-slot"><small>${k}</small><strong style="color:var(--blue)">Lv.${lvl}</strong></div>`;
+      return `<div class="gear-slot"><small>${escapeHtml(k)}</small><strong style="color:var(--blue)">Lv.${escapeHtml(lvl)}</strong></div>`;
     }).join('') : '<div class="hint">لا توجد تفاصيل مهارات متاحة</div>';
 
     const tAtk = +(weapon.attack || weapon.damage || (100 + (target.level||1)*2));
