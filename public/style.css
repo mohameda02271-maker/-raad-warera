@@ -249,3 +249,69 @@ input:focus,select:focus{outline:none;border-color:var(--violet);box-shadow:0 0 
 
 /* version stamp footer */
 #verstamp{position:fixed;bottom:2px;inset-inline-start:8px;font-size:9px;color:#565180;z-index:50;pointer-events:none;direction:ltr}
+
+/* ---------- country page + countries list (step 2) ---------- */
+.govswitch{display:flex;gap:6px;margin:12px 0 4px}
+.govswitch button{flex:1;padding:9px;font-size:13px;font-weight:700}
+.govswitch button.on{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px #00e5ff33}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.chips button{font-size:11.5px;padding:6px 12px;box-shadow:none}
+.chips button.on{border-color:var(--cyan);color:var(--cyan)}
+.chips-inline{display:flex;gap:4px}
+.chips-inline button{font-size:10.5px;padding:4px 9px;box-shadow:none}
+.crow{display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #ffffff08;cursor:pointer}
+.crow:last-child{border-bottom:none}
+.crow:active{background:#ffffff08;border-radius:8px}
+.cflagdot{width:12px;height:12px;border-radius:50%;background:#7c4dff;box-shadow:0 0 8px #7c4dff88;flex:none}
+.cflagdot.ally{background:#00e5ff;box-shadow:0 0 8px #00e5ff88}
+.cflagdot.foe{background:#ff3355;box-shadow:0 0 8px #ff335588}
+.cflagdot.neutral{background:#565180;box-shadow:none}
+.crow-main{flex:1;min-width:0}
+.crow-main b{font-size:13px}
+.crow-sub{display:block;font-size:10.5px;color:var(--dim)}
+.crow-n{font-size:11px;color:var(--dim);flex:none}
+.albadge{border-color:#00e5ff55;color:var(--cyan)}
+.relchip{font-size:10px;padding:2px 8px;border-radius:999px;flex:none}
+.relchip.ally{background:#00e5ff22;color:var(--cyan)}
+.relchip.foe{background:#ff335522;color:#ff7a90}
+.relchip.neutral{background:#ffffff12;color:var(--dim)}
+.chead{padding:12px}
+.chead-top{display:flex;align-items:center;gap:10px}
+.cflagbig{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#7c4dff,#00e5ff);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;box-shadow:0 0 18px #7c4dff55;flex:none}
+.chead-name{flex:1;min-width:0}
+.chead-name h4{margin:0;font-size:17px}
+.cfacts{display:flex;gap:6px;margin-top:10px}
+.cfacts>div{flex:1;background:#ffffff08;border:1px solid var(--line);border-radius:12px;padding:7px 6px;text-align:center}
+.cfacts span{display:block;font-size:9.5px;color:var(--dim);margin-bottom:2px}
+.cfacts b{font-size:12.5px;color:var(--txt)}
+.ctabs{display:flex;gap:4px;margin-top:10px;background:#ffffff08;border-radius:14px;padding:4px}
+.ctabs button{flex:1;font-size:16px;padding:7px 0;border-radius:10px;background:transparent;box-shadow:none;filter:grayscale(.5) opacity(.6)}
+.ctabs button.on{background:linear-gradient(135deg,#7c4dff33,#00e5ff1a);border:1px solid #7c4dff66;filter:none}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 0}
+.statcard{background:rgba(12,10,26,.6);border:1px solid var(--line);border-radius:16px;padding:10px;position:relative}
+.statcard.wide{margin:8px 0 0}
+.sc-label{font-size:10.5px;color:var(--dim)}
+.sc-mid{display:flex;align-items:center;justify-content:space-between;margin-top:4px;gap:6px}
+.sc-mid b{font-size:17px;color:#fff}
+.spark{width:70px;height:22px;flex:none}
+.rankchip{position:absolute;top:8px;left:8px;font-size:10px;color:var(--dim)}
+.rankchip b{color:var(--txt)}
+.rankchip.up{color:#4dff88}.rankchip.up b{color:#4dff88}
+.rankchip.dn{color:#ff7a90}.rankchip.dn b{color:#ff7a90}
+.ministrip .clogline{font-size:12px;padding:5px 2px;border-bottom:1px solid #ffffff08;color:var(--txt)}
+.ministrip .clogline:last-child{border-bottom:none}
+.pill.res{border-color:#ffb30066;color:#ffb300}
+.ministers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.mincard{background:#ffffff08;border:1px solid var(--line);border-radius:14px;padding:8px 4px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px}
+.mincard.empty{border-style:dashed;opacity:.75}
+.mi-icon{font-size:15px}
+.mi-title{font-size:9.5px;color:var(--dim)}
+.mincard b{font-size:11px}
+.favatar.sm{width:38px;height:38px;font-size:16px}
+.favatar.xs{width:20px;height:20px;font-size:9px;display:inline-flex;margin-inline-start:-4px;border:2px solid #0c0a1a}
+.empty-slot{background:#ffffff0a;border:1px dashed var(--line)}
+button.mini{font-size:9px;padding:3px 8px}
+.majbar{display:flex;height:12px;border-radius:999px;overflow:hidden;border:1px solid var(--line);margin:8px 0}
+.majbar div{transition:width .4s}
+.pdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:4px}
+.pav{display:inline-flex;margin-inline-start:6px}

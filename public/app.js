@@ -4,11 +4,15 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 let token = localStorage.getItem('raad_token') || '';
-const CLIENT_VERSION = '1.2.0';
+const CLIENT_VERSION = '1.3.0';
 let S = null, MAP = null;
 let selCountry = null;
 let battle = { warId: null, ammo: 'none' };
 let curTab = 'map';
+let govMode = 'country'; // country | list
+let govCid = null;       // viewed country (null = own)
+let govTab = 'home';     // home|eco|pop|mil|gov|dip
+let govSearch = '', govSort = 'pop';
 let prevOwners = {};
 
 async function api(path, body) {
@@ -306,7 +310,10 @@ function renderCountry() {
       ${fundable ? `<button class="cyan" data-def="${esc(r.id)}" type="button">حصّنه</button>` : ''}
     </div>`;
   }
+  h += `<button class="bigbtn" id="btn-open-country" type="button" style="margin-top:8px">افتح صفحة الدولة الكاملة</button>`;
   el.innerHTML = h + '</div>';
+  const oc = $('#btn-open-country');
+  if (oc) oc.onclick = () => { govMode = 'country'; govCid = iso; govTab = 'home'; curTab = 'gov'; render(true); };
   el.querySelectorAll('[data-war]').forEach(b => b.onclick = async () => {
     try { await api('/api/war', { regionId: b.dataset.war }); flash('أُعلنت الحرب!', 'dmg'); refresh(); }
     catch (e) { flash(e.message, 'miss'); }
@@ -586,81 +593,346 @@ function renderWar() {
 }
 
 /* --- gov tab --- */
+/* --- gov tab: country page + countries list (WarEra country screen density) --- */
+const GOV_TABS = [['home', '🏠'], ['eco', '💰'], ['pop', '👥'], ['mil', '⚔'], ['gov', '🏛'], ['dip', '🤝']];
+const OFFICES_C = [
+  ['defense', '🛡', 'وزير الدفاع', 'أوامر القتال على المعارك — تمويل الدفاع من الخزينة — نداء الحلفاء'],
+  ['economy', '💰', 'وزير الاقتصاد', 'ضريبة الدخل والسوق — ميزانية تنمية الأقاليم'],
+  ['foreign', '🤝', 'وزير الخارجية', 'عرض وقبول السلام — التحالفات والمعاهدات — العدو اللدود'],
+  ['staff', '🎖', 'رئيس الأركان', 'إدارة الوحدة الرسمية وأوامرها وتشكيلها'],
+  ['interior', '🏠', 'وزير الداخلية', 'مقاومة وتهدئة الأقاليم — تمويل دفاعها'],
+];
+function spark(points, color) {
+  const w = 70, hh = 22;
+  if (!points || points.length < 2) points = [0, 0];
+  const min = Math.min(...points), max = Math.max(...points), span = (max - min) || 1;
+  const pts = points.map((v, ix) => `${(ix / (points.length - 1) * w).toFixed(1)},${(hh - 2 - (v - min) / span * (hh - 4)).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${hh}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5"/></svg>`;
+}
+function rankChip(r) {
+  if (!r) return '';
+  const up = r.delta > 0, dn = r.delta < 0;
+  return `<span class="rankchip ${up ? 'up' : dn ? 'dn' : ''}">${up ? '↑' : dn ? '↓' : ''}${Math.abs(r.delta) || ''} <b>#${r.rank}</b></span>`;
+}
+function relationTo(cid) {
+  const y = S.you;
+  if (cid === y.country) return null;
+  const myAl = (S.alliances || []).find(a => a.members.includes(y.country));
+  if (myAl && myAl.members.includes(cid)) return ['حليف', 'ally'];
+  const mine = S.countries[y.country], theirs = S.countries[cid];
+  const atWar = S.wars.some(w => (w.from === y.country && w.to === cid) || (w.from === cid && w.to === y.country));
+  if (atWar || (mine && mine.swornEnemy === cid) || (theirs && theirs.swornEnemy === y.country)) return ['عدو', 'foe'];
+  return ['محايد', 'neutral'];
+}
+function cname(cid) { return MAP.defs[cid] ? MAP.defs[cid].name : cid; }
+
 function renderGov() {
   const el = $('#tab-gov'), y = S.you;
-  const pub = S.countries[y.country] || {};
-  const ele = pub.election;
-  let h = `<div class="card"><h4>رئاسة ${esc(pub.name || '')}</h4>
-    <div class="kv"><span>الرئيس الحالي</span><b>${esc(pub.president || '— منصب شاغر —')}</b></div>`;
-  if (ele && ele.closesAt) {
-    const mins = Math.max(0, Math.round((ele.closesAt - Date.now()) / 60000));
-    h += `<div class="kv"><span>انتخابات مفتوحة</span><b>تقفل خلال ${mins >= 60 ? Math.floor(mins / 60) + ' س ' + mins % 60 + ' د' : mins + ' دقيقة'}</b></div>`;
-    for (const c of ele.candidates) {
-      const votes = Object.values(ele.votes || {}).filter(v => v === c).length;
-      h += `<div class="regionrow"><span>${esc(c)} <span class="pill">${votes} صوت</span></span>
-        <button class="cyan" data-vote="${esc(c)}" type="button">انتخب</button></div>`;
-    }
-    if (!ele.candidates.includes(y.name)) h += `<button class="bigbtn" id="btn-run" type="button">رشّح نفسك</button>`;
-  } else if (pub.president !== y.name) {
-    h += `<p class="hint">لو رشّحت نفسك ومفيش حد ضدك، تبقى رئيس فورًا.</p>
-      <button class="bigbtn" id="btn-run" type="button">رشّح نفسك للرئاسة</button>`;
-  }
-  h += `<h3>صلاحيات الرئيس</h3><p class="hint">يعلن حرب على أقاليم الدول الجارة (من الخريطة) — يحصّن أقاليم دولته بفلوس الخزينة — الخزينة بتتجمع من ضريبة شغل المواطنين.</p></div>`;
+  let h = `<div class="govswitch">
+    <button class="${govMode === 'country' ? 'on' : ''}" data-gmode="country" type="button">🏠 صفحة الدولة</button>
+    <button class="${govMode === 'list' ? 'on' : ''}" data-gmode="list" type="button">🌍 كل الدول</button>
+  </div>`;
+  if (govMode === 'list') h += renderCountryList();
+  else h += renderCountryPage(govCid || y.country);
+  el.innerHTML = h;
+  el.querySelectorAll('[data-gmode]').forEach(b => b.onclick = () => { govMode = b.dataset.gmode; renderGov(); });
+  el.querySelectorAll('[data-gtab]').forEach(b => b.onclick = () => { govTab = b.dataset.gtab; renderGov(); });
+  el.querySelectorAll('[data-open-country]').forEach(b => b.onclick = () => { govMode = 'country'; govCid = b.dataset.openCountry; govTab = 'home'; renderGov(); });
+  const gs = $('#gov-search');
+  if (gs) gs.oninput = () => { govSearch = gs.value; renderGov(); const n = $('#gov-search'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+  el.querySelectorAll('[data-gsort]').forEach(b => b.onclick = () => { govSort = b.dataset.gsort; renderGov(); });
+  bindGovActions(el);
+}
 
-  /* alliances */
-  const isPrez = pub.president === y.name;
-  const myAl = (S.alliances || []).find(a => a.members.includes(y.country));
-  const invites = (S.alliances || []).filter(a => a.pending.includes(y.country));
-  h += `<div class="card"><h4>التحالفات</h4>`;
-  if (myAl) {
-    h += `<div class="kv"><span>تحالفك</span><b>«${esc(myAl.name)}»</b></div>
-      <div class="kv"><span>الأعضاء</span><b>${myAl.members.map(m => esc(MAP.defs[m] ? MAP.defs[m].name : m) + (m === myAl.leader ? ' 👑' : '')).join('، ')}</b></div>`;
-    if (myAl.pending.length) h += `<div class="kv"><span>دعوات مرسلة</span><b>${myAl.pending.map(m => esc(MAP.defs[m] ? MAP.defs[m].name : m)).join('، ')}</b></div>`;
-    if (isPrez) {
-      const opts = Object.keys(S.countries).filter(c => c !== y.country && !myAl.members.includes(c) && !myAl.pending.includes(c) && !(S.alliances || []).some(a => a.members.includes(c)))
-        .map(c => `<option value="${esc(c)}">${esc(MAP.defs[c] ? MAP.defs[c].name : c)}</option>`).join('');
-      if (opts) h += `<div class="row"><select id="al-inv">${opts}</select><button class="cyan" id="btn-al-invite" type="button">ادعُ</button></div>`;
-      h += `<button class="bigbtn" id="btn-al-leave" type="button" style="margin-top:8px">اخرج من التحالف</button>`;
-    }
-    h += `<p class="hint">لون دول التحالف على الخريطة واحد — والرئيس يقدر ينادي الحلفاء لأي حرب من تاب الحرب.</p>`;
-  } else {
-    if (invites.length && isPrez) {
-      for (const a of invites) h += `<div class="regionrow"><span>دعوة من «${esc(a.name)}»</span>
-        <button class="cyan" data-al-accept="${a.id}" type="button">اقبل</button>
-        <button data-al-decline="${a.id}" type="button">ارفض</button></div>`;
-    }
-    if (isPrez) h += `<div class="row"><input type="text" id="al-name" placeholder="اسم التحالف"><button class="cyan" id="btn-al-create" type="button">أسّس تحالف</button></div>`;
-    else h += `<p class="hint">دولتك مش في تحالف. الرئيس هو اللي يقدر يأسس أو يقبل دعوات.</p>`;
+function renderCountryList() {
+  const y = S.you;
+  let rows = (S.world || []).map(w => {
+    const pub = S.countries[w.id];
+    const al = (S.alliances || []).find(a => a.members.includes(w.id));
+    return { id: w.id, name: cname(w.id), president: w.president, citizens: w.citizens, alliance: al ? al.name : null, rel: relationTo(w.id), treasury: pub ? pub.treasury : 0 };
+  });
+  if (govSearch.trim()) rows = rows.filter(r => r.name.includes(govSearch.trim()) || (r.president || '').includes(govSearch.trim()));
+  if (govSort === 'pop') rows.sort((a, b) => b.citizens - a.citizens);
+  else if (govSort === 'name') rows.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  else if (govSort === 'treasury') rows.sort((a, b) => b.treasury - a.treasury);
+  let h = `<div class="card">
+    <input type="text" id="gov-search" placeholder="ابحث عن دولة أو رئيس..." value="${esc(govSearch)}">
+    <div class="chips">
+      <button class="${govSort === 'pop' ? 'on' : ''}" data-gsort="pop" type="button">السكان</button>
+      <button class="${govSort === 'treasury' ? 'on' : ''}" data-gsort="treasury" type="button">الخزينة</button>
+      <button class="${govSort === 'name' ? 'on' : ''}" data-gsort="name" type="button">أبجدي</button>
+    </div>`;
+  for (const r of rows) {
+    h += `<div class="crow" data-open-country="${esc(r.id)}">
+      <span class="cflagdot ${r.rel ? r.rel[1] : 'me'}"></span>
+      <div class="crow-main"><b>${esc(r.name)}</b>${r.id === y.country ? ' <span class="pill">دولتك</span>' : ''}<span class="crow-sub">${esc(r.president || 'بدون رئيس')}</span></div>
+      <span class="crow-n">👥 ${r.citizens}</span>
+      ${r.alliance ? `<span class="pill albadge">${esc(r.alliance)}</span>` : ''}
+      ${r.rel ? `<span class="relchip ${r.rel[1]}">${r.rel[0]}</span>` : ''}
+    </div>`;
   }
-  h += `</div>`;
-  h += `<div class="card"><h4>منطقة المالك</h4>
-    <p class="hint">لو انت صاحب اللعبة وحسابك مش واخد الإدارة (حصل لما اتنقلنا لنظام كود المالك): اكتب كود المالك هنا وحسابك يبقى الأدمن — من غير مسح أي حاجة.</p>
+  return h + '</div>';
+}
+
+function renderCountryPage(cid) {
+  const y = S.you, pub = S.countries[cid];
+  const isOwn = cid === y.country;
+  if (!pub) return `<div class="card"><h4>${esc(cname(cid))}</h4>
+    <div class="kv"><span>الرئيس</span><b>— منصب شاغر —</b></div>
+    <div class="kv"><span>المواطنين</span><b>محدش هنا لسه</b></div>
+    <p class="hint">الدولة دي لسه مفيهاش نشاط. أول مواطن يختارها يفتح خزينتها وحكومتها.</p></div>`;
+  const myPub = S.countries[y.country] || {};
+  const isPrez = isOwn && pub.president === y.name;
+  const can = (...offs) => isOwn && (isPrez || offs.some(o => pub.offices && pub.offices[o] && pub.offices[o].name === y.name));
+  const al = (S.alliances || []).find(a => a.members.includes(cid));
+  const rel = relationTo(cid);
+  const st = pub.stats || {};
+  const filled = 1 + Object.keys(pub.offices || {}).length;
+  let h = `<div class="card chead">
+    <div class="chead-top">
+      <div class="cflagbig">${esc(pub.name.slice(0, 2))}</div>
+      <div class="chead-name"><h4>${esc(pub.name)}</h4><span class="hint">${rel ? `<span class="relchip ${rel[1]}">${rel[0]}</span>` : 'دولتك'}${pub.swornEnemy ? ` — عدو لدود: ${esc(cname(pub.swornEnemy))}` : ''}</span></div>
+      <span class="pill">المناصب ${filled}/6</span>
+    </div>
+    <div class="cfacts">
+      <div><span>💰 الدخل اليومي</span><b>${fmt(pub.dailyIncome)} ج</b></div>
+      <div><span>⚖ الحكومة</span><b>جمهورية</b></div>
+      <div><span>🤝 التحالف</span><b>${al ? esc(al.name) : '—'}</b></div>
+    </div>
+    <div class="ctabs">${GOV_TABS.map(([t, ic]) => `<button class="${govTab === t ? 'on' : ''}" data-gtab="${t}" type="button">${ic}</button>`).join('')}</div>
+  </div>`;
+
+  if (govTab === 'home') {
+    const hd = (st.hist || []);
+    const card = (label, icon, val, rk, pts, color) => `<div class="statcard">
+      <span class="sc-label">${icon} ${label}</span>
+      <div class="sc-mid"><b>${val}</b>${spark(pts, color)}</div>
+      ${rankChip(rk)}
+    </div>`;
+    h += `<div class="statgrid">
+      ${card('الضرر الأسبوعي', '🔥', fmt(st.weeklyDmg || 0), st.rankWeek, hd.map(x => x.dmg), '#ff7a90')}
+      ${card('الأسبوعي/مواطن', '🔥', fmt(st.weeklyDmgCit || 0), st.rankWeek, hd.map(x => x.dmg), '#ffb300')}
+      ${card('إجمالي الضرر', '⚔', fmt(st.totalDmg || 0), st.rankDmg, hd.map(x => x.dmg), '#b9a3ff')}
+      ${card('السكان', '👥', st.pop || 0, st.rankPop, hd.map(x => x.pop), '#00e5ff')}
+    </div>
+    <div class="statcard wide">
+      <span class="sc-label">🏗 التنمية</span>
+      <div class="sc-mid"><b>${fmt(st.dev || 0)}</b>${spark(hd.map(x => x.dev), '#4dff88')}</div>
+      ${rankChip(st.rankDev)}
+    </div>`;
+    if (pub.clogs && pub.clogs.length) h += `<div class="card ministrip"><h4>📣 آخر قرارات الدولة</h4>` +
+      pub.clogs.slice(0, 5).map(l => `<div class="clogline">${esc(l.msg)}</div>`).join('') + `</div>`;
+    h += `<div class="card"><h4>الأقاليم (${pub.regions.filter(r => r.owner === cid).length}/${pub.regions.length})</h4>` +
+      pub.regions.map(r => `<div class="regionrow"><span>${esc(r.name)}${r.owner !== cid ? ` <span class="pill">محتل: ${esc(cname(r.owner))}</span>` : ''}${pub.resist && pub.resist[r.id] > 0 ? ` <span class="pill res">مقاومة ${Math.floor(pub.resist[r.id])}%</span>` : ''}</span><span class="hint">${r.income} ج/س</span></div>`).join('') + `</div>`;
+  }
+
+  if (govTab === 'eco') {
+    h += `<div class="card"><h4>الخزينة والضرايب</h4>
+      <div class="kv"><span>الخزينة</span><b>${fmt(pub.treasury)} ج</b></div>
+      <div class="kv"><span>ضريبة الدخل</span><b>${pub.taxRate}%</b></div>
+      <div class="kv"><span>الدخل اليومي</span><b>${fmt(pub.dailyIncome)} ج</b></div>`;
+    if (can('economy')) h += `<div class="hint">غيّر الضريبة (بتتطبق على شغل المواطنين فورًا):</div>
+      <div class="chips">${[0, 5, 10, 15, 20, 25, 30].map(r2 => `<button data-tax="${r2}" class="${pub.taxRate === r2 ? 'on' : ''}" type="button">${r2}%</button>`).join('')}</div>`;
+    h += `</div><div class="card"><h4>ميزانية التنمية</h4><p class="hint">كل 100 ج تنمية = نقطة تطوير للدولة في الترتيب.</p>`;
+    for (const r of pub.regions) {
+      h += `<div class="regionrow"><span>${esc(r.name)} <span class="pill">تنمية ${fmt((pub.dev && pub.dev[r.id]) || 0)}</span></span>
+        ${can('economy') && r.owner === cid ? `<span class="chips-inline"><button class="cyan" data-devfund="${esc(r.id)}:50" type="button">+50 ج</button><button class="cyan" data-devfund="${esc(r.id)}:250" type="button">+250 ج</button></span>` : ''}</div>`;
+    }
+    h += `</div><div class="card"><h4>حيطان الدفاع</h4>`;
+    for (const r of pub.regions) {
+      const wall = (pub.defenseBonus && pub.defenseBonus[r.id]) || 0;
+      h += `<div class="regionrow"><span>${esc(r.name)} <span class="pill">حائط ${fmt(wall)}</span></span>
+        ${can('defense', 'interior') && r.owner === cid ? `<span class="chips-inline"><button class="cyan" data-deffund="${esc(r.id)}:100" type="button">+100 ج</button><button class="cyan" data-deffund="${esc(r.id)}:500" type="button">+500 ج</button></span>` : ''}</div>`;
+    }
+    h += `<p class="hint">الحائط بيتحول لأرض للمدافع في أول جولة لو اتهاجم الإقليم. التكلفة بتتخصم من الخزينة قدامك قبل ما تدوس.</p></div>`;
+  }
+
+  if (govTab === 'pop') {
+    h += `<div class="card"><h4>المواطنين (${pub.citizens.length})</h4>`;
+    const partyOf = n => { const pt = (pub.congress.seats || []).find(pt => pt.members.includes(n)); return pt ? pt.name : null; };
+    for (const n of pub.citizens) {
+      const off = Object.entries(pub.offices || {}).find(([, o]) => o.name === n);
+      const pt = partyOf(n);
+      h += `<div class="regionrow"><span>${pub.president === n ? '👑 ' : ''}${esc(n)}
+        ${off ? `<span class="pill">${OFFICES_C.find(o => o[0] === off[0])[2]}</span>` : ''}
+        ${pt ? `<span class="pill albadge">${esc(pt)}</span>` : ''}</span></div>`;
+    }
+    h += `</div>`;
+  }
+
+  if (govTab === 'mil') {
+    h += `<div class="card"><h4>🎖 ${esc(pub.unit.name)}</h4>
+      <div class="kv"><span>الأعضاء</span><b>${pub.unit.members.length ? pub.unit.members.map(m => esc(m)).join('، ') : 'فاضية'}</b></div>
+      <div class="kv"><span>التركيز الحالي</span><b>${pub.unit.focusWar ? 'معركة #' + pub.unit.focusWar : '—'}</b></div>`;
+    if (can('staff')) {
+      const warOpts = S.wars.filter(w => w.from === cid || w.to === cid).map(w => `<option value="${w.id}">#${w.id} ${esc(w.regionName || '')}</option>`).join('');
+      const czOpts = pub.citizens.filter(n => !pub.unit.members.includes(n)).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      h += `<div class="row"><input type="text" id="unit-name" placeholder="اسم الوحدة"><button class="cyan" id="btn-unit-name" type="button">سمّي</button></div>`;
+      if (warOpts) h += `<div class="row"><select id="unit-focus">${warOpts}</select><button class="cyan" id="btn-unit-focus" type="button">وجّه الوحدة</button></div>`;
+      if (czOpts) h += `<div class="row"><select id="unit-inv">${czOpts}</select><button class="cyan" id="btn-unit-inv" type="button">ضمّ</button></div>`;
+      if (pub.unit.members.length) h += `<div class="chips">${pub.unit.members.map(m => `<button data-unit-kick="${esc(m)}" type="button">اطرد ${esc(m)}</button>`).join('')}</div>`;
+    }
+    h += `</div><div class="card"><h4>حروب الدولة</h4>`;
+    const cw = S.wars.filter(w => w.from === cid || w.to === cid);
+    h += cw.length ? cw.map(w => `<div class="regionrow"><span>${esc(cname(w.from))} × ${esc(cname(w.to))} — ${esc(w.regionName || '')}</span><button class="cyan" data-open-war="${w.id}" type="button">افتح المعركة</button></div>`).join('') : '<p class="hint">لا حروب حاليًا.</p>';
+    h += `</div>`;
+  }
+
+  if (govTab === 'gov') {
+    h += `<div class="card"><h4>الحكومة</h4>
+      <div class="ministers">
+        <div class="mincard ${pub.president ? '' : 'empty'}"><span class="mi-icon">⭐</span><span class="mi-title">الرئيس</span>
+          ${pub.president ? `<div class="favatar sm">${esc(pub.president[0].toUpperCase())}</div><b>${esc(pub.president)}</b>` : '<div class="favatar sm empty-slot"></div><b class="hint">شاغر</b>'}
+        </div>
+        ${OFFICES_C.map(([k, ic, title]) => {
+          const o = (pub.offices || {})[k];
+          return `<div class="mincard ${o ? '' : 'empty'}"><span class="mi-icon">${ic}</span><span class="mi-title">${title}</span>
+            ${o ? `<div class="favatar sm">${esc(o.name[0].toUpperCase())}<span class="flvl">${o.level}</span></div><b>${esc(o.name)}</b>
+              ${isPrez ? `<button class="mini danger" data-dismiss="${k}" type="button">إقالة</button>` : ''}` : '<div class="favatar sm empty-slot"></div><b class="hint">شاغر</b>'}
+          </div>`;
+        }).join('')}
+      </div>`;
+    if (isPrez) {
+      const czOpts = pub.citizens.filter(n => n !== pub.president && !Object.values(pub.offices || {}).some(o => o.name === n)).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      if (czOpts) h += `<div class="row"><select id="appoint-office">${OFFICES_C.filter(([k]) => !(pub.offices || {})[k]).map(([k, , t]) => `<option value="${k}">${t}</option>`).join('')}</select>
+        <select id="appoint-name">${czOpts}</select><button class="cyan" id="btn-appoint" type="button">عيّن</button></div>`;
+    }
+    h += `<div class="hint" style="margin-top:6px">${OFFICES_C.map(([k, ic, t, pw]) => `${ic} <b>${t}</b>: ${pw}`).join('<br>')}</div></div>`;
+
+    const cg = pub.congress || { seats: [], majority: 0, total: 20 };
+    h += `<div class="card"><h4>الكونجرس — الأغلبية ${cg.majority} / ${cg.total} مقعد</h4>
+      <div class="majbar">${cg.seats.map(s => `<div style="width:${s.seats / cg.total * 100}%;background:${s.color}" title="${esc(s.name)}"></div>`).join('')}</div>`;
+    for (const s of cg.seats) {
+      h += `<div class="regionrow"><span><span class="pdot" style="background:${s.color}"></span> ${esc(s.name)}
+        <span class="pav">${s.members.slice(0, 5).map(m => `<span class="favatar xs">${esc(m[0].toUpperCase())}</span>`).join('')}</span></span>
+        <b>${s.seats} (${Math.round(s.seats / cg.total * 100)}%)</b></div>`;
+    }
+    const myParty = cg.seats.find(s => s.members.includes(y.name));
+    if (isOwn) {
+      h += myParty ? `<p class="hint">حزبك: «${esc(myParty.name)}»</p>` :
+        `<div class="row"><input type="text" id="party-name" placeholder="اسم حزب جديد (500 ج)"><button class="cyan" id="btn-party-found" type="button">أسّس</button></div>`;
+      const others = cg.seats.filter(s => !s.members.includes(y.name));
+      if (others.length) h += `<div class="chips">${others.map(s => `<button data-party-join="${s.id}" type="button">انضم لـ«${esc(s.name)}»</button>`).join('')}</div>`;
+    }
+    h += `</div>`;
+
+    const ele = pub.election;
+    h += `<div class="card"><h4>الرئاسة</h4>
+      <div class="kv"><span>الرئيس الحالي</span><b>${esc(pub.president || '— منصب شاغر —')}</b></div>`;
+    if (ele && ele.closesAt) {
+      const mins = Math.max(0, Math.round((ele.closesAt - Date.now()) / 60000));
+      h += `<div class="kv"><span>انتخابات مفتوحة</span><b>تقفل خلال ${mins >= 60 ? Math.floor(mins / 60) + ' س ' + mins % 60 + ' د' : mins + ' دقيقة'}</b></div>`;
+      for (const c of ele.candidates) {
+        const votes = Object.values(ele.votes || {}).filter(v => v === c).length;
+        h += `<div class="regionrow"><span>${esc(c)} <span class="pill">${votes} صوت</span></span>
+          ${isOwn ? `<button class="cyan" data-vote="${esc(c)}" type="button">انتخب</button>` : ''}</div>`;
+      }
+      if (isOwn && !ele.candidates.includes(y.name)) h += `<button class="bigbtn" id="btn-run" type="button">رشّح نفسك</button>`;
+    } else if (isOwn && pub.president !== y.name) {
+      h += `<p class="hint">لو رشّحت نفسك ومفيش حد ضدك، تبقى رئيس فورًا.</p>
+        <button class="bigbtn" id="btn-run" type="button">رشّح نفسك للرئاسة</button>`;
+    }
+    h += `</div>`;
+  }
+
+  if (govTab === 'dip') {
+    const invites = (S.alliances || []).filter(a => a.pending.includes(cid));
+    h += `<div class="card"><h4>التحالفات</h4>`;
+    if (al) {
+      h += `<div class="kv"><span>التحالف</span><b>«${esc(al.name)}»</b></div>
+        <div class="kv"><span>الأعضاء</span><b>${al.members.map(m => esc(cname(m)) + (m === al.leader ? ' 👑' : '')).join('، ')}</b></div>`;
+      if (al.pending.length) h += `<div class="kv"><span>دعوات مرسلة</span><b>${al.pending.map(m => esc(cname(m))).join('، ')}</b></div>`;
+      if (can('foreign')) {
+        const opts = (S.world || []).filter(w => w.id !== cid && !al.members.includes(w.id) && !al.pending.includes(w.id) && !(S.alliances || []).some(a => a.members.includes(w.id)))
+          .map(w => `<option value="${esc(w.id)}">${esc(cname(w.id))}</option>`).join('');
+        if (opts) h += `<div class="row"><select id="al-inv">${opts}</select><button class="cyan" id="btn-al-invite" type="button">ادعُ</button></div>`;
+        h += `<button class="bigbtn" id="btn-al-leave" type="button" style="margin-top:8px">اخرج من التحالف</button>`;
+      }
+    } else {
+      if (invites.length && can('foreign')) {
+        for (const a of invites) h += `<div class="regionrow"><span>دعوة من «${esc(a.name)}»</span>
+          <button class="cyan" data-al-accept="${a.id}" type="button">اقبل</button>
+          <button data-al-decline="${a.id}" type="button">ارفض</button></div>`;
+      }
+      if (can('foreign')) h += `<div class="row"><input type="text" id="al-name" placeholder="اسم التحالف"><button class="cyan" id="btn-al-create" type="button">أسّس تحالف</button></div>`;
+      else h += `<p class="hint">الدولة مش في تحالف.</p>`;
+    }
+    h += `</div><div class="card"><h4>العدو اللدود</h4>
+      <div class="kv"><span>الحالي</span><b>${pub.swornEnemy ? esc(cname(pub.swornEnemy)) : '—'}</b></div>`;
+    if (can('foreign')) {
+      const opts = (S.world || []).filter(w => w.id !== cid).map(w => `<option value="${esc(w.id)}">${esc(cname(w.id))}</option>`).join('');
+      h += `<div class="row"><select id="enemy-sel">${opts}</select><button class="danger" id="btn-enemy" type="button">أعلن عدوًا لدودًا</button></div>
+        ${pub.swornEnemy ? '<button id="btn-enemy-clear" type="button">اسحب الإعلان</button>' : ''}`;
+    }
+    h += `</div><div class="card"><h4>السلام</h4>`;
+    const cw = S.wars.filter(w => w.from === cid || w.to === cid);
+    h += cw.length && can('foreign') ? cw.map(w => `<div class="regionrow"><span>حرب ${esc(w.regionName || '')}</span><button class="cyan" data-peace="${w.id}" type="button">اعرض / اقبل السلام</button></div>`).join('')
+      : '<p class="hint">' + (cw.length ? 'حروب جارية — قرارات السلام للرئيس أو وزير الخارجية.' : 'لا حروب حاليًا.') + '</p>';
+    h += `</div>`;
+  }
+
+  if (isOwn) h += `<div class="card"><h4>منطقة المالك</h4>
+    <p class="hint">لو انت صاحب اللعبة وحسابك مش واخد الإدارة: اكتب كود المالك هنا.</p>
     <div class="row"><input type="text" id="claim-secret" placeholder="كود المالك (ADMIN_SECRET)"><button class="cyan" id="btn-claim" type="button">استلم الملكية</button></div>
   </div>`;
-  el.innerHTML = h;
+  return h;
+}
+
+function bindGovActions(el) {
+  const y = S.you;
   const run = $('#btn-run');
-  if (run) run.onclick = async () => {
-    try { await api('/api/run'); flash('تم', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
-  };
+  if (run) run.onclick = async () => { try { await api('/api/run'); flash('تم', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
   const claim = $('#btn-claim');
-  if (claim) claim.onclick = async () => {
-    try { await api('/api/claim', { secret: $('#claim-secret').value }); flash('انت المالك دلوقتي ★', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
-  };
+  if (claim) claim.onclick = async () => { try { await api('/api/claim', { secret: $('#claim-secret').value }); flash('انت المالك دلوقتي ★', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
   el.querySelectorAll('[data-vote]').forEach(b => b.onclick = async () => {
     try { await api('/api/vote', { candidate: b.dataset.vote }); flash('صوتك اتحسب', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
   });
+  el.querySelectorAll('[data-tax]').forEach(b => b.onclick = async () => {
+    try { await api('/api/country/tax', { rate: Number(b.dataset.tax) }); flash('الضريبة اتغيرت لـ ' + b.dataset.tax + '%', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-devfund]').forEach(b => b.onclick = async () => {
+    const [regionId, amount] = b.dataset.devfund.split(':');
+    try { await api('/api/country/devfund', { regionId, amount: Number(amount) }); flash(`اتخصص ${amount} ج للتنمية`, 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-deffund]').forEach(b => b.onclick = async () => {
+    const [regionId, amount] = b.dataset.deffund.split(':');
+    try { await api('/api/defense', { regionId, amount: Number(amount) }); flash(`الحائط اتموّل بـ ${amount} ج`, 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-dismiss]').forEach(b => b.onclick = async () => {
+    try { await api('/api/country/dismiss', { office: b.dataset.dismiss }); flash('اتقال', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  const ap = $('#btn-appoint');
+  if (ap) ap.onclick = async () => {
+    try { await api('/api/country/appoint', { office: $('#appoint-office').value, name: $('#appoint-name').value }); flash('اتعيّن', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  };
+  const pf = $('#btn-party-found');
+  if (pf) pf.onclick = async () => { try { await api('/api/party/found', { name: $('#party-name').value }); flash('الحزب اتأسس', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
+  el.querySelectorAll('[data-party-join]').forEach(b => b.onclick = async () => {
+    try { await api('/api/party/join', { partyId: Number(b.dataset.partyJoin) }); flash('انضممت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  const un = $('#btn-unit-name');
+  if (un) un.onclick = async () => { try { await api('/api/unit/name', { name: $('#unit-name').value }); flash('اتسمت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
+  const uf = $('#btn-unit-focus');
+  if (uf) uf.onclick = async () => { try { await api('/api/unit/focus', { warId: Number($('#unit-focus').value) }); flash('الوحدة اتحجزت على المعركة', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
+  const ui = $('#btn-unit-inv');
+  if (ui) ui.onclick = async () => { try { await api('/api/unit/invite', { name: $('#unit-inv').value }); flash('اتضمّ', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
+  el.querySelectorAll('[data-unit-kick]').forEach(b => b.onclick = async () => {
+    try { await api('/api/unit/kick', { name: b.dataset.unitKick }); flash('اتطرد', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-open-war]').forEach(b => b.onclick = () => { battleView = Number(b.dataset.openWar); curTab = 'war'; render(true); });
+  const en = $('#btn-enemy');
+  if (en) en.onclick = async () => { try { await api('/api/country/enemy', { country: $('#enemy-sel').value }); flash('اتعلن العدو اللدود', 'dmg'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
+  const enc = $('#btn-enemy-clear');
+  if (enc) enc.onclick = async () => { try { await api('/api/country/enemy', { country: '' }); flash('اتسحب الإعلان', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
+  el.querySelectorAll('[data-peace]').forEach(b => b.onclick = async () => {
+    try { const d = await api('/api/war/peace', { warId: Number(b.dataset.peace) }); flash(d.peace ? 'تم السلام!' : 'عرض السلام اتبعت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
   const alCreate = $('#btn-al-create');
-  if (alCreate) alCreate.onclick = async () => {
-    try { await api('/api/alliance/create', { name: $('#al-name').value }); flash('التحالف اتأسس', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
-  };
+  if (alCreate) alCreate.onclick = async () => { try { await api('/api/alliance/create', { name: $('#al-name').value }); flash('التحالف اتأسس', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
   const alInv = $('#btn-al-invite');
-  if (alInv) alInv.onclick = async () => {
-    try { await api('/api/alliance/invite', { country: $('#al-inv').value }); flash('الدعوة اتبعتت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
-  };
+  if (alInv) alInv.onclick = async () => { try { await api('/api/alliance/invite', { country: $('#al-inv').value }); flash('الدعوة اتبعتت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
   const alLeave = $('#btn-al-leave');
-  if (alLeave) alLeave.onclick = async () => {
-    try { await api('/api/alliance/leave'); flash('خرجت من التحالف', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
-  };
+  if (alLeave) alLeave.onclick = async () => { try { await api('/api/alliance/leave'); flash('خرجت من التحالف', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
   el.querySelectorAll('[data-al-accept]').forEach(b => b.onclick = async () => {
     try { await api('/api/alliance/accept', { id: b.dataset.alAccept }); flash('انضممت للتحالف', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
   });
@@ -753,4 +1025,7 @@ const qp = new URLSearchParams(location.search);
 if (qp.get('token')) { token = qp.get('token'); localStorage.setItem('raad_token', token); }
 if (qp.get('tab')) curTab = qp.get('tab');
 if (qp.get('battle')) battleView = Number(qp.get('battle'));
+if (qp.get('gmode')) govMode = qp.get('gmode');
+if (qp.get('gcountry')) { govMode = 'country'; govCid = qp.get('gcountry'); }
+if (qp.get('gtab')) govTab = qp.get('gtab');
 if (token) boot(); else show('auth');
