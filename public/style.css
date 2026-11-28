@@ -315,3 +315,17 @@ button.mini{font-size:9px;padding:3px 8px}
 .majbar div{transition:width .4s}
 .pdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:4px}
 .pav{display:inline-flex;margin-inline-start:6px}
+
+/* map modes + region overlay */
+#mapmodes{position:absolute;top:104px;left:8px;display:flex;gap:6px;z-index:5;flex-wrap:wrap;max-width:70%}
+#mapmodes button{flex:0 0 auto;background:#141126d9;border:1px solid var(--line2);color:var(--mut);font-size:.72rem;padding:5px 10px;border-radius:999px;backdrop-filter:blur(4px);box-shadow:none;font-weight:600}
+#mapmodes button.on{background:var(--vio);border-color:var(--vio2);color:#fff;box-shadow:0 0 10px #7c4dff88}
+.regions-overlay,.war-pins{pointer-events:none}
+.regions-overlay .regmap-rect{fill:#453a85;stroke:#0c0a1a;stroke-width:.6;opacity:.92}
+.regions-overlay .regmap-rect.occupied{stroke-dasharray:3 2}
+.regions-overlay .regmap-label{fill:#e8e6ff;text-anchor:middle;font-weight:600;paint-order:stroke;stroke:#0c0a1a}
+.regions-overlay .wpin{font-size:12px;text-anchor:middle;animation:pinpulse 1.4s ease-in-out infinite}
+.war-pins .wpin.big{font-size:16px;text-anchor:middle;animation:pinpulse 1.4s ease-in-out infinite}
+.regmap-outline{fill:none;stroke:var(--cyan);stroke-width:1.6;pointer-events:none;filter:drop-shadow(0 0 6px #00e5ffcc)}
+.regmap-outline.mine{stroke:#7c4dff;filter:drop-shadow(0 0 6px #7c4dffcc)}
+@keyframes pinpulse{0%,100%{opacity:1}50%{opacity:.35}}

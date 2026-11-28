@@ -4,7 +4,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 let token = localStorage.getItem('raad_token') || '';
-const CLIENT_VERSION = '1.3.0';
+const CLIENT_VERSION = '1.4.0';
 let S = null, MAP = null;
 let selCountry = null;
 let battle = { warId: null, ammo: 'none' };
@@ -13,6 +13,7 @@ let govMode = 'country'; // country | list
 let govCid = null;       // viewed country (null = own)
 let govTab = 'home';     // home|eco|pop|mil|gov|dip
 let govSearch = '', govSort = 'pop';
+let mapMode = 'pol'; // pol | ally | war | dev
 let prevOwners = {};
 
 async function api(path, body) {
@@ -68,7 +69,12 @@ function mapSVG() {
 function makePannable(stage, onTap) {
   const st = { x: 0, y: 0, k: 1 };
   const svg = () => stage.querySelector('svg');
-  const apply = () => { const s = svg(); if (s) s.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.k})`; };
+  let lastK = 1;
+  const apply = () => {
+    const s = svg(); if (s) s.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.k})`;
+    window.__mapZoom = st.k;
+    if (Math.abs(st.k - lastK) > 0.2) { lastK = st.k; if (window.__overlayRebuild) window.__overlayRebuild(); }
+  };
   const pts = new Map();
   let pinch = null, moved = 0, downAt = 0;
   stage.addEventListener('pointerdown', e => {
@@ -125,24 +131,155 @@ function makePannable(stage, onTap) {
 
 /* colors: own=violet, at-war=red pulsing, has citizens=cyan-dark, selected=cyan outline; alliance=colored stroke */
 const ALLY_COLORS = ['#f59e0b', '#22d3ee', '#a3e635', '#f472b6', '#fb7185', '#818cf8'];
+function countryFill(cid) {
+  const y = S.you, pub = S.countries[cid];
+  if (mapMode === 'ally') {
+    const i2 = (S.alliances || []).findIndex(a => a.members.includes(cid));
+    return i2 >= 0 ? ALLY_COLORS[i2 % ALLY_COLORS.length] : '#211d3f';
+  }
+  if (mapMode === 'war') {
+    return (pub && pub.wars && pub.wars.length) ? '' : '#141126'; // war countries keep their pulse class
+  }
+  if (mapMode === 'dev') {
+    const d = pub && pub.stats ? pub.stats.dev : 0;
+    const t = Math.min(1, d / 50);
+    return `rgba(77,255,136,${(0.07 + t * 0.55).toFixed(2)})`;
+  }
+  return ''; // political: classes drive it
+}
 function updateMapColors(stageEl) {
   if (!S || !MAP) return;
   const alMap = {};
   (S.alliances || []).forEach((a, i) => a.members.forEach(m => { alMap[m] = i; }));
-  stageEl.querySelectorAll('path').forEach(p => {
+  stageEl.querySelectorAll('path[data-c]').forEach(p => {
     const c = p.dataset.c;
     const pub = S.countries[c];
     let cl = '';
-    if (S.you && S.you.country === c) cl = 'own';
-    else if (pub && pub.wars && pub.wars.length) cl = 'war';
-    else if (pub && pub.citizens && pub.citizens.length) cl = 'cit';
-    if (selCountry === c) cl += ' sel';
+    if (mapMode === 'pol' || mapMode === 'war') {
+      if (mapMode === 'pol') {
+        if (S.you && S.you.country === c) cl = 'own';
+        else if (pub && pub.wars && pub.wars.length) cl = 'war';
+        else if (pub && pub.citizens && pub.citizens.length) cl = 'cit';
+      } else if (pub && pub.wars && pub.wars.length) cl = 'war';
+      if (selCountry === c) cl += ' sel';
+      if (p.style.fill) p.style.fill = '';
+    } else {
+      const f = countryFill(c);
+      if (p.style.fill !== f) p.style.fill = f;
+      if (selCountry === c) cl = 'sel';
+    }
     if (p.className.baseVal !== cl) p.className.baseVal = cl;
-    const ai = alMap[c];
+    const ai = mapMode === 'ally' ? undefined : alMap[c];
     const stroke = ai !== undefined ? ALLY_COLORS[ai % ALLY_COLORS.length] : '';
     if (p.style.stroke !== stroke) { p.style.stroke = stroke; p.style.strokeWidth = stroke ? '1.6' : ''; }
   });
+  buildRegionOverlay(stageEl);
+  buildWarPins(stageEl);
 }
+
+/* region-level overlay: the selected country splits into its real regions, colored by owner */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function buildRegionOverlay(stageEl) {
+  window.__overlayRebuild = () => buildRegionOverlay(stageEl);
+  const svg = stageEl.querySelector('svg');
+  if (!svg) return;
+  let old = svg.querySelector('g.regions-overlay');
+  if (old) old.remove();
+  if (!selCountry || !S.countries[selCountry]) return;
+  const pathEl = svg.querySelector(`path[data-c="${CSS.escape(selCountry)}"]`);
+  if (!pathEl) return;
+  const bb = pathEl.getBBox();
+  const pub = S.countries[selCountry];
+  const regs = pub.regions || [];
+  if (!regs.length) return;
+  let defs = svg.querySelector('defs.mapdefs');
+  if (!defs) { defs = document.createElementNS(SVGNS, 'defs'); defs.setAttribute('class', 'mapdefs'); svg.prepend(defs); }
+  const clipId = 'clip-' + selCountry.replace(/\W/g, '_');
+  let clip = defs.querySelector('#' + clipId);
+  if (clip) clip.remove();
+  clip = document.createElementNS(SVGNS, 'clipPath');
+  clip.setAttribute('id', clipId);
+  const cp = document.createElementNS(SVGNS, 'path');
+  cp.setAttribute('d', pathEl.getAttribute('d'));
+  clip.appendChild(cp);
+  defs.appendChild(clip);
+  const g = document.createElementNS(SVGNS, 'g');
+  g.setAttribute('class', 'regions-overlay');
+  g.setAttribute('clip-path', `url(#${clipId})`);
+  const n = regs.length;
+  const horiz = bb.width >= bb.height;
+  regs.forEach((r, i2) => {
+    const rx = horiz ? bb.x : bb.x + i2 * bb.width / n;
+    const ry = horiz ? bb.y + i2 * bb.height / n : bb.y;
+    const rw = horiz ? bb.width : bb.width / n;
+    const rh = horiz ? bb.height / n : bb.height;
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', rx); rect.setAttribute('y', ry);
+    rect.setAttribute('width', rw); rect.setAttribute('height', rh);
+    const owned = r.owner !== selCountry;
+    rect.setAttribute('class', 'regmap-rect' + (owned ? ' occupied' : ''));
+    if (owned) rect.style.fill = occupierFill(r.owner);
+    g.appendChild(rect);
+    const cx = rx + rw / 2, cy = ry + rh / 2;
+    const k = window.__mapZoom || 1;
+    const fs = Math.min(9, 12 / k); // ~12px on screen at any zoom
+    const fits = (r.name.length + (owned ? 2 : 0)) * fs * 0.62 < rw && rh * k >= 13;
+    if (fits) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', cx); t.setAttribute('y', cy + fs * 0.35);
+      t.setAttribute('class', 'regmap-label');
+      t.setAttribute('font-size', fs.toFixed(1));
+      t.setAttribute('stroke-width', (fs * 0.22).toFixed(1));
+      t.textContent = r.name + (owned ? ' ⚑' : '');
+      g.appendChild(t);
+    }
+    const war = S.wars.find(w => w.regionId === r.id);
+    if (war) {
+      const pin = document.createElementNS(SVGNS, 'text');
+      pin.setAttribute('x', cx); pin.setAttribute('y', cy - (rh > 20 ? 8 : 0));
+      pin.setAttribute('class', 'wpin');
+      pin.setAttribute('font-size', (14 / (window.__mapZoom || 1)).toFixed(1));
+      pin.textContent = '⚔';
+      g.appendChild(pin);
+    }
+  });
+  const outline = document.createElementNS(SVGNS, 'path');
+  outline.setAttribute('d', pathEl.getAttribute('d'));
+  outline.setAttribute('class', 'regmap-outline' + (selCountry === S.you.country ? ' mine' : ''));
+  svg.appendChild(outline);
+  svg.appendChild(g);
+}
+function occupierFill(cid) {
+  // occupied region takes a hostile tint of the occupier's alliance/political color
+  if (mapMode === 'ally') {
+    const i2 = (S.alliances || []).findIndex(a => a.members.includes(cid));
+    return i2 >= 0 ? ALLY_COLORS[i2 % ALLY_COLORS.length] : '#6b2233';
+  }
+  return S.you && S.you.country === cid ? '#7c4dff' : '#a02040';
+}
+function buildWarPins(stageEl) {
+  const svg = stageEl.querySelector('svg');
+  if (!svg) return;
+  let old = svg.querySelector('g.war-pins');
+  if (old) old.remove();
+  if (mapMode !== 'war' || !S.wars.length) return;
+  const g = document.createElementNS(SVGNS, 'g');
+  g.setAttribute('class', 'war-pins');
+  const seen = {};
+  for (const w of S.wars) {
+    if (seen[w.to]) continue; seen[w.to] = 1;
+    const pathEl = svg.querySelector(`path[data-c="${CSS.escape(w.to)}"]`);
+    if (!pathEl) continue;
+    const bb = pathEl.getBBox();
+    const pin = document.createElementNS(SVGNS, 'text');
+    pin.setAttribute('x', bb.x + bb.width / 2); pin.setAttribute('y', bb.y + bb.height / 2);
+    pin.setAttribute('class', 'wpin big');
+    pin.textContent = '⚔';
+    g.appendChild(pin);
+  }
+  svg.appendChild(g);
+}
+
 function detectFlips() {
   if (!S) return;
   const now = {};
@@ -164,8 +301,18 @@ async function boot() {
   stampVersion(S.version);
   if (!S.you.country) { buildPick(); show('pick'); return; }
   if (!$('#stage svg')) {
-    $('#stage').innerHTML = mapSVG();
+    $('#stage').innerHTML = mapSVG() + `<div id="mapmodes">
+      <button data-mmode="pol" type="button">🗺 سياسي</button>
+      <button data-mmode="ally" type="button">🤝 تحالفات</button>
+      <button data-mmode="war" type="button">⚔ حروب</button>
+      <button data-mmode="dev" type="button">🏗 تنمية</button>
+    </div>`;
     makePannable($('#stage'), c => { selCountry = selCountry === c ? null : c; render(true); });
+    $('#stage').querySelectorAll('[data-mmode]').forEach(b => b.onclick = () => {
+      mapMode = b.dataset.mmode; updateMapColors($('#stage'));
+      $('#stage').querySelectorAll('[data-mmode]').forEach(x => x.classList.toggle('on', x === b));
+    });
+    $('#stage').querySelectorAll('[data-mmode]').forEach(x => x.classList.toggle('on', x.dataset.mmode === mapMode));
   }
   $('#btn-tab-admin').classList.toggle('hidden', !S.you.admin);
   show('game');
@@ -1028,4 +1175,6 @@ if (qp.get('battle')) battleView = Number(qp.get('battle'));
 if (qp.get('gmode')) govMode = qp.get('gmode');
 if (qp.get('gcountry')) { govMode = 'country'; govCid = qp.get('gcountry'); }
 if (qp.get('gtab')) govTab = qp.get('gtab');
+if (qp.get('selc')) selCountry = qp.get('selc');
+if (qp.get('mmode')) mapMode = qp.get('mmode');
 if (token) boot(); else show('auth');
