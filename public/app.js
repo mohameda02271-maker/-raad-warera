@@ -88,13 +88,32 @@ function buildPickMap() {
 $('#tabs').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   curTab = b.dataset.tab;
-  [...$('#tabs').children].forEach(x => x.classList.toggle('on', x === b));
-  ['map', 'home', 'war', 'gov', 'admin'].forEach(t => $('#tab-' + t).classList.toggle('hidden', t !== curTab));
-  render();
+  render(true);
 };
 
 /* ---------- render ---------- */
-function render() {
+/* The 3s poll must never clobber what the user is typing: each tab re-renders
+   only when the data it shows actually changes, and never while an input has focus. */
+let lastTabKey = null;
+let pendingTabRender = false;
+
+function tabDataKey() {
+  const y = S.you;
+  switch (curTab) {
+    case 'home': return JSON.stringify([y.money, y.skillPoints, y.skills, y.weapon, y.armorGear, y.ammo, y.foods, y.companiesOwned]);
+    case 'war': return JSON.stringify([S.wars, y.ammo, battle]);
+    case 'gov': { const c = S.countries[y.country] || {}; return JSON.stringify([c.president, c.election, c.treasury]); }
+    case 'map': return JSON.stringify([S.countries, S.wars, selCountry]);
+    case 'admin': return JSON.stringify([S.speed]);
+    default: return '';
+  }
+}
+const isTyping = () => {
+  const a = document.activeElement;
+  return a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
+};
+
+function render(force) {
   if (!S || !S.you.country) return;
   [...$('#tabs').children].forEach(x => x.classList.toggle('on', x.dataset.tab === curTab));
   ['map', 'home', 'war', 'gov', 'admin'].forEach(t => $('#tab-' + t).classList.toggle('hidden', t !== curTab));
@@ -115,13 +134,33 @@ function render() {
     bar('طاقة', y.bars.energy, y.barMax.energy, 'energy') +
     bar('مستوى ' + y.level, y.xp - xpBase, y.levelXp, 'xp');
 
-  if (curTab === 'map') renderMap();
-  else if (curTab === 'home') renderHome();
-  else if (curTab === 'war') renderWar();
-  else if (curTab === 'gov') renderGov();
-  else if (curTab === 'admin') renderAdmin();
+  const key = curTab + '|' + tabDataKey();
+  if (force || key !== lastTabKey) {
+    if (typingSafeToRender(force)) {
+      lastTabKey = key;
+      if (curTab === 'map') renderMap();
+      else if (curTab === 'home') renderHome();
+      else if (curTab === 'war') renderWar();
+      else if (curTab === 'gov') renderGov();
+      else if (curTab === 'admin') renderAdmin();
+    } else {
+      pendingTabRender = true;
+    }
+  }
   renderLog();
 }
+function typingSafeToRender(force) {
+  return force || !isTyping();
+}
+document.addEventListener('focusout', () => {
+  if (!pendingTabRender) return;
+  setTimeout(() => {
+    if (!pendingTabRender || isTyping()) return; // moved into another field: keep deferring
+    pendingTabRender = false;
+    lastTabKey = null;
+    render();
+  }, 0);
+});
 function bar(label, c, m, cls) {
   return `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${cls}" style="width:${pct(c, m)}%"></div></div><span class="val">${fmt(c)}/${m}</span></div>`;
 }
