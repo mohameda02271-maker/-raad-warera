@@ -937,12 +937,7 @@ body{background:radial-gradient(60% 40% at 85% -5%,#7c3aed55 0%,transparent 60%)
   <footer class="app-footer">
     <div>
       <span>⚡ تطوير وتصميم: </span>
-      <strong style="color:var(--green)">Ayyubi_Warrior2</strong>
-    </div>
-    <div>
-      <a href="https://app.warera.io/user/6a8c8fe0ce8d67de63e1420c" target="_blank" rel="noopener noreferrer">
-        https://app.warera.io/user/6a8c8fe0ce8d67de63e1420c
-      </a>
+      <a id="footerName" href="https://app.warera.io/user/6a8c8fe0ce8d67de63e1420c" target="_blank" rel="noopener noreferrer" style="color:var(--green);font-weight:700">GREAT-AYYUBI</a>
     </div>
   </footer>
 </main>
@@ -3544,6 +3539,8 @@ function syncWarBuilderFromMain(){
 }
 
 loadKeys();
+// Footer credit follows the in-game name (falls back to the text above if the API is unreachable).
+trpc('user.getUserLite', { userId: '6a8c8fe0ce8d67de63e1420c' }).then(u => { const n = u && (u.username || u.user?.username); if(n) $('footerName').textContent = n; }).catch(() => {});
 document.querySelectorAll('.sus-in').forEach(el => { const v = localStorage.getItem('raad_sus_' + el.id); if(v !== null) el.value = v; });
 setInterval(() => { const S = window.susAuto; if(S && S.debuffEnd && !S.expired && Date.now() > S.debuffEnd) recalcAll(); }, 30000);
 fetch('https://api2.warera.io/trpc/itemTrading.getPrices').then(r => r.json()).then(j => { window.susPrices = j?.result?.data || {}; recalcAll(); }).catch(() => {});
