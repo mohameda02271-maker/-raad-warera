@@ -1075,6 +1075,7 @@ function saveKeys(){
   localStorage.setItem('raad_warera_key', $('wareraKey').value.trim());
   localStorage.setItem('raad_gemini_key', $('geminiKey').value.trim());
   updateAiBadge();
+  if(typeof updateKeyStatus === 'function') updateKeyStatus();
 }
 
 function loadKeys(){
