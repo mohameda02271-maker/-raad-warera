@@ -911,6 +911,7 @@ body{background:radial-gradient(60% 40% at 85% -5%,#7c3aed55 0%,transparent 60%)
           <div class="stat-box"><small>🤝 الحلفاء واتفاقيات الدفاع</small><strong id="cIntelAllies" class="blue">-</strong><div class="hint" id="cIntelAlliesSub">التحالف والـ MPPs</div></div>
         </div>
         <div class="spy-grid" id="cIntelExtraGrid" style="margin-bottom:12px"></div>
+        <div id="cIntelPlayers" class="stat-box" style="margin-bottom:12px;text-align:right"></div>
         <div id="cIntelDetails" class="hint" style="color:var(--ink);line-height:1.7"></div>
       </div>
 
@@ -1175,6 +1176,86 @@ async function tryFetchTrpcUrl(url, headers, label, timeoutMs){
 function appendCacheBust(url){
   const sep = url.includes('?') ? '&' : '?';
   return `${url}${sep}_t=${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// ===== Egypt/country players: count + eco/war split =====
+const WAR_SKILLS = ['attack','precision','criticalChance','criticalDamages','armor','dodge'];
+const ECO_SKILLS = ['production','companies','management'];
+function playersCacheKey(cId){ return 'raad_cplayers_' + cId; }
+function loadPlayersCache(cId){
+  try{ const o = JSON.parse(localStorage.getItem(playersCacheKey(cId)) || 'null'); if(o && Date.now() - o.ts < 6*3600*1000) return o; }catch(_){}
+  return null;
+}
+async function countPlayersInCountry(cId){
+  const ctx = window.__cIntelCtx; if(!ctx || ctx.cId !== cId) return;
+  ctx.total = null;
+  try{
+    const ids = []; let cursor = null;
+    for(let i = 0; i < 40; i++){
+      const inp = { countryId: cId, limit: 100 }; if(cursor) inp.cursor = cursor;
+      const d = await trpc('user.getUsersByCountry', inp);
+      const items = (d && d.items) || [];
+      items.forEach(x => ids.push(x._id || x));
+      cursor = d && d.nextCursor;
+      if(!cursor || !items.length) break;
+    }
+    ctx.ids = ids; ctx.total = ids.length;
+  }catch(e){ ctx.totalErr = e.message; }
+  renderCountryPlayers();
+}
+function classifyPlayer(u){
+  const lv = k => Number(u?.skills?.[k]?.level) || 0;
+  const war = WAR_SKILLS.reduce((a,k) => a + lv(k), 0);
+  const eco = ECO_SKILLS.reduce((a,k) => a + lv(k), 0);
+  return { war, eco, active: !!u?.isActive };
+}
+function renderCountryPlayers(){
+  const box = $('cIntelPlayers'); const ctx = window.__cIntelCtx; if(!box || !ctx) return;
+  const cache = loadPlayersCache(ctx.cId);
+  const f = n => Number(n).toLocaleString();
+  let h = `<small>👥 اللاعبون في الدولة (مواطنون مسجلون)</small>`;
+  h += `<strong style="color:var(--ink);display:block;font-size:22px">${ctx.total != null ? f(ctx.total) : (ctx.totalErr ? '—' : 'جاري العد...')} <span class="hint">لاعب</span></strong>`;
+  h += `<div class="hint">نشطون الآن (ترتيب countryActivePopulation): <b>${ctx.activeRank != null ? f(ctx.activeRank) : '-'}</b>${ctx.totalErr ? ' · تعذّر العد: ' + escapeHtml(ctx.totalErr) : ''}</div>`;
+  if(window.__splitProgress){
+    const p = window.__splitProgress;
+    h += `<div class="hint" style="margin-top:6px">⏳ تحليل المهارات: ${f(p.done)} / ${f(p.total)} (حد السيرفر 100 طلب/دقيقة، فبياخد كام دقيقة)</div>`;
+  } else if(cache && ctx.ids && Object.keys(cache.data).length >= ctx.ids.length * 0.98){
+    const v = Object.values(cache.data); let war=0, eco=0, mixed=0, fresh=0, aw=0, ae=0;
+    v.forEach(([w,e,act]) => { const k = w>e ? 'war' : e>w ? 'eco' : (w+e>0 ? 'mixed' : 'fresh'); if(k==='war'){war++; if(act) aw++;} else if(k==='eco'){eco++; if(act) ae++;} else if(k==='mixed') mixed++; else fresh++; });
+    h += `<div class="grid-2" style="margin-top:8px"><div><small>⚔️ لاعبو الحرب (War)</small><strong class="red" style="display:block">${f(war)}</strong><div class="hint">نشط منهم: ${f(aw)}</div></div><div><small>🏭 لاعبو الاقتصاد (Eco)</small><strong class="gold" style="display:block">${f(eco)}</strong><div class="hint">نشط منهم: ${f(ae)}</div></div></div>`;
+    h += `<div class="hint" style="margin-top:6px">متوازن: ${f(mixed)} · لسه ما وزّعوش نقاط: ${f(fresh)} · تحليل ${new Date(cache.ts).toLocaleTimeString('ar-EG')}</div>`;
+    h += `<div class="hint">طريقة التقسيم: نقاط المهارات الموزّعة. حرب = attack + precision + critical chance + critical damage + armor + dodge، اقتصاد = production + companies + management. الأكبر يحدد النوع.</div>`;
+    h += `<button class="btn btn-blue" style="margin-top:8px" onclick="runPlayerSplit(true)">🔄 إعادة التحليل</button>`;
+  } else if(ctx.ids){
+    h += `<button class="btn btn-blue" style="margin-top:8px" onclick="runPlayerSplit()">📊 تحليل اللاعبين: كام Eco وكام War</button>`;
+  }
+  box.innerHTML = h;
+}
+async function runPlayerSplit(force){
+  const ctx = window.__cIntelCtx; if(!ctx || !ctx.ids || window.__splitProgress) return;
+  const old = force ? null : loadPlayersCache(ctx.cId);
+  const data = old ? { ...old.data } : {};
+  const todo = ctx.ids.filter(id => !data[id]);
+  window.__splitProgress = { done: ctx.ids.length - todo.length, total: ctx.ids.length };
+  renderCountryPlayers();
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let idx = 0;
+  const worker = async () => {
+    while(idx < todo.length && window.__cIntelCtx === ctx){
+      const id = todo[idx++];
+      try{
+        const u = await trpc('user.getUserById', { userId: id });
+        const c = classifyPlayer(u); data[id] = [c.war, c.eco, c.active ? 1 : 0];
+      }catch(_){ await sleep(8000); }
+      window.__splitProgress.done = Object.keys(data).length;
+      if(window.__splitProgress.done % 10 === 0) renderCountryPlayers();
+      await sleep(2000);
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  window.__splitProgress = null;
+  try{ localStorage.setItem(playersCacheKey(ctx.cId), JSON.stringify({ ts: Date.now(), data })); }catch(_){}
+  renderCountryPlayers();
 }
 
 async function trpc(proc, input={}){
@@ -3118,7 +3199,7 @@ async function runCountryIntel(){
 
     let allianceRaw = null;
     if(country.allianceId){
-      try{ const al = await trpc('alliance.getById', { allianceId: country.allianceId }); if(al && al.name){ allianceRaw = { name: al.name, members: Array.isArray(al.memberCountries) ? al.memberCountries.length : 0 }; } }catch(_){}
+      try{ const al = await trpc('alliance.getById', { allianceId: country.allianceId }); if(al && al.name){ allianceRaw = { name: al.name, members: Array.isArray(al.memberCountries) ? al.memberCountries.length : 0, memberIds: (Array.isArray(al.memberCountries) ? al.memberCountries : []).map(m => (m && typeof m === 'object') ? (m.country || m._id) : m).filter(Boolean) }; } }catch(_){}
     }
     if(!allianceRaw && !country.allianceId) allianceRaw = findDeepValue(country, [/^alliance(?!Id)/i, /^pact$/i, /^coalition$/i, /^bloc$/i]);
     if(!allianceRaw && cId){
@@ -3198,15 +3279,18 @@ async function runCountryIntel(){
     if(moneyNum !== null) ecoParts.push(`الخزينة: $${moneyNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
     if(goldNum !== null) ecoParts.push(`الذهب: ${goldNum.toLocaleString()}`);
     if(ecoNum !== null) ecoParts.push(`الاقتصاد: ${ecoNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
+    { const cw = country.rankings?.countryWealth?.value; if(cw) ecoParts.push(`ثروة الدولة: $${Math.round(cw).toLocaleString()}`); }
     if(country.income && Number(country.income.total) > 0) ecoParts.push(`دخل الدولة اليومي: $${Number(country.income.total).toLocaleString(undefined, { maximumFractionDigits: 1 })}`);
     $('cIntelGold').textContent = ecoHeadline;
     $('cIntelEcoSub').textContent = ecoParts.length ? ecoParts.join(' · ') : 'بيانات الاقتصاد من السيرفر';
 
-    const alliesRawArr = Array.isArray(country.allies) ? country.allies : (Array.isArray(country.mpps) ? country.mpps : []);
-    const alliesCount = alliesRawArr.length ? alliesRawArr.length : (extractNumericMetric(country.alliesCount ?? country.mppsCount) || 0);
-    const allyNames = alliesRawArr.map(resolveCountryLabel).filter(Boolean);
-    $('cIntelAllies').textContent = `${alliesCount} حليف`;
-    $('cIntelAlliesSub').textContent = allyNames.length ? allyNames.slice(0, 6).join('، ') : `الحلف: ${allianceName}`;
+    const bilateralNames = (Array.isArray(country.allies) ? country.allies : []).map(resolveCountryLabel).filter(Boolean);
+    const pactNames = (Array.isArray(country.defensivePacts) ? country.defensivePacts : []).map(resolveCountryLabel).filter(Boolean);
+    const memberNames = ((allianceRaw && allianceRaw.memberIds) || []).filter(id => String(id) !== String(cId)).map(resolveCountryLabel).filter(Boolean);
+    const alliesCount = memberNames.length;
+    const allyNames = memberNames;
+    $('cIntelAllies').textContent = alliesCount ? `${alliesCount} دولة في التحالف` : `${bilateralNames.length + pactNames.length} اتفاقية`;
+    $('cIntelAlliesSub').textContent = `التحالف: ${allianceName}` + (pactNames.length ? ` · دفاع مشترك: ${pactNames.length}` : '') + (bilateralNames.length ? ` · حلفاء ثنائيين: ${bilateralNames.length}` : '');
 
     const taxVal = extractNumericMetric(country.taxes?.income ?? country.tax ?? country.workTax ?? country.productionTax);
     const currVal = country.currency || country.currencyCode || country.code || '-';
@@ -3227,7 +3311,9 @@ async function runCountryIntel(){
       ? `<div style="margin-top:6px">• <b>الأقاليم (${regionsArr.length}):</b> ${regionsArr.slice(0, 14).map(r => r.name || r.title || r._id).filter(Boolean).map(escapeHtml).join('، ')}</div>`
       : '';
     const warNamesLine = warsWithNames.length ? `<div style="margin-top:6px">• <b>في حرب مع (${warsWithNames.length}):</b> ${warsWithNames.map(escapeHtml).join('، ')}</div>` : '';
-    const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>الحلفاء (${allyNames.length}):</b> ${allyNames.map(escapeHtml).join('، ')}</div>` : '';
+    const allyNamesLine = (allyNames.length ? `<div style="margin-top:6px">• <b>دول التحالف "${escapeHtml(allianceRaw && allianceRaw.name || '')}" (${allyNames.length}):</b> ${allyNames.map(escapeHtml).join('، ')}</div>` : '')
+      + (pactNames.length ? `<div style="margin-top:6px">• <b>اتفاقيات الدفاع المشترك (${pactNames.length}):</b> ${pactNames.map(escapeHtml).join('، ')}</div>` : '')
+      + (bilateralNames.length ? `<div style="margin-top:6px">• <b>حلفاء ثنائيين (${bilateralNames.length}):</b> ${bilateralNames.map(escapeHtml).join('، ')}</div>` : '');
     const rawKeysPreview = Object.entries(country)
       .filter(([k, v]) => v !== null && v !== undefined && typeof v !== 'object' && !/^(name|_id|id|flag|flagUrl|image|icon|banner|allies|mpps)$/i.test(k))
       .slice(0, 10)
@@ -3242,10 +3328,13 @@ async function runCountryIntel(){
       ${regionNamesLine}
       ${allyNamesLine}
       ${warNamesLine}
-      ${rawKeysPreview ? `<div style="margin-top:8px">${rawKeysPreview}</div>` : ''}
+      ${rawKeysPreview ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muted)">🔧 بيانات خام من السيرفر</summary><div style="margin-top:6px">${rawKeysPreview}</div></details>` : ''}
       <div style="margin-top:6px;color:var(--green)">🕒 تم التحديث اللحظي من السيرفر الساعة: <b>${fetchedTime}</b> (${escapeHtml(lastApiDiagnostic)})</div>
     `;
 
+    window.__cIntelCtx = { cId, cName, activeRank: country.rankings?.countryActivePopulation?.value };
+    renderCountryPlayers();
+    countPlayersInCountry(cId);
     $('spyCountryBox').style.display = 'block';
     $('spyStatus').textContent = `✅ تم سحب أحدث بيانات دولة "${cName}" (${fetchedTime}).`;
   }catch(err){
