@@ -3180,7 +3180,7 @@ async function runCountryIntel(){
     const warPopRaw = findDeepValue(country, [/warPop/i, /warCitizen/i, /fighter/i, /warPoint/i, /warDamage/i, /troop/i, /soldier/i, /army/i]);
     const warPopNum = extractNumericMetric(warPopRaw);
     const wkDmg = country.rankings?.weeklyCountryDamages?.value;
-    const warPopText = warPopNum !== null && warPopNum > 0 ? Math.round(warPopNum).toLocaleString() : `${warsCount} حرب نشطة`;
+    const warPopText = warPopNum !== null && warPopNum > 0 ? Math.round(warPopNum).toLocaleString() : `${warsWithNames.length ? 'في حرب مع ' + warsWithNames.length + ' دولة' : warsCount + ' حرب نشطة'}`;
     const warPopRatio = (popNum !== null && popNum > 0 && warPopNum !== null && warPopNum > 0)
       ? ` · نسبة السكان في الحرب: ${Math.min(100, ((warPopNum / popNum) * 100)).toFixed(1)}%`
       : '';
@@ -3227,7 +3227,7 @@ async function runCountryIntel(){
       ? `<div style="margin-top:6px">• <b>الأقاليم (${regionsArr.length}):</b> ${regionsArr.slice(0, 14).map(r => r.name || r.title || r._id).filter(Boolean).map(escapeHtml).join('، ')}</div>`
       : '';
     const warNamesLine = warsWithNames.length ? `<div style="margin-top:6px">• <b>في حرب مع (${warsWithNames.length}):</b> ${warsWithNames.map(escapeHtml).join('، ')}</div>` : '';
-    const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>أسماء الحلفاء:</b> ${allyNames.map(escapeHtml).join('، ')}</div>` : '';
+    const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>الحلفاء (${allyNames.length}):</b> ${allyNames.map(escapeHtml).join('، ')}</div>` : '';
     const rawKeysPreview = Object.entries(country)
       .filter(([k, v]) => v !== null && v !== undefined && typeof v !== 'object' && !/^(name|_id|id|flag|flagUrl|image|icon|banner|allies|mpps)$/i.test(k))
       .slice(0, 10)
@@ -3237,7 +3237,7 @@ async function runCountryIntel(){
     const fetchedTime = new Date().toLocaleTimeString('ar-EG');
     $('cIntelDetails').innerHTML = `
       <div>• <b>الاسم والدولة:</b> ${escapeHtml(cName)} &nbsp;|&nbsp; <b>الحلف:</b> ${escapeHtml(allianceName)} &nbsp;|&nbsp; <b>السكان:</b> ${popText} &nbsp;|&nbsp; <b>الأقاليم:</b> ${regVal}</div>
-      <div>• <b>الوار في السكان والحروب:</b> ${warPopText} (${warsCount} حرب نشطة${warPopRatio})</div>
+      <div>• <b>الوار في السكان والحروب:</b> ${warPopText} (${warsWithNames.length ? 'في حرب مع ' + warsWithNames.length + ' دولة' : warsCount + ' حرب نشطة'} · ${liveWarsN} معركة جارية الآن${warPopRatio})</div>
       <div>• <b>الاقتصاد:</b> ${ecoParts.length ? ecoParts.join(' · ') : ecoHeadline} &nbsp;|&nbsp; <b>العملة/الرمز:</b> ${escapeHtml(currVal)} &nbsp;|&nbsp; <b>الضريبة:</b> ${taxVal === null ? '-' : taxVal + '%'}</div>
       ${regionNamesLine}
       ${allyNamesLine}
