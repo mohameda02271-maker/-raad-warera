@@ -180,6 +180,7 @@ nav.bottom-nav{
 .nav-item.active{color:var(--green)}
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 .alert{padding:10px 12px;border-radius:9px;font-size:13px;margin-top:8px}
+.alert.warn{background:#382612;border:1px solid #69461d;color:#ffd58a}
 .alert.ok{background:#11332a;border:1px solid #256856;color:#a7f3d0}
 .empress-box{background:#0b1524;border:1px solid #264870;border-radius:12px;padding:12px;margin-top:12px}
 .verdict-pill{display:inline-block;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:800;background:#13382c;color:var(--green);border:1px solid #246b53;margin-top:6px}
@@ -355,6 +356,9 @@ body{background:radial-gradient(60% 40% at 85% -5%,#7c3aed55 0%,transparent 60%)
 .stat-box strong.red{color:#ff6b81}
 .stat-box strong.gold{color:#ffc14d}
 .diff-tag{background:#3a2608;color:#ffc14d;border-color:#8a5a14}
+.alert.warn{background:#3a2608;border:1px solid #8a5a14;color:#ffd58a}
+.btn-ghost{background:transparent;color:var(--muted);box-shadow:none;border:1px solid transparent;font-weight:600}
+.btn-ghost:hover{color:var(--ink);border-color:var(--line2);background:transparent;box-shadow:none;transform:none}
 .viz{background:var(--inset);border:1px solid var(--line);border-radius:var(--ri);padding:var(--s4)}
 .viz-title{font-weight:600;color:var(--ink);font-size:14px}
 .spark .viz-title{font-size:12.5px;color:var(--muted);font-weight:500}
@@ -389,12 +393,14 @@ body{background:radial-gradient(60% 40% at 85% -5%,#7c3aed55 0%,transparent 60%)
         <span>بطاقة اللاعب والربط الحي</span>
         <span id="regenTimer" class="badge">Regen --:--</span>
       </div>
+      <label for="playerInput">اسم اللاعب (الاسم داخل اللعبة، وليس مفتاح API)</label>
       <div class="row">
-        <input id="playerInput" placeholder="اكتب اسم اللاعب أو ID..." />
+        <input id="playerInput" placeholder="اسم اللاعب، مثال: GREAT-AYYUB" autocomplete="off" oninput="checkPlayerFieldForKey()" />
         <input id="homeLevelInput" type="number" min="1" max="200" placeholder="Lv" title="ليفل اللاعب" style="max-width:78px;text-align:center;font-weight:800" oninput="setManualPlayerLevel(this.value)" />
         <button class="btn" onclick="fetchPlayer()">جلب البيانات</button>
       </div>
 
+      <div id="keyMisplacedHint" class="alert warn" style="display:none"></div>
       <div class="identity-strip">
         <span class="badge blue" id="badgePlayer"><img id="playerAvatarImg" class="badge-emblem" style="display:none" alt=""> <span id="playerText">👤 اللاعب: غير محدد (Lv.?)</span></span>
         <span class="badge blue" id="badgeCountry"><img id="countryFlagImg" class="badge-icon" style="display:none" alt=""> <span id="countryText">🌍 الدولة: غير محددة</span></span>
@@ -447,10 +453,13 @@ body{background:radial-gradient(60% 40% at 85% -5%,#7c3aed55 0%,transparent 60%)
           <div><label>الدولة (تلقائي أو يدوي)</label><input id="inManualCountry" placeholder="مثال: Egypt" oninput="recalcAll()"></div>
           <div><label>الوحدة العسكرية (تلقائي أو يدوي)</label><input id="inManualMu" placeholder="مثال: RAAD Force" oninput="recalcAll()"></div>
         </div>
-        <div class="row" style="margin-top:10px">
-          <input id="wareraKey" type="password" placeholder="WarEra API Key (اختياري)" onchange="saveKeys()" />
+        <label for="wareraKey" style="margin-top:10px;display:block">مفتاح WarEra API (اختياري، يبدأ بـ wae_ ويُلصق هنا فقط)</label>
+        <div class="row">
+          <input id="wareraKey" type="password" placeholder="wae_..." autocomplete="off" onchange="saveKeys()" oninput="updateKeyStatus()" />
+          <button class="btn btn-ghost btn-sm" type="button" id="keyEye" onclick="toggleKeyVisible()">إظهار</button>
           <button class="btn btn-sec btn-sm" onclick="saveKeys()">حفظ</button>
         </div>
+        <div class="hint" id="keyStatus" style="margin-top:4px"></div>
         <div class="hint" style="margin-top:4px">المفاتيح اختيارية، تُحفظ في متصفحك فقط، ولا تُرسل إلا إلى WarEra API الرسمي (وإلى Google لمفتاح Gemini).</div>
         <div style="margin-top:10px">
           <label>لصق بيانات اللاعب (JSON جاهز من API أو أداة خارجية - اختياري)</label>
@@ -1072,6 +1081,43 @@ function loadKeys(){
   $('wareraKey').value = localStorage.getItem('raad_warera_key') || '';
   $('geminiKey').value = localStorage.getItem('raad_gemini_key') || '';
   updateAiBadge();
+  updateKeyStatus();
+}
+
+function updateKeyStatus(){
+  const el = $('keyStatus'); if(!el) return;
+  const k = ($('wareraKey').value || '').trim();
+  if(!k){ el.textContent = 'لا يوجد مفتاح: يعمل الموقع بالقراءة العامة (حدّها 100 طلب في الدقيقة).'; return; }
+  const ok = /^wae_/i.test(k);
+  el.innerHTML = ok ? `✅ مفتاح محفوظ (${escapeHtml(k.slice(0, 4))}…${escapeHtml(k.slice(-4))}) ويُرسل إلى api2.warera.io فقط.` : '⚠️ المفتاح لا يبدأ بـ wae_، تأكد أنك نسخته كاملاً.';
+}
+
+function toggleKeyVisible(){
+  const k = $('wareraKey'); const show = k.type === 'password';
+  k.type = show ? 'text' : 'password';
+  $('keyEye').textContent = show ? 'إخفاء' : 'إظهار';
+}
+
+function looksLikeApiKey(v){ return /^wae_[A-Za-z0-9_\-]{8,}/.test((v || '').trim()); }
+
+function checkPlayerFieldForKey(){
+  const box = $('keyMisplacedHint'); if(!box) return;
+  const v = $('playerInput').value.trim();
+  if(looksLikeApiKey(v)){
+    box.style.display = 'block';
+    box.innerHTML = '🔑 هذا يبدو <b>مفتاح API</b> وليس اسم لاعب. مكانه خانة المفتاح (داخل «مفتاح WarEra API» في الإعدادات).<br><button class="btn btn-sm" type="button" onclick="moveKeyFromPlayerField()">انقل إلى خانة المفتاح</button>';
+  }else{ box.style.display = 'none'; box.innerHTML = ''; }
+}
+
+function moveKeyFromPlayerField(){
+  const v = $('playerInput').value.trim(); if(!looksLikeApiKey(v)) return;
+  $('wareraKey').value = v; saveKeys();
+  $('playerInput').value = '';
+  const d = $('wareraKey').closest('details'); if(d) d.open = true;
+  const box = $('keyMisplacedHint');
+  box.style.display = 'block';
+  box.innerHTML = '✅ تم نقل المفتاح إلى خانته وحفظه. الآن اكتب <b>اسم اللاعب</b> في الخانة أعلاه واضغط «جلب البيانات».';
+  $('playerInput').focus();
 }
 
 function updateAiBadge(){
@@ -1136,61 +1182,74 @@ function appendCacheBust(url){
 }
 
 async function trpc(proc, input={}){
-  const headers = {
+  const baseHeaders = {
     'Accept': 'application/json',
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache'
   };
   const key = $('wareraKey')?.value?.trim();
+  const keyedHeaders = { ...baseHeaders };
   if(key){
-    // Security: the WarEra API key is sent ONLY to the official WarEra API host.
-    headers['x-api-key'] = key;
-    headers['Authorization'] = 'Bearer ' + key;
+    // Security: the WarEra API key is sent ONLY to the official WarEra API host (api2.warera.io).
+    keyedHeaders['x-api-key'] = key;
+    keyedHeaders['Authorization'] = 'Bearer ' + key;
   }
-  // gateway.warerastats.io requires its own API key (401 without one), so it was
-  // dropped from the fan-out: the WarEra key must never be sent to third parties.
-  const allDirectUrls = buildTrpcCandidateUrls('https://api2.warera.io/trpc/', proc, input)
-    .map(appendCacheBust);
+  // gateway.warerastats.io requires its own API key (401 without one), so it is not used:
+  // the WarEra key must never be sent to third parties.
+  const urls = buildTrpcCandidateUrls('https://api2.warera.io/trpc/', proc, input);
+  // Remember which input format the API accepts so each call is one request, not two (rate limit).
+  const pref = window.__trpcFmt || 0;
+  const order = urls.length > 1 ? (pref ? [urls[1], urls[0]] : [urls[0], urls[1]]) : urls;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const direct = async (headers, label) => {
+    let lastErr;
+    for(let i = 0; i < order.length; i++){
+      for(let retry = 0; retry < 2; retry++){
+        try{
+          const data = await tryFetchTrpcUrl(appendCacheBust(order[i]), headers, label, 4500);
+          if(urls.length > 1) window.__trpcFmt = (order[i] === urls[0]) ? 0 : 1;
+          lastApiDiagnostic = `LIVE OK (${proc}${label === 'direct-keyless' ? ', بدون مفتاح' : ''})`;
+          return data;
+        }catch(e){
+          lastErr = e;
+          if(/rate limit|429/i.test(e?.message || '') && retry === 0){ await sleep(1200); continue; }
+          break;
+        }
+      }
+    }
+    throw lastErr || new Error('direct failed');
+  };
 
-  const directTasks = allDirectUrls.map((url) =>
-    tryFetchTrpcUrl(url, headers, 'direct-live', 4500)
-      .then(data => {
-        lastApiDiagnostic = `LIVE OK (${proc})`;
-        return data;
-      })
-  );
-
+  let firstErr;
   try{
-    return await Promise.any(directTasks);
-  }catch(_){}
+    return await direct(key ? keyedHeaders : baseHeaders, key ? 'direct-keyed' : 'direct-live');
+  }catch(e){ firstErr = e; }
 
-  // Security: when a key is set, skip the CORS-proxy fallback entirely so the
-  // key can never leak to a third-party proxy. Without a key the headers carry
-  // no credentials, so the proxy path stays as harmless as before.
+  // A rejected, expired or rate-limited key must not break the page: retry the same public
+  // read without any key (the key is never sent anywhere but api2.warera.io, and not here at all).
   if(key){
-    lastApiDiagnostic = `${proc}: فشل الاتصال المباشر (تم تخطي البروكسي حمايةً للمفتاح)`;
-    const keyErr = new Error(lastApiDiagnostic);
-    keyErr.diagnostics = lastApiDiagnostic;
-    throw keyErr;
+    try{
+      return await direct(baseHeaders, 'direct-keyless');
+    }catch(e){ firstErr = e; }
   }
-  const targetForProxy = allDirectUrls[0];
+
+  // Public CORS-proxy fallback: only ever with NO credentials.
+  const targetForProxy = urls[0];
   const proxies = [
     { name: 'corsproxy.io', url: 'https://corsproxy.io/?' + encodeURIComponent(targetForProxy) },
     { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetForProxy) }
   ];
-
   const proxyTasks = proxies.map(p =>
-    tryFetchTrpcUrl(p.url, headers, p.name, 5000)
+    tryFetchTrpcUrl(p.url, baseHeaders, p.name, 5000)
       .then(data => {
         lastApiDiagnostic = `LIVE OK (${proc} via ${p.name})`;
         return data;
       })
   );
-
   try{
     return await Promise.any(proxyTasks);
   }catch(e){
-    const msg = e?.name === 'AbortError' ? 'Timeout' : (e?.message || 'فشل الاتصال');
+    const msg = firstErr?.message || (e?.name === 'AbortError' ? 'Timeout' : (e?.message || 'فشل الاتصال'));
     lastApiDiagnostic = `${proc}: ${msg}`;
     const err = new Error(lastApiDiagnostic);
     err.diagnostics = lastApiDiagnostic;
@@ -1321,6 +1380,11 @@ function extractPlayerLevel(user, searchItem){
 async function fetchPlayer(){
   const q = $('playerInput').value.trim();
   if(!q) return;
+  if(looksLikeApiKey(q)){
+    checkPlayerFieldForKey();
+    $('profileMsg').innerHTML = '⚠️ <b>الخانة تحتوي مفتاح API وليس اسم لاعب.</b> لم يتم البحث. استخدم زر «انقل إلى خانة المفتاح» أسفل الخانة.';
+    return;
+  }
   $('profileMsg').textContent = 'جاري جلب بيانات اللاعب، الليفل، الدولة، الوحدة العسكرية، والمصانع...';
   try{
     let user = null;
@@ -1330,7 +1394,7 @@ async function fetchPlayer(){
     }else{
       const res = await trpc('search.searchUsers', { searchText: q });
       const list = Array.isArray(res) ? res : (res?.users || res?.items || []);
-      if(!list.length) throw new Error('لم يتم العثور على اللاعب');
+      if(!list.length) { const nf = new Error('لم يتم العثور على اللاعب'); nf.kind = 'notfound'; throw nf; }
       searchHit = typeof list[0] === 'object' ? list[0] : null;
       const id = typeof list[0] === 'string' ? list[0] : list[0]._id;
       user = await trpc('user.getUserById', { userId: id });
@@ -1448,7 +1512,17 @@ async function fetchPlayer(){
     if($('homeLevelInput')) $('homeLevelInput').value = typedLv;
     setIdentityDisplay(q, typedLv, '', $('inManualCountry')?.value.trim() || '', '', $('inManualMu')?.value.trim() || '', '');
     const diag = err?.diagnostics || err?.message || 'حجب CORS أو انقطاع الشبكة أو تغيّر مسار الـ API';
-    $('profileMsg').innerHTML = `⚠️ <b>تعذر السحب المباشر من الـ API (${escapeHtml(q)}):</b> ${escapeHtml(diag)}<br>✅ تم تثبيت الاسم <b>${escapeHtml(q)}</b> و<b>Lv.${typedLv}</b> محلياً — يمكنك المتابعة بالضبط اليدوي أو إضافة <b>WarEra API Key</b> أو لصق JSON اللاعب من الإعدادات.`;
+    const em = String(err?.message || '');
+    const hasKey = !!($('wareraKey')?.value || '').trim();
+    if(err?.kind === 'notfound'){
+      $('profileMsg').innerHTML = `⚠️ <b>لا يوجد لاعب بهذا الاسم: «${escapeHtml(q)}».</b> تأكد من الإملاء (الاسم داخل اللعبة بالإنجليزية غالباً) أو استخدم الـ ID. المفتاح ليس السبب.`;
+    }else if(/\b(401|403)\b|unauthor|forbidden|invalid.*(key|token)|api key/i.test(em)){
+      $('profileMsg').innerHTML = `⚠️ <b>مفتاح API مرفوض من WarEra.</b> الاسم «${escapeHtml(q)}» لم يُجرَّب بسبب ذلك. تأكد من نسخ المفتاح كاملاً في خانة المفتاح، أو احذفه ليعمل الموقع بالقراءة العامة.`;
+    }else if(/rate limit|429/i.test(em)){
+      $('profileMsg').innerHTML = `⚠️ <b>تجاوزت حدّ الطلبات في WarEra (${hasKey ? 'حتى مع المفتاح' : 'بدون مفتاح: 100 طلب/دقيقة'}).</b> انتظر دقيقة ثم اضغط «جلب البيانات» مرة أخرى.`;
+    }else{
+      $('profileMsg').innerHTML = `⚠️ <b>تعذر الاتصال بـ WarEra API (${escapeHtml(q)}):</b> ${escapeHtml(diag)}<br>تم تثبيت الاسم <b>${escapeHtml(q)}</b> و<b>Lv.${typedLv}</b> محلياً — يمكنك المتابعة بالضبط اليدوي أو لصق JSON اللاعب من الإعدادات.`;
+    }
     recalcAll();
   }
 }
@@ -1787,15 +1861,15 @@ async function runGearOpt(){
         await Promise.all(missing.slice(i, i + 6).map(async ([sl, t, c]) => { try{ const v = Number(await trpc('gameStat.getEquipmentAvgByCode', { itemCode: c })) || 0; if(v > 0) window.gearPriceCache[c] = v; }catch(e){} }));
       }
     }
-    const stillMissing = codes.filter(([sl, t, c]) => !(window.gearPriceCache[c] > 0)).map(x => x[2]);
-    if(stillMissing.length){ out.textContent = 'تعذّر جلب سعر بعض القطع (' + stillMissing.slice(0, 6).join(', ') + '). أعد المحاولة بعد قليل حتى لا تظهر نتائج خاطئة.'; btn.disabled = false; return; }
+    const stillMissing = codes.filter(([sl, t, c]) => !(window.gearPriceCache[c] > 0));
     await new Promise(r => setTimeout(r, 30));
     const { ctx, st, eff, mode } = G;
     const base = (window.susAuto && window.susAuto.gear) || {};
     // إحصائيات بدون أي جير
     const st0 = { ...st };
     GEAR_SLOTS.forEach(sl => { const c = gearContribution(sl, eff[sl]); st0.atk -= c.atk; st0.crit -= c.critc; st0.critd -= c.critd; st0.prc -= c.prc; st0.arm -= c.arm; st0.ddg -= c.ddg; });
-    const opts = {}; GEAR_SLOTS.forEach(sl => { opts[sl] = []; for(let t = 1; t <= 6; t++){ const code = gearCodeOf(sl, t); const pr = window.gearPriceCache[code] || 0; const own = base[sl] && base[sl].tier === t ? base[sl] : null; opts[sl].push({ g: own ? { ...own } : { code, tier: t, price: pr, skills: null }, c: gearContribution(sl, own || { tier: t, skills: null }) }); } });
+    const opts = {}; GEAR_SLOTS.forEach(sl => { opts[sl] = []; for(let t = 1; t <= 6; t++){ if(!(window.gearPriceCache[gearCodeOf(sl, t)] > 0) && !(base[sl] && base[sl].tier === t)) continue; const code = gearCodeOf(sl, t); const pr = window.gearPriceCache[code] || 0; const own = base[sl] && base[sl].tier === t ? base[sl] : null; opts[sl].push({ g: own ? { ...own } : { code, tier: t, price: pr, skills: null }, c: gearContribution(sl, own || { tier: t, skills: null }) }); } });
+    if(GEAR_SLOTS.some(sl => !opts[sl].length)){ out.textContent = 'تعذّر جلب أسعار القطع من WarEra (ربما حدّ الطلبات). انتظر دقيقة ثم أعد البحث.'; btn.disabled = false; return; }
     const cctx = { ...ctx, hasGear: true };
     const res = []; const cur = simulateGear(ctx, st, eff, mode);
     for(const w of opts.weapon) for(const h of opts.helmet) for(const gl of opts.gloves) for(const ch of opts.chest) for(const pa of opts.pants) for(const bo of opts.boots){
@@ -1821,7 +1895,8 @@ async function runGearOpt(){
     const th = 'style="padding:4px 6px;text-align:right;border-bottom:1px solid #2a3441;white-space:nowrap"';
     const row = (lab, r, extra) => `<tr><td ${th}>${lab}</td><td ${th} dir="ltr">${nm(r.t)}</td><td ${th}>${f(r.hit)}</td><td ${th}>${f(r.hits)}</td><td ${th}>${f(r.dmg)}</td><td ${th}>${m(r.cost)}</td><td ${th}>${m(r.per1k)}</td><td ${th}>${extra || ''}<button class="btn btn-sm" onclick="applyGearTiers([${r.t}])">طبّق</button></td></tr>`;
     const curRow = `<tr style="opacity:.8"><td ${th}>جيرك الحالي</td><td ${th} dir="ltr">${GEAR_SLOTS.map(sl => eff[sl] ? eff[sl].code : '-').join(' · ')}</td><td ${th}>${f(cur.hit)}</td><td ${th}>${f(cur.hits)}</td><td ${th}>${f(cur.dmg)}</td><td ${th}>${m(cur.cost)}</td><td ${th}>${m(cur.per1k)}</td><td ${th}></td></tr>`;
-    out.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${th}>الترتيب</th><th ${th}>التوليفة</th><th ${th}>ضرر/ضربة</th><th ${th}>ضربات/يوم</th><th ${th}>ضرر يومي</th><th ${th}>تكلفة/يوم (جير+مستهلكات)</th><th ${th}>صافي لكل 1000 ضرر</th><th ${th}></th></tr></thead><tbody>${curRow}${bestK ? row('⚖️ أقل تكلفة/1000 ضرر بضرر ≥ جيرك', bestK) : ''}${row('🎯 أعلى ضرر لكل $', bestPerD, 'ضرر لكل $: ' + (bestPerD.dmg / bestPerD.cost).toFixed(0) + ' ')}${row('🥇 أعلى ضرر', maxD)}${row('💲 أرخص خيار', cheap)}${marg ? row('📈 أكبر زيادة ضرر لكل $ إضافي', marg, `+${f(marg.dd)} ضرر لـ +${m(marg.dc)} (${f(marg.v)} ضرر/$) `) : ''}${fr.map((r, i) => row('منحنى الكفاءة ' + (i + 1) + '/' + fr.length, r)).join('')}</tbody></table></div><div class="hint" style="margin-top:4px">${res.length.toLocaleString()} توليفة · الأرقام بنموذج "${mode}" · قطعك الفعلية تحتفظ بأرقامها الفعلية، وباقي المستويات بالمتوسط (مثل الـbuilder). h=خوذة g=قفازات c=صدر p=بنطلون b=حذاء، الرقم = المستوى (T).</div>`;
+    const missWarn = stillMissing.length ? `<div class="alert warn" style="margin-bottom:8px">⚠️ تعذّر سعر ${stillMissing.length} قطعة (${stillMissing.slice(0, 4).join(', ')}${stillMissing.length > 4 ? '…' : ''}). استُبعدت هذه المستويات من البحث فقط؛ أعد البحث بعد دقيقة لتشملها.</div>` : '';
+    out.innerHTML = missWarn + `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${th}>الترتيب</th><th ${th}>التوليفة</th><th ${th}>ضرر/ضربة</th><th ${th}>ضربات/يوم</th><th ${th}>ضرر يومي</th><th ${th}>تكلفة/يوم (جير+مستهلكات)</th><th ${th}>صافي لكل 1000 ضرر</th><th ${th}></th></tr></thead><tbody>${curRow}${bestK ? row('⚖️ أقل تكلفة/1000 ضرر بضرر ≥ جيرك', bestK) : ''}${row('🎯 أعلى ضرر لكل $', bestPerD, 'ضرر لكل $: ' + (bestPerD.dmg / bestPerD.cost).toFixed(0) + ' ')}${row('🥇 أعلى ضرر', maxD)}${row('💲 أرخص خيار', cheap)}${marg ? row('📈 أكبر زيادة ضرر لكل $ إضافي', marg, `+${f(marg.dd)} ضرر لـ +${m(marg.dc)} (${f(marg.v)} ضرر/$) `) : ''}${fr.map((r, i) => row('منحنى الكفاءة ' + (i + 1) + '/' + fr.length, r)).join('')}</tbody></table></div><div class="hint" style="margin-top:4px">${res.length.toLocaleString()} توليفة · الأرقام بنموذج "${mode}" · قطعك الفعلية تحتفظ بأرقامها الفعلية، وباقي المستويات بالمتوسط (مثل الـbuilder). h=خوذة g=قفازات c=صدر p=بنطلون b=حذاء، الرقم = المستوى (T).</div>`;
   }catch(e){ out.textContent = 'تعذّر الحساب: ' + e.message; }
   btn.disabled = false;
 }
