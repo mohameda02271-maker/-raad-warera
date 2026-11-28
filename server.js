@@ -10,7 +10,7 @@ import { DEFS, PATHS, NEIGHBORS } from './gamedata.js';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = process.env.DATA_FILE || path.join(ROOT, 'data.json');
 const PORT = Number(process.env.PORT) || 8080; // Railway injects PORT; 8080 is just the local fallback
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 // The world stays locked until the owner claims the admin account with this secret.
 // If the env var is missing, a one-time secret is generated and printed to the log,
 // so a public URL can never hand admin to a stranger.
@@ -102,6 +102,12 @@ const MISSIONS = [
     { id: 'd-craft', daily: true, name: 'اصنع أي حاجة', stat: 'crafts', target: 1, reward: { money: 30, xp: 20, sp: 1 } },
     { id: 'd-hits', daily: true, name: 'أصب 10 ضربات في الحرب', stat: 'hits', target: 10, reward: { money: 60, xp: 40, sp: 1 } },
     { id: 'd-supply', daily: true, name: 'زوّد المجهود الحربي مرة', stat: 'supply', target: 1, reward: { money: 40, xp: 30, sp: 1 } },
+    { id: 'w-hits', weekly: true, name: 'أصب 100 ضربة في الأسبوع', stat: 'hits', target: 100, reward: { money: 400, xp: 250, sp: 3 } },
+    { id: 'w-dmg', weekly: true, name: 'سبب 50 ألف ضرر في الأسبوع', stat: 'dmg', target: 50000, reward: { money: 500, xp: 300, sp: 3 } },
+    { id: 'w-work', weekly: true, name: 'اشتغل 15 مرة في الأسبوع', stat: 'work', target: 15, reward: { money: 300, xp: 200, sp: 2 } },
+    { id: 'w-supply', weekly: true, name: 'زوّد المجهود الحربي 5 مرات', stat: 'supply', target: 5, reward: { money: 250, xp: 150, sp: 2 } },
+    { id: 's-dmg1', name: 'سبب 100 ألف ضرر إجمالي', stat: 'dmg', target: 100000, reward: { money: 500, xp: 400, sp: 4 } },
+    { id: 's-dmg2', name: 'سبب مليون ضرر إجمالي', stat: 'dmg', target: 1000000, reward: { money: 2000, xp: 1000, sp: 6 } },
     { id: 's-factory', name: 'ابنِ أول مصنع', stat: 'factoriesBuilt', target: 1, reward: { money: 100, xp: 50, sp: 2 } },
     { id: 's-skill', name: 'طوّر أي مهارة', stat: 'skillsUp', target: 1, reward: { money: 50, xp: 30, sp: 1 } },
     { id: 's-weapon', name: 'اصنع سلاح من الحديد', stat: 'weaponsCrafted', target: 1, reward: { money: 150, xp: 100, sp: 2 } },
@@ -110,16 +116,19 @@ const MISSIONS = [
     { id: 's-prez', name: 'ابقى رئيس دولتك', stat: 'pres', target: 1, reward: { money: 200, xp: 150, sp: 2 } },
 ];
 const todayStr = () => new Date().toISOString().slice(0, 10);
+const weekStr = () => { const d = new Date(); const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); const day = (t.getUTCDay() + 6) % 7; t.setUTCDate(t.getUTCDate() - day + 3); const first = new Date(Date.UTC(t.getUTCFullYear(), 0, 4)); return t.getUTCFullYear() + '-W' + String(1 + Math.round((t - first) / 6048e5)).padStart(2, '0'); };
 function bumpStat(p, stat, n) {
     p.mStats[stat] = (p.mStats[stat] || 0) + n;
     p.mDaily[stat] = (p.mDaily[stat] || 0) + n;
+    if (p.mWeekly) p.mWeekly[stat] = (p.mWeekly[stat] || 0) + n;
 }
+const mBucket = (p, m) => m.daily ? [p.mDaily, p.mDailyDone] : m.weekly ? [p.mWeekly, p.mWeeklyDone] : [p.mStats, p.mStoryDone];
 function checkMissions(p) {
     const done = [];
     for (const m of MISSIONS) {
-        const list = m.daily ? p.mDailyDone : p.mStoryDone;
+        const [cnt, list] = mBucket(p, m);
         if (list.includes(m.id)) continue;
-        const cur = m.daily ? (p.mDaily[m.stat] || 0) : (p.mStats[m.stat] || 0);
+        const cur = cnt[m.stat] || 0;
         if (cur >= m.target) {
             list.push(m.id);
             p.money += m.reward.money; p.xp += m.reward.xp; p.skillPoints += m.reward.sp;
@@ -206,12 +215,26 @@ function warSide(p, w) {
     return null;
 }
 
-function rankBonus(p) {
-    const d = p.totalDamage;
-    if (d >= 100e6) return 0.375;
-    if (d >= 1e6) return 0.15 + Math.min(0.125, (d / 86e6) * 0.125);
-    return Math.min(0.1375, (d / 875000) * 0.1375);
-}
+// military ranks: named tiers by lifetime damage. Old saves migrate in place — totalDamage is untouched.
+const RANKS = [
+    { name: 'مجند', icon: '🎖', dmg: 0, bonus: 0 },
+    { name: 'جندي', icon: '🎖', dmg: 10e3, bonus: 0.02 },
+    { name: 'عريف', icon: '🎖', dmg: 50e3, bonus: 0.045 },
+    { name: 'رقيب', icon: '🎖', dmg: 150e3, bonus: 0.07 },
+    { name: 'مساعد أول', icon: '🎖', dmg: 400e3, bonus: 0.10 },
+    { name: 'ملازم', icon: '⭐', dmg: 875e3, bonus: 0.1375 },
+    { name: 'ملازم أول', icon: '⭐', dmg: 1.5e6, bonus: 0.16 },
+    { name: 'نقيب', icon: '⭐', dmg: 4e6, bonus: 0.185 },
+    { name: 'رائد', icon: '⭐', dmg: 10e6, bonus: 0.21 },
+    { name: 'مقدم', icon: '🌟', dmg: 25e6, bonus: 0.24 },
+    { name: 'عقيد', icon: '🌟', dmg: 50e6, bonus: 0.27 },
+    { name: 'عميد', icon: '🌟', dmg: 100e6, bonus: 0.31 },
+    { name: 'لواء', icon: '💫', dmg: 300e6, bonus: 0.375 },
+    { name: 'فريق', icon: '💫', dmg: 600e6, bonus: 0.42 },
+    { name: 'مشير', icon: '👑', dmg: 1e9, bonus: 0.50 },
+];
+function rankOf(d) { let i = 0; for (let k = 0; k < RANKS.length; k++) if (d >= RANKS[k].dmg) i = k; return i; }
+function rankBonus(p) { return RANKS[rankOf(p.totalDamage)].bonus; }
 const barMax = (p, b) => 100 + (p.skills[b] || 0) * 10;
 
 function tickPlayer(p) {
@@ -220,9 +243,12 @@ function tickPlayer(p) {
     if (!p.factories) { p.factories = []; p.factSeq = 0; }
     // migration + daily reset for missions
     if (!p.mStats) p.mStats = {};
+    if (p.mStats.dmg === undefined && p.totalDamage) p.mStats.dmg = p.totalDamage; // seed new dmg counter from history
     if (!p.mStoryDone) p.mStoryDone = [];
     if (!p.mDailyDone) p.mDailyDone = [];
     if (!p.mDaily || p.mDaily.date !== todayStr()) { p.mDaily = { date: todayStr() }; p.mDailyDone = []; }
+    if (!p.mWeeklyDone) p.mWeeklyDone = [];
+    if (!p.mWeekly || p.mWeekly.week !== weekStr()) { p.mWeekly = { week: weekStr() }; p.mWeeklyDone = []; }
     const now = Date.now();
     const hours = (now - p.lastTick) / 3600000 * db.speed;
     if (hours <= 0) return;
@@ -568,11 +594,18 @@ const server = http.createServer(async (req, res) => {
                 factoryCap: factoryCap(p),
             },
             speed: db.speed, version: VERSION,
-            missions: MISSIONS.map(m => ({
-                id: m.id, name: m.name, daily: !!m.daily, target: m.target, reward: m.reward,
-                progress: Math.floor(m.daily ? (p.mDaily[m.stat] || 0) : (p.mStats[m.stat] || 0)),
-                done: (m.daily ? p.mDailyDone : p.mStoryDone).includes(m.id),
-            })),
+            missions: MISSIONS.map(m => {
+                const [cnt, list] = mBucket(p, m);
+                return {
+                    id: m.id, name: m.name, daily: !!m.daily, weekly: !!m.weekly, target: m.target, reward: m.reward,
+                    progress: Math.floor(cnt[m.stat] || 0),
+                    done: list.includes(m.id),
+                };
+            }),
+            ranks: RANKS,
+            myRank: rankOf(p.totalDamage),
+            topFighters: Object.values(db.users).map(u => u.player).map(q => ({ name: q.name, country: q.country, dmg: Math.floor(q.totalDamage), rank: rankOf(q.totalDamage), level: q.level }))
+                .sort((a, b) => b.dmg - a.dmg).slice(0, 20),
             alliances: Object.values(db.alliances).map(a => ({ id: a.id, name: a.name, leader: a.leader, members: a.members, pending: a.pending })),
             countries, wars: Object.values(db.wars).filter(w => !w.over).map(publicWar),
             world: Object.keys(DEFS).map(id => ({
@@ -730,7 +763,8 @@ const server = http.createServer(async (req, res) => {
         r.contrib[p.name] = (r.contrib[p.name] || 0) + finalDmg;
         w.hits.push({ t: Date.now(), side: hitSide, name: p.name, country: p.country, dmg: finalDmg, crit, missed, ammo: ammoKind, weapon: p.weapon, level: p.level });
         if (w.hits.length > 30) w.hits.splice(0, w.hits.length - 30);
-        p.totalDamage += finalDmg; p.xp += HIT.xp; gainXp(p);
+        p.totalDamage += finalDmg;
+            bumpStat(p, 'dmg', finalDmg); p.xp += HIT.xp; gainXp(p);
         if (!missed && finalDmg > 0) bumpStat(p, 'hits', 1);
         const mdh = checkMissions(p);
         resolveWar(w); mark(); save();

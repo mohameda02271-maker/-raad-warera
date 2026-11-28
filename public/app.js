@@ -4,7 +4,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 let token = localStorage.getItem('raad_token') || '';
-const CLIENT_VERSION = '1.4.0';
+const CLIENT_VERSION = '1.5.0';
 let S = null, MAP = null;
 let selCountry = null;
 let battle = { warId: null, ammo: 'none' };
@@ -14,6 +14,7 @@ let govCid = null;       // viewed country (null = own)
 let govTab = 'home';     // home|eco|pop|mil|gov|dip
 let govSearch = '', govSort = 'pop';
 let mapMode = 'pol'; // pol | ally | war | dev
+let ranksOpen = false, misTab = 'daily';
 let prevOwners = {};
 
 async function api(path, body) {
@@ -28,7 +29,7 @@ async function api(path, body) {
   return d;
 }
 const apiGet = async p => (await fetch(p)).json();
-const fmt = n => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : Math.round(n);
+const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(n);
 const pct = (c, m) => Math.max(0, Math.min(100, c / m * 100));
 
 function show(id) { ['auth', 'pick', 'game'].forEach(x => $('#' + x).classList.toggle('hidden', x !== id)); }
@@ -381,6 +382,7 @@ function render(force) {
   $('#me-money').textContent = fmt(y.money);
   $('#me-level').textContent = y.level;
   $('#me-rank').textContent = '+' + Math.round(y.rankBonus * 100) + '%';
+  const rkChip = $('#me-rank'); if (rkChip && !rkChip.dataset.bound) { rkChip.dataset.bound = 1; rkChip.style.cursor = 'pointer'; rkChip.title = 'الرتب العسكرية'; rkChip.onclick = () => { ranksOpen = true; curTab = 'war'; render(true); }; }
   $('#war-dot').classList.toggle('hidden', !S.wars.some(w => w.from === y.country || w.to === y.country));
   $('#bars').innerHTML =
     bar('صحة', y.bars.health, y.barMax.health, 'health') + bar('جوع', y.bars.hunger, y.barMax.hunger, 'hunger') +
@@ -482,10 +484,14 @@ function renderHome() {
     <button class="bigbtn" id="btn-work" type="button">اشتغل<br><small>+${Math.round(50 * (1 + y.skills.production * 0.05))} ج — 10 طاقة</small></button>
     <button class="bigbtn cyan" id="btn-company" type="button">شركاتك: ${y.companiesOwned}<br><small>شركة: ${sh.company.price} ج — ${sh.company.income} ج/ساعة</small></button>
   </div>
-  <h3>المهمات <span class="pill">دي أسرع طريق للفلوس واللفل ونقاط المهارة — اليومية بتتصفّر كل يوم</span></h3>
-  ${(S.missions || []).filter(m => m.daily).map(mrow).join('')}
-  <h3 style="border:none;color:var(--cyan);font-size:13px">مهمات طويلة</h3>
-  ${(S.missions || []).filter(m => !m.daily).map(mrow).join('')}
+  <h3>المهمات <span class="pill">أسرع طريق للفلوس واللفل ونقاط المهارة</span></h3>
+  <div class="rtoggle mistoggle">
+    <button data-mistab="daily" class="${misTab === 'daily' ? 'on' : ''}" type="button">يومية ${(S.missions || []).filter(m => m.daily && m.done).length}/${(S.missions || []).filter(m => m.daily).length}</button>
+    <button data-mistab="weekly" class="${misTab === 'weekly' ? 'on' : ''}" type="button">أسبوعية ${(S.missions || []).filter(m => m.weekly && m.done).length}/${(S.missions || []).filter(m => m.weekly).length}</button>
+    <button data-mistab="story" class="${misTab === 'story' ? 'on' : ''}" type="button">إنجازات ${(S.missions || []).filter(m => !m.daily && !m.weekly && m.done).length}/${(S.missions || []).filter(m => !m.daily && !m.weekly).length}</button>
+  </div>
+  <p class="hint">${misTab === 'daily' ? 'بتتصفّر كل يوم' : misTab === 'weekly' ? 'بتتصفّر كل أسبوع' : 'مهمات مرة واحدة في العمر — مكافآتها أكبر'}</p>
+  ${(S.missions || []).filter(m => (misTab === 'daily' && m.daily) || (misTab === 'weekly' && m.weekly) || (misTab === 'story' && !m.daily && !m.weekly)).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0)).map(mrow).join('')}
   <h3>المصانع <span class="pill">${y.factories.length}/${y.factoryCap} — مهارة إدارة بتزوّد الحد</span></h3>
   <p class="hint chain">السلسلة: <b>منجم ← حديد ← ذخيرة وسلاح ← الحرب</b> — ومزرعة ← قمح ← أكل. المصنع بيدفع صيانة كل ساعة، ولو الفلوس خلصت بيقف.</p>
   <div class="kv"><span>مخزونك</span><b>حديد: ${fmt(y.goods.iron)} — قمح: ${fmt(y.goods.wheat)}</b></div>
@@ -527,8 +533,9 @@ function renderHome() {
 
   function mrow(m) {
     const pr = Math.min(m.progress, m.target);
-    return `<div class="skillrow"><span>${m.name}${m.daily ? ' <span class="pill">يومية</span>' : ''}<span class="lvl">${pr}/${m.target}</span><br><small class="have">مكافأة: ${m.reward.money} ج + ${m.reward.xp} XP + ${m.reward.sp} نقطة مهارة</small></span>
-      ${m.done ? '<span class="pill" style="color:var(--green)">اتعملت ✓</span>' : `<div class="track" style="min-width:90px;align-self:center"><div class="fill xp" style="width:${pct(m.progress, m.target)}%"></div></div>`}</div>`;
+    const pc = Math.min(100, Math.round(m.progress / m.target * 100));
+    return `<div class="skillrow misrow ${m.done ? 'done' : ''}"><span>${m.name}<span class="lvl">${fmt(pr)}/${fmt(m.target)} — ${pc}%</span><br><small class="have">🪙 ${fmt(m.reward.money)} · ✨ ${m.reward.xp} XP · 🧠 ${m.reward.sp} مهارة</small></span>
+      ${m.done ? '<span class="pill" style="color:var(--green)">اتعملت ✓</span>' : `<div class="track" style="min-width:90px;align-self:center"><div class="fill xp" style="width:${pc}%"></div></div>`}</div>`;
   }
   function skillRow(s) {
     const lvl = y.skills[s.id] || 0;
@@ -536,6 +543,7 @@ function renderHome() {
       <button data-skill="${s.id}" ${lvl >= sh.skillMax || y.skillPoints < lvl + 1 ? 'disabled' : ''} type="button">+${lvl + 1} نقطة</button></div>`;
   }
   $('#btn-work').onclick = async () => { try { await api('/api/work'); flash('اشتغلت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
+  $('#tab-home').querySelectorAll('[data-mistab]').forEach(b => b.onclick = () => { misTab = b.dataset.mistab; renderHome(); });
   $('#btn-company').onclick = async () => { try { await api('/api/buy', { kind: 'company' }); flash('شركة جديدة!', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } };
   const el = $('#tab-home');
   el.querySelectorAll('[data-buy]').forEach(b => b.onclick = async () => {
@@ -604,8 +612,35 @@ function renderWar() {
   const otherWars = S.wars.filter(w => !inWar(w));
   const nm = id => MAP.defs[id] ? MAP.defs[id].name : id;
   let h = '';
-  if (!S.wars.length) h = '<p class="hint" style="margin-top:14px">لا حروب حاليًا. الرئيس يقدر يعلن حرب على إقليم تابع لدولة جارة — اضغط على الدولة في الخريطة.</p>';
+  h += `<button id="btn-ranks" class="ghost ranksbtn" type="button">🏅 الرتب العسكرية وأقوى المقاتلين</button>`;
+  if (!S.wars.length) h += '<p class="hint" style="margin-top:14px">لا حروب حاليًا. الرئيس يقدر يعلن حرب على إقليم تابع لدولة جارة — اضغط على الدولة في الخريطة.</p>';
 
+  if (ranksOpen) {
+    const myR = S.myRank || 0, ranks = S.ranks || [];
+    const cur = ranks[myR] || { name: '—', icon: '🎖', dmg: 0, bonus: 0 };
+    const next = ranks[myR + 1];
+    const dmg = y.totalDamage || 0;
+    const span = next ? next.dmg - cur.dmg : 1;
+    const into = next ? Math.min(1, (dmg - cur.dmg) / span) : 1;
+    h += `<div class="rankhero card">
+      <button id="btn-ranks-back" class="ghost" type="button">← رجوع للحروب</button>
+      <div class="rh-cur"><span class="rh-icon">${cur.icon}</span><div><b>${esc(cur.name)}</b><small>رتبتك الحالية — ضرر إضافي +${Math.round(cur.bonus * 100)}%</small></div></div>
+      ${next ? `<div class="track big"><div class="fill xp" style="width:${Math.round(into * 100)}%"></div></div>
+      <p class="hint">باقي <b dir="ltr">${fmt(next.dmg - dmg)}</b> ضرر لرتبة <b>${esc(next.name)}</b> ${next.icon} (+${Math.round(next.bonus * 100)}%)</p>`
+      : '<p class="hint">وصلت أعلى رتبة في الجيش 👑</p>'}
+    </div>
+    <h3>سلّم الرتب العسكرية <span class="pill">الرتبة بتتاخد من إجمالي ضررك في الحروب وبتزوّد ضررك</span></h3>
+    ${ranks.map((r, i2) => `<div class="ranktier ${i2 === myR ? 'cur' : ''} ${i2 < myR ? 'passed' : ''}">
+      <span class="rt-icon">${r.icon}</span><b>${esc(r.name)}</b>
+      <span class="rt-dmg" dir="ltr">${fmt(r.dmg)}</span><span class="rt-bonus">+${Math.round(r.bonus * 100)}%</span>
+      ${i2 === myR ? '<span class="pill">أنت هنا</span>' : i2 < myR ? '<span class="rt-check">✓</span>' : ''}
+    </div>`).join('')}
+    <h3>أقوى المقاتلين</h3>
+    ${(S.topFighters || []).map((f, i2) => `<div class="rankrow"><span class="rr-n">${i2 + 1}</span><span class="rr-l">${f.level}</span><b>${esc(f.name)}</b><span class="rr-c">${esc(nm(f.country) || '')}</span><span>${(S.ranks[f.rank] || {}).icon || ''}</span><b class="rr-d">${fmt(f.dmg)}</b></div>`).join('') || '<p class="hint">لسه مفيش مقاتلين</p>'}`;
+    el.innerHTML = h;
+    $('#btn-ranks-back').onclick = () => { ranksOpen = false; renderWar(); };
+    return;
+  }
   const openW = battleView != null ? S.wars.find(w => w.id === battleView) : null;
   if (openW) {
     const w = openW;
@@ -714,6 +749,7 @@ function renderWar() {
   const back = $('#btn-back-battles');
   if (back) back.onclick = () => { battleView = null; renderWar(); };
   el.querySelectorAll('[data-open]').forEach(c => c.onclick = () => { battleView = Number(c.dataset.open); renderWar(); });
+  const rb = el.querySelector('#btn-ranks'); if (rb) rb.onclick = () => { ranksOpen = true; renderWar(); };
   el.querySelectorAll('[data-ammo]').forEach(b => b.onclick = () => { battle = { warId: Number(b.dataset.w), ammo: b.dataset.ammo }; renderWar(); });
   el.querySelectorAll('[data-alcall]').forEach(b => b.onclick = async () => {
     try { await api('/api/alliance/call', { warId: Number(b.dataset.alcall) }); flash('الحلفاء اتحشدوا', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
@@ -1172,6 +1208,7 @@ const qp = new URLSearchParams(location.search);
 if (qp.get('token')) { token = qp.get('token'); localStorage.setItem('raad_token', token); }
 if (qp.get('tab')) curTab = qp.get('tab');
 if (qp.get('battle')) battleView = Number(qp.get('battle'));
+if (qp.get('ranks')) ranksOpen = true;
 if (qp.get('gmode')) govMode = qp.get('gmode');
 if (qp.get('gcountry')) { govMode = 'country'; govCid = qp.get('gcountry'); }
 if (qp.get('gtab')) govTab = qp.get('gtab');

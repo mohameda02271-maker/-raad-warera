@@ -329,3 +329,22 @@ button.mini{font-size:9px;padding:3px 8px}
 .regmap-outline{fill:none;stroke:var(--cyan);stroke-width:1.6;pointer-events:none;filter:drop-shadow(0 0 6px #00e5ffcc)}
 .regmap-outline.mine{stroke:#7c4dff;filter:drop-shadow(0 0 6px #7c4dffcc)}
 @keyframes pinpulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ranks screen + missions restructure */
+.ranksbtn{width:100%;margin:10px 0 2px;padding:11px;font-size:13px;font-weight:700}
+.rankhero{text-align:start}
+.rankhero .ghost{width:auto;padding:6px 12px;font-size:12px;margin-bottom:10px}
+.rh-cur{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.rh-icon{font-size:40px;filter:drop-shadow(0 0 12px #ffd70088)}
+.rh-cur b{font-size:20px;display:block}
+.rh-cur small{color:var(--mut)}
+.track.big{height:10px;border-radius:999px;background:#0c0a1a;overflow:hidden;margin:6px 0}
+.ranktier{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px;background:#12102a}
+.ranktier.cur{border-color:var(--vio2);background:linear-gradient(135deg,#7c4dff22,#00e5ff11);box-shadow:0 0 14px #7c4dff33}
+.ranktier.passed{opacity:.62}
+.rt-icon{font-size:18px}
+.rt-dmg{margin-inline-start:auto;color:var(--mut);font-size:11.5px}
+.rt-bonus{color:var(--gold);font-weight:700;font-size:12px;min-width:38px;text-align:end}
+.rt-check{color:var(--green);font-weight:700}
+.mistoggle{margin-bottom:6px}
+.misrow.done{opacity:.55}
