@@ -150,9 +150,47 @@ function ensureCountry(id) {
         regions: Object.fromEntries(DEFS[id].regions.map(r => [r.id, id])),
         defenseBonus: {}, lastTick: Date.now(),
     };
-    return db.countries[id];
+    const c = db.countries[id];
+    if (!c.offices) c.offices = {};            // office key -> player name
+    if (!c.clogs) c.clogs = [];               // country feed: who did what
+    if (c.taxRate == null) c.taxRate = 0.15;  // income tax, economy minister
+    if (!c.swornEnemy) c.swornEnemy = null;
+    if (!c.parties) { c.parties = []; c.partySeq = 0; }
+    if (!c.resist) c.resist = {};             // occupied-region resistance (on the home country)
+    if (!c.dev) c.dev = {};                   // development budget per region
+    if (!c.hist) c.hist = [];                 // daily snapshots for stat cards
+    if (!c.unit) c.unit = { name: 'الوحدة الرسمية', focusWar: null, members: [] };
+    return c;
 }
 function citizens(id) { return Object.values(db.users).filter(u => u.player.country === id).map(u => u.player); }
+const OFFICES = { defense: 'وزير الدفاع', economy: 'وزير الاقتصاد', foreign: 'وزير الخارجية', staff: 'رئيس الأركان', interior: 'وزير الداخلية' };
+function clog(cid, msg) {
+    const c = db.countries[cid]; if (!c) return;
+    if (!c.clogs) c.clogs = [];
+    c.clogs.unshift({ t: Date.now(), msg });
+    if (c.clogs.length > 40) c.clogs.length = 40;
+    mark();
+}
+function govOK(p, cid, ...offices) { // president or the named office holder, own country only
+    if (p.country !== cid) return false;
+    const c = db.countries[cid]; if (!c) return false;
+    if (c.president === p.name) return true;
+    return offices.some(o => c.offices[o] === p.name);
+}
+const countryDamage = (id) => citizens(id).reduce((a, pl) => a + (pl.totalDamage || 0), 0);
+function congress(c) { // 20 seats split proportionally by party membership
+    const SEATS = 20;
+    const lists = c.parties.map(pt => ({ ...pt, n: pt.members.length }));
+    const total = lists.reduce((a, pt) => a + pt.n, 0);
+    if (!total) return { seats: [], majority: 0, total: SEATS };
+    let seats = lists.map(pt => ({ id: pt.id, name: pt.name, color: pt.color, members: pt.members, raw: pt.n / total * SEATS }));
+    seats.forEach(s => s.seats = Math.floor(s.raw));
+    let left = SEATS - seats.reduce((a, s) => a + s.seats, 0);
+    seats.sort((a, b) => (b.raw - b.seats) - (a.raw - a.seats));
+    for (let i = 0; left > 0 && i < seats.length; i++, left--) seats[i].seats++;
+    seats.sort((a, b) => b.seats - a.seats);
+    return { seats, majority: seats[0] ? seats[0].seats : 0, total: SEATS };
+}
 function countryWars(id) { return Object.values(db.wars).filter(w => !w.over && (w.from === id || w.to === id)); }
 function allianceOf(cid) { return Object.values(db.alliances).find(a => a.members.includes(cid)) || null; }
 // which side a player fights on: his own country's side, or an ally's side once allies are called in
@@ -223,7 +261,20 @@ function tickCountry(c) {
     const hours = (now - c.lastTick) / 3600000 * db.speed;
     if (hours <= 0) return;
     c.lastTick = now;
-    for (const r of DEFS[c.id].regions) if (c.regions[r.id] === c.id) c.treasury += r.income * hours;
+    for (const r of DEFS[c.id].regions) {
+        if (c.regions[r.id] === c.id) { c.treasury += r.income * hours; continue; }
+        // occupied home region: resistance builds; at 100 the region revolts back
+        c.resist[r.id] = (c.resist[r.id] || 0) + hours * 2;
+        if (c.resist[r.id] >= 100) {
+            c.regions[r.id] = c.id; c.resist[r.id] = 0;
+            logLine(`مقاومة ${r.name} انتصرت — الإقليم رجع لـ ${DEFS[c.id].name}`);
+        }
+    }
+    const lastSnap = c.hist[c.hist.length - 1];
+    if (!lastSnap || now - lastSnap.t >= 24 * 3600000) {
+        c.hist.push({ t: now, dmg: countryDamage(c.id), pop: citizens(c.id).length, dev: Object.values(c.dev).reduce((a, v) => a + v, 0) });
+        if (c.hist.length > 30) c.hist.shift();
+    }
     mark();
 }
 function gainXp(p) {
@@ -260,6 +311,8 @@ function migrateWar(w) {
     }
     if (!w.orders) w.orders = {};
     if (!w.contrib) w.contrib = {};
+    if (!w.hits) w.hits = [];      // live hit feed, newest last
+    if (!w.sideOf) w.sideOf = {};  // player -> 'att'|'def' (first action fixes the side)
     return w;
 }
 const roundOf = (w) => w.rounds[w.rounds.length - 1];
@@ -292,7 +345,7 @@ function resolveWar(w) {
                 endBattle(w, w.roundWins.att >= BATTLE.roundsToWin ? 'att' : 'def');
                 break;
             }
-            w.rounds.push({ tickAtt: 0, tickDef: 0, poolAtt: 0, poolDef: 0, terrAtt: 0, terrDef: 0 });
+            w.rounds.push({ tickAtt: 0, tickDef: 0, poolAtt: 0, poolDef: 0, terrAtt: 0, terrDef: 0, contrib: {} });
             continue;
         }
         if (now >= w.endsAt) {
@@ -352,9 +405,38 @@ function settleElection(c) {
 }
 
 // ---------- public state shaping ----------
-function publicCountry(id) {
+function countryStats(id) {
     const c = db.countries[id];
-    if (!c) return null;
+    const now = Date.now();
+    const cur = { dmg: countryDamage(id), pop: citizens(id).length, dev: Object.values(c.dev).reduce((a, v) => a + v, 0) };
+    const hist = c.hist || [];
+    const snapAt = (h, t) => [...h].reverse().find(x => x.t <= t) || h[0] || null;
+    const weekAgo = snapAt(hist, now - 7 * 86400000);
+    const weeklyDmg = Math.max(0, cur.dmg - (weekAgo ? weekAgo.dmg : 0));
+    const all = Object.keys(db.countries);
+    const histVal = (i, k) => { const s = snapAt(db.countries[i].hist || [], now - 7 * 86400000); return s ? s[k] : 0; };
+    const rankBy = (fnNow, fnThen) => {
+        const rNow = all.map(i => [i, fnNow(i)]).sort((a, b) => b[1] - a[1]).findIndex(x => x[0] === id) + 1;
+        const rThen = all.map(i => [i, fnThen(i)]).sort((a, b) => b[1] - a[1]).findIndex(x => x[0] === id) + 1;
+        return { rank: rNow || all.length, delta: (rThen || (rNow || 1)) - (rNow || 1) };
+    };
+    const weekOf = i => Math.max(0, countryDamage(i) - histVal(i, 'dmg'));
+    return {
+        weeklyDmg: Math.floor(weeklyDmg),
+        weeklyDmgCit: cur.pop ? Math.floor(weeklyDmg / cur.pop) : 0,
+        totalDmg: Math.floor(cur.dmg),
+        pop: cur.pop,
+        dev: Math.floor(cur.dev / 100),
+        rankWeek: rankBy(weekOf, () => 0),
+        rankDmg: rankBy(i => countryDamage(i), i => histVal(i, 'dmg')),
+        rankPop: rankBy(i => citizens(i).length, i => histVal(i, 'pop')),
+        rankDev: rankBy(i => Object.values(db.countries[i].dev || {}).reduce((a, v) => a + v, 0), i => histVal(i, 'dev')),
+        hist: hist.slice(-14),
+    };
+}
+function publicCountry(id) {
+    if (!db.countries[id]) return null;
+    const c = ensureCountry(id);
     settleElection(c);
     tickCountry(c);
     const cz = citizens(id);
@@ -364,7 +446,25 @@ function publicCountry(id) {
         regions: DEFS[id].regions.map(r => ({ ...r, owner: c.regions[r.id] })),
         defenseBonus: c.defenseBonus,
         wars: countryWars(id).map(publicWar),
+        offices: Object.fromEntries(Object.entries(c.offices).map(([k, n]) => [k, { name: n, level: db.users[n] ? db.users[n].player.level : 1 }])),
+        clogs: c.clogs.slice(0, 15),
+        taxRate: Math.round(c.taxRate * 100),
+        swornEnemy: c.swornEnemy,
+        congress: congress(c),
+        unit: c.unit,
+        dev: c.dev, resist: c.resist,
+        dailyIncome: DEFS[id].regions.filter(r => c.regions[r.id] === id).reduce((a, r) => a + r.income, 0) * 24,
+        stats: countryStats(id),
     };
+}
+function warRanks(w, contrib, sideOf) {
+    const rows = Object.entries(contrib || {}).map(([name, dmg]) => ({
+        name, dmg: Math.floor(dmg), side: (sideOf || {})[name] || null,
+        level: db.users[name] ? db.users[name].player.level : 1,
+        country: db.users[name] ? db.users[name].player.country : null,
+    })).filter(x => x.side);
+    rows.sort((a, b) => b.dmg - a.dmg);
+    return { att: rows.filter(x => x.side === 'att').slice(0, 10), def: rows.filter(x => x.side === 'def').slice(0, 10) };
 }
 function publicWar(w) {
     resolveWar(w);
@@ -379,6 +479,18 @@ function publicWar(w) {
         terr: { att: r.terrAtt, def: r.terrDef, win: BATTLE.terrainWin },
         tickPools: { att: Math.floor(r.tickAtt), def: Math.floor(r.tickDef) },
         tickEndsAt: w.tickAt + tick,
+        tickGain: (r.tickAtt || r.tickDef) ? terrainGain(Math.max(r.tickAtt, r.tickDef)) : 0,
+        hits: (w.hits || []).slice(-20).reverse(),
+        rankBattle: warRanks(w, w.contrib, w.sideOf),
+        rankRound: warRanks(w, r.contrib || {}, w.sideOf),
+        sideMods: {
+            att: Math.round(((w.orders[w.from] && ORDER_BONUS[w.orders[w.from].priority]) || 0) * 100),
+            def: Math.round(((w.orders[w.to] && ORDER_BONUS[w.orders[w.to].priority]) || 0) * 100),
+        },
+        sideCount: {
+            att: Object.keys(w.sideOf || {}).filter(n => w.sideOf[n] === 'att').length,
+            def: Object.keys(w.sideOf || {}).filter(n => w.sideOf[n] === 'def').length,
+        },
         orders: w.orders,
         contrib: w.contrib,
     };
@@ -462,6 +574,11 @@ const server = http.createServer(async (req, res) => {
             })),
             alliances: Object.values(db.alliances).map(a => ({ id: a.id, name: a.name, leader: a.leader, members: a.members, pending: a.pending })),
             countries, wars: Object.values(db.wars).filter(w => !w.over).map(publicWar),
+            world: Object.keys(DEFS).map(id => ({
+                id, president: db.countries[id] ? db.countries[id].president : null,
+                citizens: citizens(id).length,
+                swornEnemy: db.countries[id] ? db.countries[id].swornEnemy : null,
+            })),
             log: db.log.slice(0, 20),
             shop: { foods: FOODS, weapons: WEAPONS, armors: ARMORS, ammos: AMMOS, skills: SKILLS, skillMax: SKILL_MAX, company: COMPANY, factories: FACTORIES, factoryMaxLevel: FACTORY_MAX_LEVEL, craftAmmoIron: CRAFT_AMMO_IRON, craftMealWheat: CRAFT_MEAL_WHEAT, weaponIron: WEAPONS.map((_, i) => weaponIronCost(i)), supply: SUPPLY },
         });
@@ -507,7 +624,7 @@ const server = http.createServer(async (req, res) => {
         if (need(p.bars.energy >= WORK.energy, 'طاقة غير كافية')) return;
         p.bars.energy -= WORK.energy;
         const salary = WORK.salary * (1 + p.skills.production * 0.05);
-        const tax = salary * WORK.tax;
+        const tax = salary * (home.taxRate != null ? home.taxRate : WORK.tax);
         p.money += salary - tax;
         home.treasury += tax;
         p.xp += WORK.xp; gainXp(p);
@@ -607,14 +724,19 @@ const server = http.createServer(async (req, res) => {
         if (hitSide === 'att') { w.attDmg += finalDmg; r.poolAtt += finalDmg; r.tickAtt += finalDmg; }
         else { w.defDmg += finalDmg; r.poolDef += finalDmg; r.tickDef += finalDmg; }
         w.contrib[p.name] = (w.contrib[p.name] || 0) + finalDmg;
+        w.sideOf[p.name] = hitSide;
+        r.contrib = r.contrib || {};
+        r.contrib[p.name] = (r.contrib[p.name] || 0) + finalDmg;
+        w.hits.push({ t: Date.now(), side: hitSide, name: p.name, country: p.country, dmg: finalDmg, crit, missed, ammo: ammoKind, weapon: p.weapon, level: p.level });
+        if (w.hits.length > 30) w.hits.splice(0, w.hits.length - 30);
         p.totalDamage += finalDmg; p.xp += HIT.xp; gainXp(p);
         if (!missed && finalDmg > 0) bumpStat(p, 'hits', 1);
         const mdh = checkMissions(p);
         resolveWar(w); mark(); save();
         return json(res, 200, { ok: true, dmg: finalDmg, crit, missed, cost, dodged, ordered: !!ord, war: publicWar(w), missions: mdh });
     }
-    if (P === '/api/defense' && req.method === 'POST') { // president funds a region's defense from treasury
-        if (need(home.president === p.name, 'الرئيس بس')) return;
+    if (P === '/api/defense' && req.method === 'POST') { // defense/interior ministry funds a region's defense from treasury
+        if (need(govOK(p, p.country, 'defense', 'interior'), 'للرئيس أو وزير الدفاع أو الداخلية بس')) return;
         const r = DEFS[p.country].regions.find(r => r.id === body.regionId);
         if (need(r, 'إقليم غير معروف')) return;
         const amount = Math.min(Number(body.amount) || 0, Math.floor(home.treasury));
@@ -693,6 +815,7 @@ const server = http.createServer(async (req, res) => {
         if (supSide === 'att') { w.attDmg += s.points; const r = roundOf(w); r.poolAtt += s.points; r.tickAtt += s.points; }
         else { w.defDmg += s.points; const r = roundOf(w); r.poolDef += s.points; r.tickDef += s.points; }
         w.contrib[p.name] = (w.contrib[p.name] || 0) + s.points;
+        w.sideOf[p.name] = supSide;
         logLine(`${p.name} زوّد الحرب بـ${s.amount} ${body.kind === 'iron' ? 'حديد' : 'ذخيرة ثقيلة'} (+${s.points} نقطة)`);
         bumpStat(p, 'supply', 1);
         const mdu = checkMissions(p);
@@ -705,8 +828,8 @@ const server = http.createServer(async (req, res) => {
         if (need(w, 'معركة غير موجودة')) return;
         resolveWar(w);
         if (need(!w.over, 'المعركة خلصت')) return;
-        if (need(home.president === p.name, 'الرئيس بس')) return;
         if (need(p.country === w.from || p.country === w.to, 'دي مش معركة دولتك')) return;
+        if (need(govOK(p, p.country, 'defense'), 'للرئيس أو وزير الدفاع بس')) return;
         const pr = Number(body.priority);
         if (need(ORDER_BONUS[pr], 'أولوية غير معروفة')) return;
         const cost = ORDER_COST[pr];
@@ -720,7 +843,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---------- alliances: form, invite, leave, call into wars ----------
     if (P === '/api/alliance/create' && req.method === 'POST') {
-        if (need(home.president === p.name, 'الرئيس بس اللي يقدر يأسس تحالف')) return;
+        if (need(govOK(p, p.country, 'foreign'), 'للرئيس أو وزير الخارجية بس')) return;
         if (need(!allianceOf(p.country), 'دولتك في تحالف بالفعل')) return;
         const name = String(body.name || '').trim().slice(0, 30);
         if (need(name.length >= 2, 'اسم التحالف قصير')) return;
@@ -731,7 +854,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true });
     }
     if (P === '/api/alliance/invite' && req.method === 'POST') {
-        if (need(home.president === p.name, 'الرئيس بس')) return;
+        if (need(govOK(p, p.country, 'foreign'), 'للرئيس أو وزير الخارجية بس')) return;
         const al = allianceOf(p.country);
         if (need(al, 'دولتك مش في تحالف')) return;
         const target = String(body.country || '');
@@ -744,7 +867,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true });
     }
     if (P === '/api/alliance/accept' && req.method === 'POST') {
-        if (need(home.president === p.name, 'الرئيس بس')) return;
+        if (need(govOK(p, p.country, 'foreign'), 'للرئيس أو وزير الخارجية بس')) return;
         const al = db.alliances[body.id];
         if (need(al, 'تحالف غير موجود')) return;
         if (need(al.pending.includes(p.country), 'مفيش دعوة لدولتك')) return;
@@ -756,7 +879,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true });
     }
     if (P === '/api/alliance/decline' && req.method === 'POST') {
-        if (need(home.president === p.name, 'الرئيس بس')) return;
+        if (need(govOK(p, p.country, 'foreign'), 'للرئيس أو وزير الخارجية بس')) return;
         const al = db.alliances[body.id];
         if (need(al && al.pending.includes(p.country), 'مفيش دعوة لدولتك')) return;
         al.pending = al.pending.filter(c => c !== p.country);
@@ -764,7 +887,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true });
     }
     if (P === '/api/alliance/leave' && req.method === 'POST') {
-        if (need(home.president === p.name, 'الرئيس بس')) return;
+        if (need(govOK(p, p.country, 'foreign'), 'للرئيس أو وزير الخارجية بس')) return;
         const al = allianceOf(p.country);
         if (need(al, 'دولتك مش في تحالف')) return;
         al.members = al.members.filter(c => c !== p.country);
@@ -780,7 +903,7 @@ const server = http.createServer(async (req, res) => {
         resolveWar(w);
         if (need(!w.over, 'المعركة خلصت')) return;
         if (need(p.country === w.from || p.country === w.to, 'مش طرف في المعركة دي')) return;
-        if (need(home.president === p.name, 'الرئيس بس')) return;
+        if (need(govOK(p, p.country, 'defense'), 'للرئيس أو وزير الدفاع بس')) return;
         const al = allianceOf(p.country);
         if (need(al && al.members.length > 1, 'مفيش حلفاء في التحالف')) return;
         if (need(!w.alliesCalled, 'الحلفاء اتحشدوا بالفعل')) return;
@@ -788,6 +911,164 @@ const server = http.createServer(async (req, res) => {
         logLine(`${DEFS[p.country].name} نادت حلفاء «${al.name}» للحرب`);
         mark(); save();
         return json(res, 200, { ok: true, war: publicWar(w) });
+    }
+
+    // ---------- ministries: offices with real, server-enforced powers ----------
+    if (P === '/api/country/appoint' && req.method === 'POST') { // president appoints a minister
+        if (need(home.president === p.name, 'الرئيس بس اللي يعيّن الوزراء')) return;
+        const office = String(body.office || '');
+        if (need(OFFICES[office], 'منصب غير معروف')) return;
+        const t = db.users[String(body.name || '')] && db.users[String(body.name || '')].player;
+        if (need(t, 'لاعب غير موجود')) return;
+        if (need(t.country === p.country, 'لازم يكون من مواطني دولتك')) return;
+        if (need(t.name !== home.president, 'الرئيس مش بيتعيّن وزير')) return;
+        if (need(!Object.values(home.offices).includes(t.name), 'اللاعب ده شاغل منصب بالفعل — لاعب واحد = منصب واحد')) return;
+        home.offices[office] = t.name;
+        clog(p.country, `${p.name} عيّن ${t.name} ${OFFICES[office]}`);
+        logLine(`${t.name} أصبح ${OFFICES[office]} في ${DEFS[p.country].name}`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/country/dismiss' && req.method === 'POST') { // president dismisses a minister
+        if (need(home.president === p.name, 'الرئيس بس')) return;
+        const office = String(body.office || '');
+        if (need(home.offices[office], 'المنصب ده فاضي أصلاً')) return;
+        const old = home.offices[office];
+        delete home.offices[office];
+        clog(p.country, `${p.name} أقال ${old} من منصب ${OFFICES[office]}`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/country/tax' && req.method === 'POST') { // economy minister sets income tax %
+        if (need(govOK(p, p.country, 'economy'), 'للرئيس أو وزير الاقتصاد بس')) return;
+        const rate = Number(body.rate);
+        if (need(Number.isFinite(rate) && rate >= 0 && rate <= 30, 'الضريبة بين 0% و 30%')) return;
+        home.taxRate = rate / 100;
+        clog(p.country, `${p.name} غيّر ضريبة الدخل لـ ${rate}%`);
+        mark(); save();
+        return json(res, 200, { ok: true, taxRate: rate });
+    }
+    if (P === '/api/country/devfund' && req.method === 'POST') { // economy minister funds a region's development
+        if (need(govOK(p, p.country, 'economy'), 'للرئيس أو وزير الاقتصاد بس')) return;
+        const r = DEFS[p.country].regions.find(r => r.id === body.regionId);
+        if (need(r, 'إقليم غير معروف')) return;
+        const amount = Math.min(Number(body.amount) || 0, Math.floor(home.treasury));
+        if (need(amount >= 10, 'أقل مبلغ 10')) return;
+        home.treasury -= amount;
+        home.dev[r.id] = (home.dev[r.id] || 0) + amount;
+        clog(p.country, `${p.name} خصص ${amount} ج من الخزينة لتنمية ${r.name}`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/country/enemy' && req.method === 'POST') { // foreign minister declares a sworn enemy (or clears it)
+        if (need(govOK(p, p.country, 'foreign'), 'للرئيس أو وزير الخارجية بس')) return;
+        const target = String(body.country || '');
+        if (target) {
+            if (need(DEFS[target] && target !== p.country, 'دولة غير معروفة')) return;
+            home.swornEnemy = target;
+            clog(p.country, `${p.name} أعلن ${DEFS[target].name} عدوًا لدودًا`);
+            logLine(`${DEFS[p.country].name} أعلنت ${DEFS[target].name} عدوًا لدودًا`);
+        } else {
+            home.swornEnemy = null;
+            clog(p.country, `${p.name} سحب إعلان العدو اللدود`);
+        }
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/country/suppress' && req.method === 'POST') { // interior minister spends treasury to calm a region we occupy
+        if (need(govOK(p, p.country, 'interior'), 'للرئيس أو وزير الداخلية بس')) return;
+        const [dcid] = String(body.regionId || '').split(':');
+        if (db.countries[dcid]) ensureCountry(dcid);
+        const def = db.countries[dcid];
+        if (need(def && def.regions[body.regionId] === p.country, 'الإقليم ده مش محتل من دولتك')) return;
+        const amount = Math.min(Number(body.amount) || 0, Math.floor(home.treasury));
+        if (need(amount >= 10, 'أقل مبلغ 10')) return;
+        home.treasury -= amount;
+        def.resist[body.regionId] = Math.max(0, (def.resist[body.regionId] || 0) - amount / 10);
+        clog(p.country, `${p.name} صرف ${amount} ج على تهدئة ${regionName({ to: dcid, regionId: body.regionId })}`);
+        mark(); save();
+        return json(res, 200, { ok: true, resist: Math.floor(def.resist[body.regionId]) });
+    }
+    if (P === '/api/war/peace' && req.method === 'POST') { // foreign ministry offers peace; other side accepts
+        const w = db.wars[body.warId];
+        if (need(w, 'معركة غير موجودة')) return;
+        resolveWar(w);
+        if (need(!w.over, 'المعركة خلصت')) return;
+        const mySide = p.country === w.from ? 'att' : p.country === w.to ? 'def' : null;
+        if (need(mySide, 'دي مش حرب دولتك')) return;
+        if (need(govOK(p, p.country, 'foreign'), 'للرئيس أو وزير الخارجية بس')) return;
+        if (!w.peaceOffer) {
+            w.peaceOffer = { side: mySide, by: p.name };
+            clog(p.country, `${p.name} عرض السلام في حرب ${regionName(w)}`);
+            mark(); save();
+            return json(res, 200, { ok: true, offered: true });
+        }
+        if (need(w.peaceOffer.side !== mySide, 'العرض من طرفكم — استنوا رد الطرف التاني')) return;
+        w.over = 'lost'; // peace: defender keeps the region
+        logLine(`سلام في حرب ${regionName(w)} — ${DEFS[w.to].name} احتفظت بالإقليم`);
+        clog(w.from, `اتفاق سلام أنهى حرب ${regionName(w)}`);
+        clog(w.to, `اتفاق سلام أنهى حرب ${regionName(w)}`);
+        mark(); save();
+        return json(res, 200, { ok: true, peace: true });
+    }
+    if (P === '/api/party/found' && req.method === 'POST') { // found a party in your country (500 ج)
+        if (need(!home.parties.some(pt => pt.members.includes(p.name)), 'أنت في حزب بالفعل')) return;
+        if (need(p.money >= 500, 'تأسيس حزب بـ 500 ج')) return;
+        const name = String(body.name || '').trim().slice(0, 30);
+        if (need(name.length >= 2, 'اسم الحزب قصير')) return;
+        p.money -= 500;
+        const colors = ['#7c4dff', '#00e5ff', '#ff3355', '#ffb300', '#4dff88', '#ff7ad9'];
+        const pt = { id: ++home.partySeq, name, color: colors[home.parties.length % colors.length], members: [p.name] };
+        home.parties.push(pt);
+        clog(p.country, `${p.name} أسس حزب «${name}»`);
+        mark(); save();
+        return json(res, 200, { ok: true, party: pt });
+    }
+    if (P === '/api/party/join' && req.method === 'POST') {
+        const pt = home.parties.find(pt => pt.id === Number(body.partyId));
+        if (need(pt, 'حزب غير موجود')) return;
+        for (const o of home.parties) o.members = o.members.filter(n => n !== p.name);
+        pt.members.push(p.name);
+        clog(p.country, `${p.name} انضم لحزب «${pt.name}»`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/unit/name' && req.method === 'POST') { // chief of staff renames the official unit
+        if (need(govOK(p, p.country, 'staff'), 'للرئيس أو رئيس الأركان بس')) return;
+        const name = String(body.name || '').trim().slice(0, 30);
+        if (need(name.length >= 2, 'اسم قصير')) return;
+        home.unit.name = name;
+        clog(p.country, `${p.name} سمّى الوحدة الرسمية «${name}»`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/unit/focus' && req.method === 'POST') { // chief of staff points the unit at a battle
+        if (need(govOK(p, p.country, 'staff'), 'للرئيس أو رئيس الأركان بس')) return;
+        const w = db.wars[body.warId];
+        if (need(w && !w.over, 'معركة غير موجودة')) return;
+        home.unit.focusWar = w.id;
+        clog(p.country, `${p.name} وجّه الوحدة لحرب ${regionName(w)}`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/unit/invite' && req.method === 'POST') {
+        if (need(govOK(p, p.country, 'staff'), 'للرئيس أو رئيس الأركان بس')) return;
+        const t = db.users[String(body.name || '')] && db.users[String(body.name || '')].player;
+        if (need(t && t.country === p.country, 'لاعب غير موجود في دولتك')) return;
+        if (need(!home.unit.members.includes(t.name), 'في الوحدة بالفعل')) return;
+        home.unit.members.push(t.name);
+        clog(p.country, `${p.name} ضمّ ${t.name} للوحدة`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/unit/kick' && req.method === 'POST') {
+        if (need(govOK(p, p.country, 'staff'), 'للرئيس أو رئيس الأركان بس')) return;
+        const name = String(body.name || '');
+        if (need(home.unit.members.includes(name), 'مش في الوحدة')) return;
+        home.unit.members = home.unit.members.filter(n => n !== name);
+        clog(p.country, `${p.name} طرد ${name} من الوحدة`);
+        mark(); save();
+        return json(res, 200, { ok: true });
     }
 
     // ---------- admin (his account only: the first registered account) ----------

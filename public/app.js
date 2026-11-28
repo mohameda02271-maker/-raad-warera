@@ -405,6 +405,7 @@ function renderHome() {
 
 /* --- war tab: world battles list + battle detail --- */
 let battleView = null;
+let rankMode = 'battle';
 function frameClass(w, cid) {
   const y = S.you;
   const myAl = (S.alliances || []).find(a => a.members.includes(y.country));
@@ -432,6 +433,10 @@ function tugBar(w) {
   </div>
   <div class="tuglbl"><span class="wallA-t">${fmt(w.terr.att)}</span><span>الأرض — أول 300 ياخد الجولة</span><span class="wallB-t">${fmt(w.terr.def)}</span></div>`;
 }
+function rankRow(r, i) {
+  const cn = r.country && MAP.defs[r.country] ? MAP.defs[r.country].name : (r.country || '');
+  return `<div class="rankrow"><span class="rr-n">${i + 1}</span><span class="rr-l">${r.level}</span><b>${esc(r.name)}</b><span class="rr-c">${esc(cn)}</span><b class="rr-d">${fmt(r.dmg)}</b></div>`;
+}
 function renderWar() {
   const el = $('#tab-war'), y = S.you, sh = S.shop;
   const myPub = S.countries[y.country] || {};
@@ -453,21 +458,60 @@ function renderWar() {
     const tickIn = Math.max(0, Math.round((w.tickEndsAt - Date.now()) / 1000));
     const myOrder = w.orders && w.orders[y.country];
     const canOrder = isPrez && (y.country === w.from || y.country === w.to) && !w.over;
+    const tot = (w.attDmg + w.defDmg) || 1;
+    const attPct = Math.round(w.attDmg / tot * 1000) / 10, defPct = Math.round(w.defDmg / tot * 1000) / 10;
+    const sk = y.skills || {};
+    const wName = ix => sh.weapons[ix] ? sh.weapons[ix].name : 'قبضة';
+    const wAtk = ix => sh.weapons[ix] ? sh.weapons[ix].atk : 0;
+    const rank = (w.rankRound && w.rankBattle) ? (rankMode === 'round' ? w.rankRound : w.rankBattle) : { att: [], def: [] };
+    if (w.hits && w.hits.length) {
+      h += `<div class="card hitfeed">` + w.hits.slice(0, 8).map(hx => `
+        <div class="hitline ${hx.crit || hx.dmg >= 1000 ? 'big' : ''}">
+          <span class="hl-side ${hx.side}"></span>
+          <b>${esc(hx.name)}</b><span class="hl-c">${esc(hx.country ? nm(hx.country) : '')}</span>
+          <span class="hl-w">${hx.weapon ? '🔫' : '👊'}${hx.ammo ? '➕' : ''}</span>
+          <b class="hl-d">${hx.missed ? 'أخطأ' : fmt(hx.dmg) + (hx.crit ? '!' : '')}</b>
+        </div>`).join('') + `</div>`;
+    }
     h += `<div class="card">
       <div class="row" style="justify-content:space-between"><button class="cyan" id="btn-back-battles" type="button">← كل المعارك</button><span class="pill">الجولة ${Math.min(w.round, 3)} من 3 ${roundsDots(w)}</span></div>
-      <h4><span class="side ${frameClass(w, w.from)}">${esc(nm(w.from))}</span> × <span class="side ${frameClass(w, w.to)}">${esc(nm(w.to))}</span> — ${esc(w.regionName || '')}</h4>
+      <h4 style="font-size:16px;text-align:center"><span class="side ${frameClass(w, w.from)}">${esc(nm(w.from))}</span> <b class="wscore" dir="ltr">${w.roundWins.att} - ${w.roundWins.def}</b> <span class="side ${frameClass(w, w.to)}">${esc(nm(w.to))}</span></h4>
+      <div class="hint center" style="margin:0 0 4px">${esc(w.regionName || '')} — النقطة الجاية بعد ${Math.floor(tickIn / 60)}:${String(tickIn % 60).padStart(2, '0')}${w.tickGain ? ` <b class="cyan-t">+${w.tickGain} أرض</b>` : ''} — أقصى وقت ${mins >= 60 ? Math.floor(mins / 60) + ' س ' + mins % 60 + ' د' : mins + ' د'}</div>
       ${tugBar(w)}
-      ${mine && !w.over ? `<div class="amnoselect">
-          ${['none', 'light', 'mid', 'heavy'].map(k => `<button data-ammo="${k}" data-w="${w.id}" class="${battle.warId === w.id && battle.ammo === k ? 'on' : ''}" type="button">${k === 'none' ? 'بدون' : sh.ammos[k].name + ' (' + fmt(y.ammo[k] || 0) + ')'}</button>`).join('')}
-        </div>
-        <button class="bigbtn hitbtn" data-hit="${w.id}" type="button">اضرب!</button>` : ''}
-      <div class="kv"><span>ضرر النقطة الحالية</span><b dir="ltr">${fmt(w.tickPools.att)} × ${fmt(w.tickPools.def)}</b></div>
-      <div class="kv"><span>النقطة الجاية بعد</span><b>${Math.floor(tickIn / 60)}:${String(tickIn % 60).padStart(2, '0')}</b></div>
-      <div class="kv"><span>أقصى وقت للمعركة</span><b>${mins >= 60 ? Math.floor(mins / 60) + ' س ' + mins % 60 + ' د' : mins + ' دقيقة'}</b></div>
-      <div class="kv"><span>ضررك في المعركة دي</span><b>${fmt((w.contrib && w.contrib[y.name]) || 0)}</b></div>
-      ${myOrder ? `<div class="kv"><span>أمر القيادة</span><b class="wallA-t">+${Math.round(({ 1: 5, 2: 10, 3: 15 })[myOrder.priority] || 0)}% ضرر لدولتك</b></div>` : ''}
+      <div class="splitbar"><div class="sp-att" style="width:${attPct}%"></div><div class="sp-def" style="width:${defPct}%"></div></div>
+      <div class="splitlbl"><span><b dir="ltr">${defPct}%</b> ${fmt(w.defDmg)} 🔥</span><span>🔥 ${fmt(w.attDmg)} <b dir="ltr">${attPct}%</b></span></div>
+    </div>`;
+
+    h += `<div class="sidecards">
+      <div class="sidecard def"><div class="sc-mod">${w.sideMods.def ? '+' + w.sideMods.def + '%' : 'بدون أمر'}</div><div class="sc-name">🛡 دفاع — ${esc(nm(w.to))}</div><div class="sc-meta"><span>👥 ${w.sideCount.def}</span><span>${fmt(w.defDmg)} ضرر</span></div></div>
+      <div class="sidecard att"><div class="sc-mod">${w.sideMods.att ? '+' + w.sideMods.att + '%' : 'بدون أمر'}</div><div class="sc-name">⚔ هجوم — ${esc(nm(w.from))}</div><div class="sc-meta"><span>👥 ${w.sideCount.att}</span><span>${fmt(w.attDmg)} ضرر</span></div></div>
     </div>`;
     if (mine && !w.over) {
+      const best = ['feast', 'meal', 'bread'].find(f => y.foods[f] > 0);
+      h += `<div class="card fighter">
+        <div class="frow">
+          <div class="favatar">${esc((y.name[0] || '?').toUpperCase())}<span class="flvl">${y.level}</span></div>
+          <div class="fstats">
+            <div>⚔ هجوم <b>${sk.attack || 0}</b></div><div>🎯 دقة <b>${sk.precision || 0}</b></div>
+            <div>💥 كريت <b>${(sk.crit || 0) * 2}%</b></div><div>🛡 درع <b>${(sk.armor || 0) * 2 + (sh.armors[y.armorGear] ? sh.armors[y.armorGear].armor : 0)}%</b></div>
+            <div>💨 مراوغة <b>${((sk.dodge || 0) * 1.5).toFixed(0)}%</b></div><div>🏅 رتبة <b>+${Math.round(y.rankBonus * 100)}%</b></div>
+          </div>
+          <button class="cyan feat" data-eat="${best || ''}" ${best ? '' : 'disabled'} type="button">🍽 كل${best ? ' (' + y.foods[best] + ')' : ''}</button>
+        </div>
+        <div class="equip">
+          <div class="slot"><i>🗡</i><b>${esc(wName(y.weapon))}</b><span>${wAtk(y.weapon)} ضرر</span></div>
+          <div class="slot"><i>🧨</i><b>${battle.ammo === 'none' ? 'بدون' : esc(sh.ammos[battle.ammo].name.split(' ')[0])}</b><span>${battle.ammo === 'none' ? '—' : fmt(y.ammo[battle.ammo] || 0)}</span></div>
+          <div class="slot ${y.armorGear ? '' : 'empty'}"><i>🪖</i><b>${y.armorGear ? esc(sh.armors[y.armorGear].name) : 'فاضي'}</b><span>${y.armorGear ? sh.armors[y.armorGear].armor + '%' : ''}</span></div>
+          <div class="slot empty"><i>🦺</i><b>فاضي</b><span></span></div>
+          <div class="slot empty"><i>👖</i><b>فاضي</b><span></span></div>
+          <div class="slot empty"><i>🥾</i><b>فاضي</b><span></span></div>
+          <div class="slot empty"><i>🧤</i><b>فاضي</b><span></span></div>
+        </div>
+        <div class="amnoselect">
+          ${['none', 'light', 'mid', 'heavy'].map(k => `<button data-ammo="${k}" data-w="${w.id}" class="${battle.warId === w.id && battle.ammo === k ? 'on' : ''}" type="button">${k === 'none' ? 'بدون' : sh.ammos[k].name + ' (' + fmt(y.ammo[k] || 0) + ')'}</button>`).join('')}
+        </div>
+        <button class="bigbtn hitbtn" data-hit="${w.id}" type="button">اضرب!</button>
+      </div>`;
       h += `<div class="card">
         <div class="amnoselect" style="margin-top:0">
           <button data-supply="iron:${w.id}" type="button">زوّد بـ${sh.supply.iron.amount} حديد (+${sh.supply.iron.points}) — عندك ${fmt(y.goods.iron)}</button>
@@ -480,6 +524,14 @@ function renderWar() {
         </div>` : ''}
       </div>`;
     }
+    h += `<div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center"><h3 style="border:none;margin:0">الترتيب</h3>
+      <div class="rtoggle"><button data-rankmode="battle" class="${rankMode === 'battle' ? 'on' : ''}" type="button">معركة</button><button data-rankmode="round" class="${rankMode === 'round' ? 'on' : ''}" type="button">جولة ${Math.min(w.round, 3)}#</button></div></div>
+      <div class="rankcols">
+        <div class="rankcol"><h4>⚔ ${esc(nm(w.from))}</h4>${rank.att.length ? rank.att.map((r2, i2) => rankRow(r2, i2)).join('') : '<p class="hint">لسه مفيش ضرر</p>'}</div>
+        <div class="rankcol"><h4>🛡 ${esc(nm(w.to))}</h4>${rank.def.length ? rank.def.map((r2, i2) => rankRow(r2, i2)).join('') : '<p class="hint">لسه مفيش ضرر</p>'}</div>
+      </div>
+    </div>`;
     if (w.over) h += `<p class="hint center">المعركة خلصت — ${w.over === 'won' ? 'الهجوم كسب والإقليم اتنقل' : 'الدفاع صمد'}.</p>`;
   } else {
     const card = w => {
@@ -497,6 +549,11 @@ function renderWar() {
     if (otherWars.length) h += `<h3>معارك العالم</h3>` + otherWars.map(card).join('');
   }
   el.innerHTML = h;
+  el.querySelectorAll('[data-rankmode]').forEach(b => b.onclick = () => { rankMode = b.dataset.rankmode; renderWar(); });
+  el.querySelectorAll('[data-eat]').forEach(b => b.onclick = async () => {
+    if (!b.dataset.eat) return;
+    try { await api('/api/eat', { food: b.dataset.eat }); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
   if (!myWars.find(w => w.id === battle.warId)) battle = { warId: myWars[0] ? myWars[0].id : null, ammo: battle.ammo };
   const back = $('#btn-back-battles');
   if (back) back.onclick = () => { battleView = null; renderWar(); };
