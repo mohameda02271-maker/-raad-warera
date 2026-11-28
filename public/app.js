@@ -4,6 +4,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 let token = localStorage.getItem('raad_token') || '';
+const CLIENT_VERSION = '1.2.0';
 let S = null, MAP = null;
 let selCountry = null;
 let battle = { warId: null, ammo: 'none' };
@@ -156,6 +157,7 @@ function detectFlips() {
 async function boot() {
   if (!MAP) MAP = await apiGet('/api/mapdata');
   try { S = await api('/api/state'); } catch { token = ''; localStorage.removeItem('raad_token'); show('auth'); return; }
+  stampVersion(S.version);
   if (!S.you.country) { buildPick(); show('pick'); return; }
   if (!$('#stage svg')) {
     $('#stage').innerHTML = mapSVG();
@@ -730,10 +732,21 @@ let refreshing = false;
 async function refresh() {
   if (refreshing || $('#game').classList.contains('hidden')) return;
   refreshing = true;
-  try { S = await api('/api/state'); detectFlips(); render(); } catch {}
+  try { S = await api('/api/state'); stampVersion(S.version); detectFlips(); render(); } catch {}
   refreshing = false;
 }
 setInterval(refresh, 3000);
+
+/* ---------- version footer + self-healing refresh ---------- */
+function stampVersion(sv) {
+  let el = document.getElementById('verstamp');
+  if (!el) { el = document.createElement('div'); el.id = 'verstamp'; document.body.appendChild(el); }
+  el.textContent = 'v' + CLIENT_VERSION + (sv && sv !== CLIENT_VERSION ? ' — في تحديث جديد، بحدّث...' : '');
+  if (sv && sv !== CLIENT_VERSION && !sessionStorage.getItem('ver_reload')) {
+    sessionStorage.setItem('ver_reload', '1');
+    setTimeout(() => location.reload(true), 800);
+  }
+}
 
 /* ---------- start ---------- */
 const qp = new URLSearchParams(location.search);

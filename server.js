@@ -9,7 +9,8 @@ import { DEFS, PATHS, NEIGHBORS } from './gamedata.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = process.env.DATA_FILE || path.join(ROOT, 'data.json');
-const PORT = Number(process.env.PORT) || 8080; // Railway injects PORT; 8080 is just the local fallback
+const PORT = Number(process.env.PORT) || 8080;
+const VERSION = '1.2.0'; // Railway injects PORT; 8080 is just the local fallback
 // The world stays locked until the owner claims the admin account with this secret.
 // If the env var is missing, a one-time secret is generated and printed to the log,
 // so a public URL can never hand admin to a stranger.
@@ -542,7 +543,7 @@ const server = http.createServer(async (req, res) => {
         const fp = path.join(ROOT, 'public', P === '/' ? 'index.html' : P);
         if (fp.startsWith(path.join(ROOT, 'public')) && fs.existsSync(fp) && fs.statSync(fp).isFile()) {
             const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' }[path.extname(fp)] || 'application/octet-stream';
-            res.writeHead(200, { 'content-type': mime });
+            res.writeHead(200, { 'content-type': mime, 'cache-control': 'no-cache, must-revalidate', 'x-raad-version': VERSION });
             return fs.createReadStream(fp).pipe(res);
         }
     }
@@ -566,7 +567,7 @@ const server = http.createServer(async (req, res) => {
                 factories: p.factories.map(f => ({ ...f, upNext: factoryUpgradeCost(f) })),
                 factoryCap: factoryCap(p),
             },
-            speed: db.speed,
+            speed: db.speed, version: VERSION,
             missions: MISSIONS.map(m => ({
                 id: m.id, name: m.name, daily: !!m.daily, target: m.target, reward: m.reward,
                 progress: Math.floor(m.daily ? (p.mDaily[m.stat] || 0) : (p.mStats[m.stat] || 0)),

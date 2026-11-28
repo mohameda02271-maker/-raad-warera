@@ -246,3 +246,6 @@ input:focus,select:focus{outline:none;border-color:var(--violet);box-shadow:0 0 
 .rankrow b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rr-c{color:var(--dim);font-size:9.5px}
 .rr-d{margin-inline-start:auto;color:var(--cyan);flex:none}
+
+/* version stamp footer */
+#verstamp{position:fixed;bottom:2px;inset-inline-start:8px;font-size:9px;color:#565180;z-index:50;pointer-events:none;direction:ltr}
