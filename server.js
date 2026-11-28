@@ -20,6 +20,7 @@ try { fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true }); } catch (e) { 
 let db = { users: {}, sessions: {}, countries: {}, wars: {}, warSeq: 0, log: [], speed: 1 };
 try { db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch {}
 if (!db.speed) db.speed = 1;
+if (!db.alliances) { db.alliances = {}; db.allySeq = 0; }
 let dirty = false;
 const save = () => {
     if (!dirty) return;
@@ -115,6 +116,18 @@ function ensureCountry(id) {
 }
 function citizens(id) { return Object.values(db.users).filter(u => u.player.country === id).map(u => u.player); }
 function countryWars(id) { return Object.values(db.wars).filter(w => !w.over && (w.from === id || w.to === id)); }
+function allianceOf(cid) { return Object.values(db.alliances).find(a => a.members.includes(cid)) || null; }
+// which side a player fights on: his own country's side, or an ally's side once allies are called in
+function warSide(p, w) {
+    if (p.country === w.from) return 'att';
+    if (p.country === w.to) return 'def';
+    if (w.alliesCalled) {
+        const al = allianceOf(p.country);
+        if (al && al.members.includes(w.from)) return 'att';
+        if (al && al.members.includes(w.to)) return 'def';
+    }
+    return null;
+}
 
 function rankBonus(p) {
     const d = p.totalDamage;
@@ -263,7 +276,7 @@ function publicWar(w) {
         id: w.id, from: w.from, to: w.to, regionId: w.regionId,
         regionName: DEFS[w.to].regions.find(r => r.id === w.regionId)?.name,
         attDmg: Math.floor(w.attDmg), defDmg: Math.floor(w.defDmg),
-        threshold: warThreshold(w), over: w.over, endsAt: w.endsAt,
+        threshold: warThreshold(w), over: w.over, endsAt: w.endsAt, alliesCalled: !!w.alliesCalled,
     };
 }
 
@@ -338,6 +351,7 @@ const server = http.createServer(async (req, res) => {
                 factoryCap: factoryCap(p),
             },
             speed: db.speed,
+            alliances: Object.values(db.alliances).map(a => ({ id: a.id, name: a.name, leader: a.leader, members: a.members, pending: a.pending })),
             countries, wars: Object.values(db.wars).filter(w => !w.over).map(publicWar),
             log: db.log.slice(0, 20),
             shop: { foods: FOODS, weapons: WEAPONS, armors: ARMORS, ammos: AMMOS, skills: SKILLS, skillMax: SKILL_MAX, company: COMPANY, factories: FACTORIES, factoryMaxLevel: FACTORY_MAX_LEVEL, craftAmmoIron: CRAFT_AMMO_IRON, craftMealWheat: CRAFT_MEAL_WHEAT, weaponIron: WEAPONS.map((_, i) => weaponIronCost(i)), supply: SUPPLY },
@@ -459,7 +473,8 @@ const server = http.createServer(async (req, res) => {
         if (need(w, 'معركة غير موجودة')) return;
         resolveWar(w);
         if (need(!w.over, 'المعركة خلصت')) return;
-        if (need(p.country === w.from || p.country === w.to, 'مش طرف في المعركة دي')) return;
+        const hitSide = warSide(p, w);
+        if (need(hitSide, 'مش طرف في المعركة دي — ولا حليف منادى')) return;
         if (need(p.bars.health >= HIT.health, 'صحتك أقل من 10 — كُل الأول')) return;
         const ammoKind = AMMOS[body.ammo] && p.ammo[body.ammo] > 0 ? body.ammo : null;
         const armorPct = ARMORS[p.armorGear].armor + p.skills.armor * 2;
@@ -468,7 +483,7 @@ const server = http.createServer(async (req, res) => {
         p.bars.health -= cost;
         if (ammoKind) p.ammo[ammoKind]--;
         const { dmg, crit, missed } = hitDamage(p, ammoKind);
-        if (p.country === w.from) w.attDmg += dmg; else w.defDmg += dmg;
+        if (hitSide === 'att') w.attDmg += dmg; else w.defDmg += dmg;
         p.totalDamage += dmg; p.xp += HIT.xp; gainXp(p);
         resolveWar(w); mark(); save();
         return json(res, 200, { ok: true, dmg, crit, missed, cost, dodged, war: publicWar(w) });
@@ -534,7 +549,8 @@ const server = http.createServer(async (req, res) => {
         if (need(w, 'معركة غير موجودة')) return;
         resolveWar(w);
         if (need(!w.over, 'المعركة خلصت')) return;
-        if (need(p.country === w.from || p.country === w.to, 'مش طرف في المعركة دي')) return;
+        const supSide = warSide(p, w);
+        if (need(supSide, 'مش طرف في المعركة دي — ولا حليف منادى')) return;
         const s = SUPPLY[body.kind];
         if (need(s, 'نوع تموين غير معروف')) return;
         if (body.kind === 'iron') {
@@ -544,9 +560,81 @@ const server = http.createServer(async (req, res) => {
             if (need(p.ammo.heavy >= s.amount, 'ذخيرة ثقيلة غير كافية')) return;
             p.ammo.heavy -= s.amount;
         }
-        if (p.country === w.from) w.attDmg += s.points; else w.defDmg += s.points;
+        if (supSide === 'att') w.attDmg += s.points; else w.defDmg += s.points;
         logLine(`${p.name} زوّد الحرب بـ${s.amount} ${body.kind === 'iron' ? 'حديد' : 'ذخيرة ثقيلة'} (+${s.points} نقطة)`);
         resolveWar(w); mark(); save();
+        return json(res, 200, { ok: true, war: publicWar(w) });
+    }
+
+    // ---------- alliances: form, invite, leave, call into wars ----------
+    if (P === '/api/alliance/create' && req.method === 'POST') {
+        if (need(home.president === p.name, 'الرئيس بس اللي يقدر يأسس تحالف')) return;
+        if (need(!allianceOf(p.country), 'دولتك في تحالف بالفعل')) return;
+        const name = String(body.name || '').trim().slice(0, 30);
+        if (need(name.length >= 2, 'اسم التحالف قصير')) return;
+        const a = { id: ++db.allySeq, name, leader: p.country, members: [p.country], pending: [] };
+        db.alliances[a.id] = a;
+        logLine(`${DEFS[p.country].name} أسست تحالف «${name}»`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/alliance/invite' && req.method === 'POST') {
+        if (need(home.president === p.name, 'الرئيس بس')) return;
+        const al = allianceOf(p.country);
+        if (need(al, 'دولتك مش في تحالف')) return;
+        const target = String(body.country || '');
+        if (need(DEFS[target] && db.countries[target], 'دولة غير معروفة')) return;
+        if (need(!al.members.includes(target) && !al.pending.includes(target), 'الدولة دي في التحالف أو مدعوة بالفعل')) return;
+        if (need(!allianceOf(target), 'الدولة دي في تحالف تاني')) return;
+        al.pending.push(target);
+        logLine(`تحالف «${al.name}» دعا ${DEFS[target].name}`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/alliance/accept' && req.method === 'POST') {
+        if (need(home.president === p.name, 'الرئيس بس')) return;
+        const al = db.alliances[body.id];
+        if (need(al, 'تحالف غير موجود')) return;
+        if (need(al.pending.includes(p.country), 'مفيش دعوة لدولتك')) return;
+        if (need(!allianceOf(p.country), 'دولتك في تحالف بالفعل')) return;
+        al.pending = al.pending.filter(c => c !== p.country);
+        al.members.push(p.country);
+        logLine(`${DEFS[p.country].name} انضمت لتحالف «${al.name}»`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/alliance/decline' && req.method === 'POST') {
+        if (need(home.president === p.name, 'الرئيس بس')) return;
+        const al = db.alliances[body.id];
+        if (need(al && al.pending.includes(p.country), 'مفيش دعوة لدولتك')) return;
+        al.pending = al.pending.filter(c => c !== p.country);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/alliance/leave' && req.method === 'POST') {
+        if (need(home.president === p.name, 'الرئيس بس')) return;
+        const al = allianceOf(p.country);
+        if (need(al, 'دولتك مش في تحالف')) return;
+        al.members = al.members.filter(c => c !== p.country);
+        if (!al.members.length) delete db.alliances[al.id];
+        else if (al.leader === p.country) al.leader = al.members[0];
+        logLine(`${DEFS[p.country].name} غادرت تحالف «${al.name}»`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/alliance/call' && req.method === 'POST') { // president calls allies into an active war
+        const w = db.wars[body.warId];
+        if (need(w, 'معركة غير موجودة')) return;
+        resolveWar(w);
+        if (need(!w.over, 'المعركة خلصت')) return;
+        if (need(p.country === w.from || p.country === w.to, 'مش طرف في المعركة دي')) return;
+        if (need(home.president === p.name, 'الرئيس بس')) return;
+        const al = allianceOf(p.country);
+        if (need(al && al.members.length > 1, 'مفيش حلفاء في التحالف')) return;
+        if (need(!w.alliesCalled, 'الحلفاء اتحشدوا بالفعل')) return;
+        w.alliesCalled = true;
+        logLine(`${DEFS[p.country].name} نادت حلفاء «${al.name}» للحرب`);
+        mark(); save();
         return json(res, 200, { ok: true, war: publicWar(w) });
     }
 

@@ -117,9 +117,12 @@ function makePannable(stage, onTap) {
   }, { passive: false });
 }
 
-/* colors: own=violet, at-war=red pulsing, has citizens=cyan-dark, selected=cyan outline */
+/* colors: own=violet, at-war=red pulsing, has citizens=cyan-dark, selected=cyan outline; alliance=colored stroke */
+const ALLY_COLORS = ['#f59e0b', '#22d3ee', '#a3e635', '#f472b6', '#fb7185', '#818cf8'];
 function updateMapColors(stageEl) {
   if (!S || !MAP) return;
+  const alMap = {};
+  (S.alliances || []).forEach((a, i) => a.members.forEach(m => { alMap[m] = i; }));
   stageEl.querySelectorAll('path').forEach(p => {
     const c = p.dataset.c;
     const pub = S.countries[c];
@@ -129,6 +132,9 @@ function updateMapColors(stageEl) {
     else if (pub && pub.citizens && pub.citizens.length) cl = 'cit';
     if (selCountry === c) cl += ' sel';
     if (p.className.baseVal !== cl) p.className.baseVal = cl;
+    const ai = alMap[c];
+    const stroke = ai !== undefined ? ALLY_COLORS[ai % ALLY_COLORS.length] : '';
+    if (p.style.stroke !== stroke) { p.style.stroke = stroke; p.style.strokeWidth = stroke ? '1.6' : ''; }
   });
 }
 function detectFlips() {
@@ -191,7 +197,7 @@ function tabDataKey() {
   switch (curTab) {
     case 'home': return JSON.stringify([y.money, y.skillPoints, y.skills, y.weapon, y.armorGear, y.ammo, y.foods, y.companiesOwned, y.goods, y.factories]);
     case 'war': return JSON.stringify([S.wars, y.ammo, y.goods, battle]);
-    case 'gov': { const c = S.countries[y.country] || {}; return JSON.stringify([c.president, c.election, c.treasury]); }
+    case 'gov': { const c = S.countries[y.country] || {}; return JSON.stringify([c.president, c.election, c.treasury, S.alliances]); }
     case 'map': return JSON.stringify([S.countries, S.wars, selCountry]);
     case 'admin': return JSON.stringify([S.speed]);
     default: return '';
@@ -336,7 +342,7 @@ function renderHome() {
   <div class="grid3">
     <div class="shopitem">وجبة (+20 صحة)<span class="have">${sh.craftMealWheat} قمح — عندك: ${fmt(y.goods.wheat)}</span><button data-craft="meal" type="button">اصنع</button></div>
     ${Object.entries(sh.craftAmmoIron).map(([k, c]) =>
-      `<div class="shopitem">${sh.ammos[k].name}<span class="have">${c} حديد — عندك: ${y.ammo[k] || 0}</span><button data-craft="ammo:${k}" type="button">اصنع</button></div>`).join('')}
+      `<div class="shopitem">${sh.ammos[k].name}<span class="have">${c} حديد — عندك: ${fmt(y.ammo[k] || 0)}</span><button data-craft="ammo:${k}" type="button">اصنع</button></div>`).join('')}
   </div>
   <h3>الأكل <span class="pill">الأكل بيعالج الصحة وبياخد 1 جوع</span></h3>
   <div class="grid3">${Object.entries(sh.foods).map(([k, f]) =>
@@ -391,8 +397,13 @@ function renderHome() {
 /* --- war tab --- */
 function renderWar() {
   const el = $('#tab-war'), y = S.you, sh = S.shop;
-  const myWars = S.wars.filter(w => w.from === y.country || w.to === y.country);
-  const otherWars = S.wars.filter(w => !(w.from === y.country || w.to === y.country));
+  const myPub = S.countries[y.country] || {};
+  const isPrez = myPub.president === y.name;
+  const myAl = (S.alliances || []).find(a => a.members.includes(y.country));
+  const inWar = w => w.from === y.country || w.to === y.country ||
+    (w.alliesCalled && myAl && (myAl.members.includes(w.from) || myAl.members.includes(w.to)));
+  const myWars = S.wars.filter(inWar);
+  const otherWars = S.wars.filter(w => !inWar(w));
   let h = '';
   if (!S.wars.length) h = '<p class="hint" style="margin-top:14px">لا حروب حاليًا. الرئيس يقدر يعلن حرب على إقليم تابع لدولة جارة — اضغط على الدولة في الخريطة.</p>';
   for (const w of myWars) {
@@ -402,7 +413,7 @@ function renderWar() {
     h += `<div class="card"><h4>حرب: ${esc(atkName)} × ${esc(defName)} — ${esc(w.regionName || '')}</h4>
       <div class="kv"><span>الوقت المتبقي</span><b>${mins >= 60 ? Math.floor(mins / 60) + ' س ' + mins % 60 + ' د' : mins + ' دقيقة'}</b></div>
       <div class="wall">
-        <div class="lbl"><span>هجوم ${esc(atkName)}</span><b>${fmt(w.attDmg)} / ${fmt(w.threshold)}</b></div>
+        <div class="lbl"><span>هجوم ${esc(atkName)}</span><b dir="ltr">${fmt(w.attDmg)} / ${fmt(w.threshold)}</b></div>
         <div class="track"><div class="fill wallA" style="width:${Math.min(100, w.attDmg / w.threshold * 100)}%"></div></div>
         <div class="lbl" style="margin-top:6px"><span>دفاع ${esc(defName)}</span><b>${fmt(w.defDmg)}</b></div>
         <div class="track"><div class="fill wallB" style="width:${w.attDmg ? Math.min(100, w.defDmg / w.attDmg * 100) : 0}%"></div></div>
@@ -414,6 +425,7 @@ function renderWar() {
       <div class="amnoselect" style="margin-top:8px">
         <button data-supply="iron:${w.id}" type="button">زوّد بـ${sh.supply.iron.amount} حديد (+${sh.supply.iron.points}) — عندك ${fmt(y.goods.iron)}</button>
         <button data-supply="heavy:${w.id}" type="button">زوّد بـ${sh.supply.heavy.amount} ثقيلة (+${sh.supply.heavy.points}) — عندك ${fmt(y.ammo.heavy || 0)}</button>
+        ${w.alliesCalled ? '<button disabled type="button">الحلفاء في الحرب معاك</button>' : (isPrez && myAl && myAl.members.length > 1 ? `<button class="cyan" data-alcall="${w.id}" type="button">نادِ حلفاء «${esc(myAl.name)}»</button>` : '')}
       </div>
     </div>`;
   }
@@ -424,6 +436,9 @@ function renderWar() {
   el.innerHTML = h;
   if (!myWars.find(w => w.id === battle.warId)) battle = { warId: myWars[0] ? myWars[0].id : null, ammo: battle.ammo };
   el.querySelectorAll('[data-ammo]').forEach(b => b.onclick = () => { battle = { warId: Number(b.dataset.w), ammo: b.dataset.ammo }; renderWar(); });
+  el.querySelectorAll('[data-alcall]').forEach(b => b.onclick = async () => {
+    try { await api('/api/alliance/call', { warId: Number(b.dataset.alcall) }); flash('الحلفاء اتحشدوا', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
   el.querySelectorAll('[data-supply]').forEach(b => b.onclick = async () => {
     const [kind, wid] = b.dataset.supply.split(':');
     try { await api('/api/supply', { warId: Number(wid), kind }); flash('التموين وصل', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
@@ -457,12 +472,39 @@ function renderGov() {
         <button class="cyan" data-vote="${esc(c)}" type="button">انتخب</button></div>`;
     }
     if (!ele.candidates.includes(y.name)) h += `<button class="bigbtn" id="btn-run" type="button">رشّح نفسك</button>`;
-  } else {
+  } else if (pub.president !== y.name) {
     h += `<p class="hint">لو رشّحت نفسك ومفيش حد ضدك، تبقى رئيس فورًا.</p>
       <button class="bigbtn" id="btn-run" type="button">رشّح نفسك للرئاسة</button>`;
   }
-  h += `<h3>صلاحيات الرئيس</h3><p class="hint">يعلن حرب على أقاليم الدول الجارة (من الخريطة) — يحصّن أقاليم دولته بفلوس الخزينة — الخزينة بتتجمع من ضريبة شغل المواطنين.</p></div>
-  <div class="card"><h4>منطقة المالك</h4>
+  h += `<h3>صلاحيات الرئيس</h3><p class="hint">يعلن حرب على أقاليم الدول الجارة (من الخريطة) — يحصّن أقاليم دولته بفلوس الخزينة — الخزينة بتتجمع من ضريبة شغل المواطنين.</p></div>`;
+
+  /* alliances */
+  const isPrez = pub.president === y.name;
+  const myAl = (S.alliances || []).find(a => a.members.includes(y.country));
+  const invites = (S.alliances || []).filter(a => a.pending.includes(y.country));
+  h += `<div class="card"><h4>التحالفات</h4>`;
+  if (myAl) {
+    h += `<div class="kv"><span>تحالفك</span><b>«${esc(myAl.name)}»</b></div>
+      <div class="kv"><span>الأعضاء</span><b>${myAl.members.map(m => esc(MAP.defs[m] ? MAP.defs[m].name : m) + (m === myAl.leader ? ' 👑' : '')).join('، ')}</b></div>`;
+    if (myAl.pending.length) h += `<div class="kv"><span>دعوات مرسلة</span><b>${myAl.pending.map(m => esc(MAP.defs[m] ? MAP.defs[m].name : m)).join('، ')}</b></div>`;
+    if (isPrez) {
+      const opts = Object.keys(S.countries).filter(c => c !== y.country && !myAl.members.includes(c) && !myAl.pending.includes(c) && !(S.alliances || []).some(a => a.members.includes(c)))
+        .map(c => `<option value="${esc(c)}">${esc(MAP.defs[c] ? MAP.defs[c].name : c)}</option>`).join('');
+      if (opts) h += `<div class="row"><select id="al-inv">${opts}</select><button class="cyan" id="btn-al-invite" type="button">ادعُ</button></div>`;
+      h += `<button class="bigbtn" id="btn-al-leave" type="button" style="margin-top:8px">اخرج من التحالف</button>`;
+    }
+    h += `<p class="hint">لون دول التحالف على الخريطة واحد — والرئيس يقدر ينادي الحلفاء لأي حرب من تاب الحرب.</p>`;
+  } else {
+    if (invites.length && isPrez) {
+      for (const a of invites) h += `<div class="regionrow"><span>دعوة من «${esc(a.name)}»</span>
+        <button class="cyan" data-al-accept="${a.id}" type="button">اقبل</button>
+        <button data-al-decline="${a.id}" type="button">ارفض</button></div>`;
+    }
+    if (isPrez) h += `<div class="row"><input type="text" id="al-name" placeholder="اسم التحالف"><button class="cyan" id="btn-al-create" type="button">أسّس تحالف</button></div>`;
+    else h += `<p class="hint">دولتك مش في تحالف. الرئيس هو اللي يقدر يأسس أو يقبل دعوات.</p>`;
+  }
+  h += `</div>`;
+  h += `<div class="card"><h4>منطقة المالك</h4>
     <p class="hint">لو انت صاحب اللعبة وحسابك مش واخد الإدارة (حصل لما اتنقلنا لنظام كود المالك): اكتب كود المالك هنا وحسابك يبقى الأدمن — من غير مسح أي حاجة.</p>
     <div class="row"><input type="text" id="claim-secret" placeholder="كود المالك (ADMIN_SECRET)"><button class="cyan" id="btn-claim" type="button">استلم الملكية</button></div>
   </div>`;
@@ -477,6 +519,24 @@ function renderGov() {
   };
   el.querySelectorAll('[data-vote]').forEach(b => b.onclick = async () => {
     try { await api('/api/vote', { candidate: b.dataset.vote }); flash('صوتك اتحسب', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  const alCreate = $('#btn-al-create');
+  if (alCreate) alCreate.onclick = async () => {
+    try { await api('/api/alliance/create', { name: $('#al-name').value }); flash('التحالف اتأسس', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  };
+  const alInv = $('#btn-al-invite');
+  if (alInv) alInv.onclick = async () => {
+    try { await api('/api/alliance/invite', { country: $('#al-inv').value }); flash('الدعوة اتبعتت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  };
+  const alLeave = $('#btn-al-leave');
+  if (alLeave) alLeave.onclick = async () => {
+    try { await api('/api/alliance/leave'); flash('خرجت من التحالف', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  };
+  el.querySelectorAll('[data-al-accept]').forEach(b => b.onclick = async () => {
+    try { await api('/api/alliance/accept', { id: b.dataset.alAccept }); flash('انضممت للتحالف', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-al-decline]').forEach(b => b.onclick = async () => {
+    try { await api('/api/alliance/decline', { id: b.dataset.alDecline }); flash('رفضت الدعوة', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
   });
 }
 
