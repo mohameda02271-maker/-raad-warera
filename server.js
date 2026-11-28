@@ -245,24 +245,69 @@ function hitDamage(p, ammoKind) {
     return { dmg: Math.round(dmg), crit, missed };
 }
 
-function warThreshold(w) {
+// battles: best-of-3 rounds; each round is a race to 300 terrain. Every tick (2 min,
+// scaled by world speed) the side with more damage in the window takes terrain
+// (1-6, scaling with the leader's total). Defender wins ties. Old walls become round-1 defender terrain.
+const BATTLE = { tickMs: 120000, terrainWin: 300, roundsToWin: 2 };
+const ORDER_BONUS = { 1: 0.05, 2: 0.10, 3: 0.15 };
+const ORDER_COST = { 1: 100, 2: 250, 3: 500 };
+const terrainGain = (lead) => lead < 100 ? 1 : lead < 200 ? 2 : lead < 300 ? 3 : lead < 400 ? 4 : lead < 500 ? 5 : 6;
+function migrateWar(w) {
+    if (!w.rounds) {
+        w.rounds = [{ tickAtt: 0, tickDef: 0, poolAtt: 0, poolDef: 0, terrAtt: 0, terrDef: 0 }];
+        w.roundWins = { att: 0, def: 0 };
+        w.tickAt = Date.now();
+    }
+    if (!w.orders) w.orders = {};
+    if (!w.contrib) w.contrib = {};
+    return w;
+}
+const roundOf = (w) => w.rounds[w.rounds.length - 1];
+const regionName = (w) => DEFS[w.to].regions.find(r => r.id === w.regionId)?.name || w.regionId;
+function endBattle(w, side) {
+    w.over = side === 'att' ? 'won' : 'lost';
     const def = db.countries[w.to];
-    return WAR_BASE_THRESHOLD + (def && def.defenseBonus[w.regionId] || 0);
+    const rName = regionName(w);
+    if (side === 'att') {
+        def.regions[w.regionId] = w.from;
+        logLine(`${DEFS[w.from].name} احتلت ${rName} من ${DEFS[w.to].name}`);
+    } else {
+        logLine(`${DEFS[w.to].name} صدّت هجوم ${DEFS[w.from].name} على ${rName}`);
+    }
+    mark();
 }
 function resolveWar(w) {
     if (w.over) return;
-    const t = warThreshold(w);
-    if (w.attDmg >= t || w.defDmg >= t || Date.now() > w.endsAt) {
-        const attackerWins = w.attDmg >= t || (Date.now() > w.endsAt && w.attDmg > w.defDmg);
-        w.over = attackerWins ? 'won' : 'lost';
-        const def = db.countries[w.to];
-        const rName = DEFS[w.to].regions.find(r => r.id === w.regionId)?.name || w.regionId;
-        if (attackerWins) {
-            def.regions[w.regionId] = w.from;
-            logLine(`${DEFS[w.from].name} احتلت ${rName} من ${DEFS[w.to].name}`);
-        } else {
-            logLine(`${DEFS[w.to].name} صدّت هجوم ${DEFS[w.from].name} على ${rName}`);
+    migrateWar(w);
+    const tick = Math.max(100, BATTLE.tickMs / db.speed);
+    const now = Date.now();
+    let guard = 0;
+    while (!w.over && guard++ < 5000) {
+        const r = roundOf(w);
+        if (r.terrAtt >= BATTLE.terrainWin || r.terrDef >= BATTLE.terrainWin) {
+            const attWon = r.terrAtt >= BATTLE.terrainWin;
+            w.roundWins[attWon ? 'att' : 'def']++;
+            logLine(`${DEFS[attWon ? w.from : w.to].name} حسمت الجولة ${w.rounds.length} في حرب ${regionName(w)}`);
+            if (w.roundWins.att >= BATTLE.roundsToWin || w.roundWins.def >= BATTLE.roundsToWin) {
+                endBattle(w, w.roundWins.att >= BATTLE.roundsToWin ? 'att' : 'def');
+                break;
+            }
+            w.rounds.push({ tickAtt: 0, tickDef: 0, poolAtt: 0, poolDef: 0, terrAtt: 0, terrDef: 0 });
+            continue;
         }
+        if (now >= w.endsAt) {
+            if (w.roundWins.att !== w.roundWins.def) endBattle(w, w.roundWins.att > w.roundWins.def ? 'att' : 'def');
+            else if (r.terrAtt !== r.terrDef) endBattle(w, r.terrAtt > r.terrDef ? 'att' : 'def');
+            else endBattle(w, 'def');
+            break;
+        }
+        if (now < w.tickAt + tick) break;
+        w.tickAt += tick;
+        if (r.tickAtt === 0 && r.tickDef === 0) continue; // no damage, no movement
+        const side = r.tickAtt > r.tickDef ? 'att' : 'def'; // ties to defender
+        const gain = terrainGain(Math.max(r.tickAtt, r.tickDef));
+        if (side === 'att') r.terrAtt += gain; else r.terrDef += gain;
+        r.tickAtt = 0; r.tickDef = 0;
         mark();
     }
 }
@@ -323,11 +368,19 @@ function publicCountry(id) {
 }
 function publicWar(w) {
     resolveWar(w);
+    const r = roundOf(w);
+    const tick = Math.max(100, BATTLE.tickMs / db.speed);
     return {
         id: w.id, from: w.from, to: w.to, regionId: w.regionId,
-        regionName: DEFS[w.to].regions.find(r => r.id === w.regionId)?.name,
+        regionName: regionName(w),
         attDmg: Math.floor(w.attDmg), defDmg: Math.floor(w.defDmg),
-        threshold: warThreshold(w), over: w.over, endsAt: w.endsAt, alliesCalled: !!w.alliesCalled,
+        over: w.over, endsAt: w.endsAt, alliesCalled: !!w.alliesCalled,
+        round: w.rounds.length, roundWins: w.roundWins,
+        terr: { att: r.terrAtt, def: r.terrDef, win: BATTLE.terrainWin },
+        tickPools: { att: Math.floor(r.tickAtt), def: Math.floor(r.tickDef) },
+        tickEndsAt: w.tickAt + tick,
+        orders: w.orders,
+        contrib: w.contrib,
     };
 }
 
@@ -523,6 +576,10 @@ const server = http.createServer(async (req, res) => {
             attDmg: 0, defDmg: 0, startedBy: p.name,
             endsAt: Date.now() + 24 * 3600000, over: null,
         };
+        migrateWar(w);
+        // old defense walls become starting defender terrain in round 1
+        const wall = db.countries[target.c].defenseBonus[regionId] || 0;
+        if (wall > 0) { w.rounds[0].terrDef = Math.min(60, Math.floor(wall / 50)); db.countries[target.c].defenseBonus[regionId] = 0; }
         db.wars[w.id] = w;
         logLine(`${DEFS[p.country].name} أعلنت الحرب على ${target.r.name} (${DEFS[target.c].name})`);
         mark(); save();
@@ -543,12 +600,18 @@ const server = http.createServer(async (req, res) => {
         p.bars.health -= cost;
         if (ammoKind) p.ammo[ammoKind]--;
         const { dmg, crit, missed } = hitDamage(p, ammoKind);
-        if (hitSide === 'att') w.attDmg += dmg; else w.defDmg += dmg;
-        p.totalDamage += dmg; p.xp += HIT.xp; gainXp(p);
-        if (!missed && dmg > 0) bumpStat(p, 'hits', 1);
+        // battle order bonus: your country's leadership marked this battle
+        const ord = w.orders[p.country];
+        const finalDmg = ord && ORDER_BONUS[ord.priority] ? Math.round(dmg * (1 + ORDER_BONUS[ord.priority])) : dmg;
+        const r = roundOf(w);
+        if (hitSide === 'att') { w.attDmg += finalDmg; r.poolAtt += finalDmg; r.tickAtt += finalDmg; }
+        else { w.defDmg += finalDmg; r.poolDef += finalDmg; r.tickDef += finalDmg; }
+        w.contrib[p.name] = (w.contrib[p.name] || 0) + finalDmg;
+        p.totalDamage += finalDmg; p.xp += HIT.xp; gainXp(p);
+        if (!missed && finalDmg > 0) bumpStat(p, 'hits', 1);
         const mdh = checkMissions(p);
         resolveWar(w); mark(); save();
-        return json(res, 200, { ok: true, dmg, crit, missed, cost, dodged, war: publicWar(w), missions: mdh });
+        return json(res, 200, { ok: true, dmg: finalDmg, crit, missed, cost, dodged, ordered: !!ord, war: publicWar(w), missions: mdh });
     }
     if (P === '/api/defense' && req.method === 'POST') { // president funds a region's defense from treasury
         if (need(home.president === p.name, 'الرئيس بس')) return;
@@ -627,12 +690,32 @@ const server = http.createServer(async (req, res) => {
             if (need(p.ammo.heavy >= s.amount, 'ذخيرة ثقيلة غير كافية')) return;
             p.ammo.heavy -= s.amount;
         }
-        if (supSide === 'att') w.attDmg += s.points; else w.defDmg += s.points;
+        if (supSide === 'att') { w.attDmg += s.points; const r = roundOf(w); r.poolAtt += s.points; r.tickAtt += s.points; }
+        else { w.defDmg += s.points; const r = roundOf(w); r.poolDef += s.points; r.tickDef += s.points; }
+        w.contrib[p.name] = (w.contrib[p.name] || 0) + s.points;
         logLine(`${p.name} زوّد الحرب بـ${s.amount} ${body.kind === 'iron' ? 'حديد' : 'ذخيرة ثقيلة'} (+${s.points} نقطة)`);
         bumpStat(p, 'supply', 1);
         const mdu = checkMissions(p);
         resolveWar(w); mark(); save();
         return json(res, 200, { ok: true, war: publicWar(w), missions: mdu });
+    }
+
+    if (P === '/api/order' && req.method === 'POST') { // president marks a battle with a damage order
+        const w = db.wars[body.warId];
+        if (need(w, 'معركة غير موجودة')) return;
+        resolveWar(w);
+        if (need(!w.over, 'المعركة خلصت')) return;
+        if (need(home.president === p.name, 'الرئيس بس')) return;
+        if (need(p.country === w.from || p.country === w.to, 'دي مش معركة دولتك')) return;
+        const pr = Number(body.priority);
+        if (need(ORDER_BONUS[pr], 'أولوية غير معروفة')) return;
+        const cost = ORDER_COST[pr];
+        if (need(home.treasury >= cost, 'الخزينة غير كافية')) return;
+        home.treasury -= cost;
+        w.orders[p.country] = { priority: pr, by: p.name, at: Date.now() };
+        logLine(`قيادة ${DEFS[p.country].name} أصدرت أمر قتال +${Math.round(ORDER_BONUS[pr] * 100)}% في حرب ${regionName(w)}`);
+        mark(); save();
+        return json(res, 200, { ok: true, war: publicWar(w) });
     }
 
     // ---------- alliances: form, invite, leave, call into wars ----------
@@ -752,6 +835,7 @@ const server = http.createServer(async (req, res) => {
             ensureCountry(body.from); ensureCountry(body.to);
             const w = { id: ++db.warSeq, from: body.from, to: body.to, regionId: r.id,
                 attDmg: 0, defDmg: 0, startedBy: 'الإدارة', endsAt: Date.now() + 24 * 3600000, over: null };
+            migrateWar(w);
             db.wars[w.id] = w;
             logLine(`الإدارة أعلنت حرب: ${DEFS[body.from].name} ضد ${DEFS[body.to].name}`);
             mark(); save();

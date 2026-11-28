@@ -197,7 +197,7 @@ function tabDataKey() {
   const y = S.you;
   switch (curTab) {
     case 'home': return JSON.stringify([y.money, y.skillPoints, y.skills, y.weapon, y.armorGear, y.ammo, y.foods, y.companiesOwned, y.goods, y.factories, S.missions]);
-    case 'war': return JSON.stringify([S.wars, y.ammo, y.goods, battle]);
+    case 'war': return JSON.stringify([S.wars, y.ammo, y.goods, battle, battleView]);
     case 'gov': { const c = S.countries[y.country] || {}; return JSON.stringify([c.president, c.election, c.treasury, S.alliances]); }
     case 'map': return JSON.stringify([S.countries, S.wars, selCountry]);
     case 'admin': return JSON.stringify([S.speed]);
@@ -403,7 +403,35 @@ function renderHome() {
   });
 }
 
-/* --- war tab --- */
+/* --- war tab: world battles list + battle detail --- */
+let battleView = null;
+function frameClass(w, cid) {
+  const y = S.you;
+  const myAl = (S.alliances || []).find(a => a.members.includes(y.country));
+  if (cid === y.country) return 'me';
+  if (myAl && myAl.members.includes(cid)) return 'ally';
+  return 'foe';
+}
+function roundsDots(w) {
+  let d = '';
+  for (let i = 1; i <= 3; i++) {
+    let cls = 'dot';
+    if (i < w.round || (w.over && i <= w.round)) cls += i <= w.roundWins.att + w.roundWins.def ? ' done' : '';
+    if (i === w.round && !w.over) cls += ' now';
+    d += `<span class="${cls}"></span>`;
+  }
+  return `<span class="dots">${d}</span> <span class="lvl">${w.roundWins.att} - ${w.roundWins.def}</span>`;
+}
+function tugBar(w) {
+  const a = Math.min(100, w.terr.att / w.terr.win * 100);
+  const d = Math.min(100, w.terr.def / w.terr.win * 100);
+  return `<div class="tug">
+    <div class="tug-half att"><div class="tug-fill" style="width:${a}%"></div></div>
+    <div class="tug-mid"></div>
+    <div class="tug-half def"><div class="tug-fill" style="width:${d}%"></div></div>
+  </div>
+  <div class="tuglbl"><span class="wallA-t">${fmt(w.terr.att)}</span><span>الأرض — أول 300 ياخد الجولة</span><span class="wallB-t">${fmt(w.terr.def)}</span></div>`;
+}
 function renderWar() {
   const el = $('#tab-war'), y = S.you, sh = S.shop;
   const myPub = S.countries[y.country] || {};
@@ -413,40 +441,73 @@ function renderWar() {
     (w.alliesCalled && myAl && (myAl.members.includes(w.from) || myAl.members.includes(w.to)));
   const myWars = S.wars.filter(inWar);
   const otherWars = S.wars.filter(w => !inWar(w));
+  const nm = id => MAP.defs[id] ? MAP.defs[id].name : id;
   let h = '';
   if (!S.wars.length) h = '<p class="hint" style="margin-top:14px">لا حروب حاليًا. الرئيس يقدر يعلن حرب على إقليم تابع لدولة جارة — اضغط على الدولة في الخريطة.</p>';
-  for (const w of myWars) {
-    const atkName = MAP.defs[w.from] ? MAP.defs[w.from].name : w.from;
-    const defName = MAP.defs[w.to] ? MAP.defs[w.to].name : w.to;
+
+  const openW = battleView != null ? S.wars.find(w => w.id === battleView) : null;
+  if (openW) {
+    const w = openW;
+    const mine = inWar(w);
     const mins = Math.max(0, Math.round((w.endsAt - Date.now()) / 60000));
-    h += `<div class="card"><h4>حرب: ${esc(atkName)} × ${esc(defName)} — ${esc(w.regionName || '')}</h4>
-      <div class="kv"><span>الوقت المتبقي</span><b>${mins >= 60 ? Math.floor(mins / 60) + ' س ' + mins % 60 + ' د' : mins + ' دقيقة'}</b></div>
-      <div class="wall">
-        <div class="lbl"><span>هجوم ${esc(atkName)}</span><b dir="ltr">${fmt(w.attDmg)} / ${fmt(w.threshold)}</b></div>
-        <div class="track"><div class="fill wallA" style="width:${Math.min(100, w.attDmg / w.threshold * 100)}%"></div></div>
-        <div class="lbl" style="margin-top:6px"><span>دفاع ${esc(defName)}</span><b>${fmt(w.defDmg)}</b></div>
-        <div class="track"><div class="fill wallB" style="width:${w.attDmg ? Math.min(100, w.defDmg / w.attDmg * 100) : 0}%"></div></div>
-      </div>
-      <div class="amnoselect">
-        ${['none', 'light', 'mid', 'heavy'].map(k => `<button data-ammo="${k}" data-w="${w.id}" class="${battle.warId === w.id && battle.ammo === k ? 'on' : ''}" type="button">${k === 'none' ? 'بدون' : S.shop.ammos[k].name + ' (' + fmt(y.ammo[k] || 0) + ')'}</button>`).join('')}
-      </div>
-      <button class="bigbtn hitbtn" data-hit="${w.id}" type="button">اضرب!</button>
-      <div class="amnoselect" style="margin-top:8px">
-        <button data-supply="iron:${w.id}" type="button">زوّد بـ${sh.supply.iron.amount} حديد (+${sh.supply.iron.points}) — عندك ${fmt(y.goods.iron)}</button>
-        <button data-supply="heavy:${w.id}" type="button">زوّد بـ${sh.supply.heavy.amount} ثقيلة (+${sh.supply.heavy.points}) — عندك ${fmt(y.ammo.heavy || 0)}</button>
-        ${w.alliesCalled ? '<button disabled type="button">الحلفاء في الحرب معاك</button>' : (isPrez && myAl && myAl.members.length > 1 ? `<button class="cyan" data-alcall="${w.id}" type="button">نادِ حلفاء «${esc(myAl.name)}»</button>` : '')}
-      </div>
+    const tickIn = Math.max(0, Math.round((w.tickEndsAt - Date.now()) / 1000));
+    const myOrder = w.orders && w.orders[y.country];
+    const canOrder = isPrez && (y.country === w.from || y.country === w.to) && !w.over;
+    h += `<div class="card">
+      <div class="row" style="justify-content:space-between"><button class="cyan" id="btn-back-battles" type="button">← كل المعارك</button><span class="pill">الجولة ${Math.min(w.round, 3)} من 3 ${roundsDots(w)}</span></div>
+      <h4><span class="side ${frameClass(w, w.from)}">${esc(nm(w.from))}</span> × <span class="side ${frameClass(w, w.to)}">${esc(nm(w.to))}</span> — ${esc(w.regionName || '')}</h4>
+      ${tugBar(w)}
+      ${mine && !w.over ? `<div class="amnoselect">
+          ${['none', 'light', 'mid', 'heavy'].map(k => `<button data-ammo="${k}" data-w="${w.id}" class="${battle.warId === w.id && battle.ammo === k ? 'on' : ''}" type="button">${k === 'none' ? 'بدون' : sh.ammos[k].name + ' (' + fmt(y.ammo[k] || 0) + ')'}</button>`).join('')}
+        </div>
+        <button class="bigbtn hitbtn" data-hit="${w.id}" type="button">اضرب!</button>` : ''}
+      <div class="kv"><span>ضرر النقطة الحالية</span><b dir="ltr">${fmt(w.tickPools.att)} × ${fmt(w.tickPools.def)}</b></div>
+      <div class="kv"><span>النقطة الجاية بعد</span><b>${Math.floor(tickIn / 60)}:${String(tickIn % 60).padStart(2, '0')}</b></div>
+      <div class="kv"><span>أقصى وقت للمعركة</span><b>${mins >= 60 ? Math.floor(mins / 60) + ' س ' + mins % 60 + ' د' : mins + ' دقيقة'}</b></div>
+      <div class="kv"><span>ضررك في المعركة دي</span><b>${fmt((w.contrib && w.contrib[y.name]) || 0)}</b></div>
+      ${myOrder ? `<div class="kv"><span>أمر القيادة</span><b class="wallA-t">+${Math.round(({ 1: 5, 2: 10, 3: 15 })[myOrder.priority] || 0)}% ضرر لدولتك</b></div>` : ''}
     </div>`;
-  }
-  for (const w of otherWars) {
-    h += `<div class="card"><h4>حرب بعيدة: ${esc(MAP.defs[w.from] ? MAP.defs[w.from].name : w.from)} × ${esc(MAP.defs[w.to] ? MAP.defs[w.to].name : w.to)}</h4>
-      <div class="kv"><span>هجوم</span><b>${fmt(w.attDmg)}</b></div><div class="kv"><span>دفاع</span><b>${fmt(w.defDmg)}</b></div></div>`;
+    if (mine && !w.over) {
+      h += `<div class="card">
+        <div class="amnoselect" style="margin-top:0">
+          <button data-supply="iron:${w.id}" type="button">زوّد بـ${sh.supply.iron.amount} حديد (+${sh.supply.iron.points}) — عندك ${fmt(y.goods.iron)}</button>
+          <button data-supply="heavy:${w.id}" type="button">زوّد بـ${sh.supply.heavy.amount} ثقيلة (+${sh.supply.heavy.points}) — عندك ${fmt(y.ammo.heavy || 0)}</button>
+          ${w.alliesCalled ? '<button disabled type="button">الحلفاء في الحرب معاك</button>' : (isPrez && myAl && myAl.members.length > 1 ? `<button class="cyan" data-alcall="${w.id}" type="button">نادِ حلفاء «${esc(myAl.name)}»</button>` : '')}
+        </div>
+        ${canOrder ? `<h3 style="border:none;font-size:13px">أمر قتال (من الخزينة)</h3>
+        <div class="amnoselect">
+          ${[1, 2, 3].map(pr => `<button data-order="${pr}:${w.id}" type="button">+${[5, 10, 15][pr - 1]}% — ${[100, 250, 500][pr - 1]} ج</button>`).join('')}
+        </div>` : ''}
+      </div>`;
+    }
+    if (w.over) h += `<p class="hint center">المعركة خلصت — ${w.over === 'won' ? 'الهجوم كسب والإقليم اتنقل' : 'الدفاع صمد'}.</p>`;
+  } else {
+    const card = w => {
+      const mine = inWar(w);
+      const myOrder = w.orders && w.orders[y.country];
+      return `<div class="card battlecard ${mine ? 'mine' : ''}" data-open="${w.id}">
+        <h4><span class="side ${frameClass(w, w.from)}">${esc(nm(w.from))}</span> × <span class="side ${frameClass(w, w.to)}">${esc(nm(w.to))}</span> — ${esc(w.regionName || '')}</h4>
+        <div class="row" style="justify-content:space-between;align-items:center"><span>الجولة ${Math.min(w.round, 3)}/3 ${roundsDots(w)}</span>
+        ${myOrder ? `<span class="pill orderbadge">أوامر +${[5, 10, 15][myOrder.priority - 1] || 0}%</span>` : ''}
+        ${mine ? '<span class="pill">حربك</span>' : ''}</div>
+        ${tugBar(w)}
+      </div>`;
+    };
+    if (myWars.length) h += `<h3>معاركك <span class="pill">حمراء = عدو — زرقاء = حليف أو انت</span></h3>` + myWars.map(card).join('');
+    if (otherWars.length) h += `<h3>معارك العالم</h3>` + otherWars.map(card).join('');
   }
   el.innerHTML = h;
   if (!myWars.find(w => w.id === battle.warId)) battle = { warId: myWars[0] ? myWars[0].id : null, ammo: battle.ammo };
+  const back = $('#btn-back-battles');
+  if (back) back.onclick = () => { battleView = null; renderWar(); };
+  el.querySelectorAll('[data-open]').forEach(c => c.onclick = () => { battleView = Number(c.dataset.open); renderWar(); });
   el.querySelectorAll('[data-ammo]').forEach(b => b.onclick = () => { battle = { warId: Number(b.dataset.w), ammo: b.dataset.ammo }; renderWar(); });
   el.querySelectorAll('[data-alcall]').forEach(b => b.onclick = async () => {
     try { await api('/api/alliance/call', { warId: Number(b.dataset.alcall) }); flash('الحلفاء اتحشدوا', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-order]').forEach(b => b.onclick = async () => {
+    const [pr, wid] = b.dataset.order.split(':');
+    try { await api('/api/order', { warId: Number(wid), priority: Number(pr) }); flash('الأمر اتنشر', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
   });
   el.querySelectorAll('[data-supply]').forEach(b => b.onclick = async () => {
     const [kind, wid] = b.dataset.supply.split(':');
@@ -621,4 +682,5 @@ setInterval(refresh, 3000);
 const qp = new URLSearchParams(location.search);
 if (qp.get('token')) { token = qp.get('token'); localStorage.setItem('raad_token', token); }
 if (qp.get('tab')) curTab = qp.get('tab');
+if (qp.get('battle')) battleView = Number(qp.get('battle'));
 if (token) boot(); else show('auth');

@@ -146,17 +146,39 @@ h3{color:#b9a3ff;margin:14px 0 6px;font-size:15px;border-bottom:1px solid var(--
 .pill{display:inline-block;background:rgba(5,5,13,.6);border:1px solid var(--line);border-radius:999px;
   padding:2px 9px;font-size:11px;margin:2px;color:var(--dim)}
 .pill b{color:var(--txt)}
-.bigbtn{width:100%;padding:16px;font-size:17px;margin:8px 0}
+.bigbtn{width:100%;padding:12px;font-size:16px;margin:6px 0}
 .bigbtn small{font-size:11px;opacity:.8}
-.hitbtn{background:linear-gradient(135deg,#ff3355,#b3002d);font-size:22px;padding:20px;letter-spacing:2px;
+.hitbtn{background:linear-gradient(135deg,#ff3355,#b3002d);font-size:19px;padding:14px;letter-spacing:2px;
   box-shadow:0 0 28px #ff335555, inset 0 1px 0 #ffffff33}
 .wall{margin:10px 0}
 .wall .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin:3px 0}
 .wall .track{height:13px;background:#ffffff10;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
 .fill.wallA{background:linear-gradient(90deg,#7c4dff,#b39dff);box-shadow:0 0 12px #7c4dff88;transition:width .5s ease}
 .fill.wallB{background:linear-gradient(90deg,#ff3355,#ff7a90);box-shadow:0 0 12px #ff335588;transition:width .5s ease}
+/* tug-of-war terrain bar: attacker fills from the right toward center, defender from the left */
+.tug{display:flex;align-items:stretch;height:16px;margin:8px 0 2px;gap:0}
+.tug-half{flex:1;display:flex;background:#ffffff10;border:1px solid var(--line);overflow:hidden}
+.tug-half.att{justify-content:flex-start;border-radius:0 999px 999px 0;border-left:none}
+.tug-half.def{justify-content:flex-end;border-radius:999px 0 0 999px;border-right:none}
+.tug-half .tug-fill{transition:width .5s ease}
+.tug-half.att .tug-fill{background:linear-gradient(90deg,#b39dff,#7c4dff);box-shadow:0 0 12px #7c4dff88}
+.tug-half.def .tug-fill{background:linear-gradient(90deg,#ff3355,#ff7a90);box-shadow:0 0 12px #ff335588}
+.tug-mid{width:3px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.tuglbl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:4px}
+.wallA-t{color:#b39dff;font-weight:700}
+.wallB-t{color:#ff7a90;font-weight:700}
+.dots{display:inline-flex;gap:4px;vertical-align:middle}
+.dot{width:9px;height:9px;border-radius:50%;background:#ffffff18;border:1px solid var(--line);display:inline-block}
+.dot.now{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.dot.done{background:var(--violet)}
+.side.me{color:var(--cyan);font-weight:700}
+.side.ally{color:#7dd3fc;font-weight:700}
+.side.foe{color:var(--red);font-weight:700}
+.battlecard{cursor:pointer}
+.battlecard.mine{border-color:var(--violet);box-shadow:0 0 14px #7c4dff33}
+.orderbadge{color:var(--amber,#f5a623);border-color:var(--amber,#f5a623)}
 .amnoselect{display:flex;gap:6px;margin:8px 0}
-.amnoselect button{font-size:12px;padding:10px 4px;background:rgba(5,5,13,.6);border:1px solid var(--line);color:var(--dim);box-shadow:none}
+.amnoselect button{font-size:11px;padding:7px 3px;background:rgba(5,5,13,.6);border:1px solid var(--line);color:var(--dim);box-shadow:none}
 .amnoselect button.on{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px #00e5ff33}
 select{width:100%;padding:11px;margin:6px 0;border-radius:12px;border:1px solid var(--line);
   background:#0c0b16;color:var(--txt);font-family:inherit;font-size:14px}
