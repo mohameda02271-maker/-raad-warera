@@ -10,7 +10,7 @@ import { DEFS, PATHS, NEIGHBORS } from './gamedata.js';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = process.env.DATA_FILE || path.join(ROOT, 'data.json');
 const PORT = Number(process.env.PORT) || 8080; // Railway injects PORT; 8080 is just the local fallback
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 // The world stays locked until the owner claims the admin account with this secret.
 // If the env var is missing, a one-time secret is generated and printed to the log,
 // so a public URL can never hand admin to a stranger.
@@ -18,10 +18,11 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET || crypto.randomBytes(4).toString(
 if (!process.env.ADMIN_SECRET) console.log('ADMIN_SECRET not set — one-time owner secret:', ADMIN_SECRET);
 
 try { fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true }); } catch (e) { console.log('data dir not creatable:', e.message); }
-let db = { users: {}, sessions: {}, countries: {}, wars: {}, warSeq: 0, log: [], speed: 1 };
+let db = { users: {}, sessions: {}, countries: {}, wars: {}, warSeq: 0, log: [], speed: 1, market: [], marketSeq: 0 };
 try { db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch {}
 if (!db.speed) db.speed = 1;
 if (!db.alliances) { db.alliances = {}; db.allySeq = 0; }
+if (!db.market) { db.market = []; db.marketSeq = 0; }
 let dirty = false;
 const save = () => {
     if (!dirty) return;
@@ -78,6 +79,31 @@ const ARMORS = [ // reduces the health cost per hit
     { name: 'درع ميداني', price: 1200, armor: 20 },
     { name: 'درع متقدم', price: 3000, armor: 32 },
     { name: 'درع أسطوري', price: 8000, armor: 50 },
+];
+const CASES = [
+    {
+        id: 'war', name: 'صندوق الحرب', icon: '📦', price: 300,
+        table: [
+            { w: 26, kind: 'money', min: 120, max: 420, label: 'فلوس' },
+            { w: 22, kind: 'ammo', label: 'ذخيرة مشكلة' },
+            { w: 24, kind: 'weapon', tiers: [1, 2, 3] },
+            { w: 12, kind: 'armor', tiers: [1, 2, 3] },
+            { w: 10, kind: 'weapon', tiers: [4] },
+            { w: 4, kind: 'armor', tiers: [4] },
+            { w: 2, kind: 'weapon', tiers: [5] },
+        ],
+    },
+    {
+        id: 'gold', name: 'الصندوق الذهبي', icon: '🎁', price: 1200,
+        table: [
+            { w: 20, kind: 'money', min: 500, max: 1600, label: 'فلوس' },
+            { w: 10, kind: 'sp', n: 3, label: '3 نقاط مهارة' },
+            { w: 30, kind: 'weapon', tiers: [3, 4] },
+            { w: 18, kind: 'armor', tiers: [3, 4] },
+            { w: 16, kind: 'weapon', tiers: [5] },
+            { w: 6, kind: 'armor', tiers: [5] },
+        ],
+    },
 ];
 const AMMOS = {
     light: { name: 'خفيفة +10%', price: 15, bonus: 0.10 },
@@ -239,6 +265,11 @@ const barMax = (p, b) => 100 + (p.skills[b] || 0) * 10;
 
 function tickPlayer(p) {
     // migration for worlds saved before factories existed
+    if (!p.inv) { // inventory: owned gear counts; equipped piece stays counted inside
+        p.inv = { weapons: {}, armors: {} };
+        if (p.weapon > 0) p.inv.weapons[p.weapon] = 1;
+        if (p.armorGear > 0) p.inv.armors[p.armorGear] = 1;
+    }
     if (!p.goods) p.goods = { iron: 0, wheat: 0 };
     if (!p.factories) { p.factories = []; p.factSeq = 0; }
     // migration + daily reset for missions
@@ -587,7 +618,7 @@ const server = http.createServer(async (req, res) => {
                 name: p.name, country: p.country, money: Math.floor(p.money), xp: p.xp, level: p.level,
                 levelXp: levelXp(p.level), skillPoints: p.skillPoints, skills: p.skills,
                 bars: p.bars, barMax: { health: barMax(p, 'health'), hunger: barMax(p, 'hunger'), energy: barMax(p, 'energy') },
-                weapon: p.weapon, armorGear: p.armorGear, ammo: p.ammo, foods: p.foods,
+                weapon: p.weapon, armorGear: p.armorGear, ammo: p.ammo, foods: p.foods, inv: p.inv,
                 companiesOwned: p.companiesOwned, totalDamage: p.totalDamage, rankBonus: rankBonus(p), admin: !!p.admin,
                 goods: { iron: Math.floor(p.goods.iron), wheat: Math.floor(p.goods.wheat) },
                 factories: p.factories.map(f => ({ ...f, upNext: factoryUpgradeCost(f) })),
@@ -615,6 +646,10 @@ const server = http.createServer(async (req, res) => {
             })),
             log: db.log.slice(0, 20),
             shop: { foods: FOODS, weapons: WEAPONS, armors: ARMORS, ammos: AMMOS, skills: SKILLS, skillMax: SKILL_MAX, company: COMPANY, factories: FACTORIES, factoryMaxLevel: FACTORY_MAX_LEVEL, craftAmmoIron: CRAFT_AMMO_IRON, craftMealWheat: CRAFT_MEAL_WHEAT, weaponIron: WEAPONS.map((_, i) => weaponIronCost(i)), supply: SUPPLY },
+            cases: CASES.map(c => ({ id: c.id, name: c.name, icon: c.icon, price: c.price })),
+            market: db.market.map(l => ({ id: l.id, seller: l.seller, kind: l.kind, idx: l.idx, price: l.price,
+                name: l.kind === 'weapon' ? WEAPONS[l.idx].name : ARMORS[l.idx].name,
+                stat: l.kind === 'weapon' ? WEAPONS[l.idx].atk + ' ضرر' : ARMORS[l.idx].armor + '% درع' })),
         });
     }
 
@@ -630,6 +665,74 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify(db, null, 2));
     }
 
+    if (P === '/api/equip' && req.method === 'POST') {
+        const kind = body.kind === 'armor' ? 'armor' : 'weapon';
+        const idx = Number(body.idx);
+        const bag = kind === 'weapon' ? p.inv.weapons : p.inv.armors;
+        const defs = kind === 'weapon' ? WEAPONS : ARMORS;
+        if (need(defs[idx] && (bag[idx] || 0) > 0, 'مش مالك القطعة دي')) return;
+        if (kind === 'weapon') p.weapon = idx; else p.armorGear = idx;
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/market/sell' && req.method === 'POST') {
+        const kind = body.kind === 'armor' ? 'armor' : 'weapon';
+        const idx = Number(body.idx), price = Math.floor(Number(body.price));
+        if (need(price >= 1 && price <= 1e9, 'سعر غير صالح')) return;
+        const bag = kind === 'weapon' ? p.inv.weapons : p.inv.armors;
+        const equipped = kind === 'weapon' ? p.weapon === idx : p.armorGear === idx;
+        if (need((bag[idx] || 0) > (equipped ? 1 : 0), 'مش مالك القطعة دي (أو لابسها)')) return;
+        bag[idx]--;
+        db.market.push({ id: ++db.marketSeq, seller: p.name, kind, idx, price });
+        logLine(`${p.name} عرض ${kind === 'weapon' ? WEAPONS[idx].name : ARMORS[idx].name} في السوق بـ ${price} ج`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/market/cancel' && req.method === 'POST') {
+        const i = db.market.findIndex(l => l.id === body.id && l.seller === p.name);
+        if (need(i >= 0, 'العرض مش موجود')) return;
+        const l = db.market.splice(i, 1)[0];
+        const bag = l.kind === 'weapon' ? p.inv.weapons : p.inv.armors;
+        bag[l.idx] = (bag[l.idx] || 0) + 1;
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/market/buy' && req.method === 'POST') {
+        const i = db.market.findIndex(l => l.id === body.id);
+        if (need(i >= 0, 'العرض اتباع')) return;
+        const l = db.market[i];
+        if (need(l.seller !== p.name, 'ده عرضك — تقدر تلغيه بدل ما تشتريه')) return;
+        if (need(p.money >= l.price, 'فلوس غير كافية')) return;
+        const seller = db.users[l.seller];
+        if (need(seller, 'البائع مش موجود')) return;
+        db.market.splice(i, 1);
+        p.money -= l.price;
+        seller.player.money += l.price;
+        const bag = l.kind === 'weapon' ? p.inv.weapons : p.inv.armors;
+        bag[l.idx] = (bag[l.idx] || 0) + 1;
+        logLine(`${p.name} اشترى ${l.kind === 'weapon' ? WEAPONS[l.idx].name : ARMORS[l.idx].name} من ${l.seller} بـ ${l.price} ج`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/case' && req.method === 'POST') {
+        const c = CASES.find(x => x.id === body.caseId);
+        if (need(c, 'صندوق غير معروف')) return;
+        if (need(p.money >= c.price, 'فلوس غير كافية')) return;
+        p.money -= c.price;
+        const roll = Math.random() * c.table.reduce((s, t) => s + t.w, 0);
+        let acc = 0, pick = c.table[0];
+        for (const t of c.table) { acc += t.w; if (roll <= acc) { pick = t; break; } }
+        let got = '';
+        if (pick.kind === 'money') { const n = pick.min + Math.floor(Math.random() * (pick.max - pick.min + 1)); p.money += n; got = `${n} ج`; }
+        else if (pick.kind === 'sp') { p.skillPoints += pick.n; got = `${pick.n} نقاط مهارة`; }
+        else if (pick.kind === 'ammo') { p.ammo.light += 15; p.ammo.mid += 8; p.ammo.heavy += 3; got = 'ذخيرة مشكلة (15 خفيفة + 8 متوسطة + 3 ثقيلة)'; }
+        else if (pick.kind === 'weapon') { const i = pick.tiers[Math.floor(Math.random() * pick.tiers.length)]; p.inv.weapons[i] = (p.inv.weapons[i] || 0) + 1; got = WEAPONS[i].name; }
+        else if (pick.kind === 'armor') { const i = pick.tiers[Math.floor(Math.random() * pick.tiers.length)]; p.inv.armors[i] = (p.inv.armors[i] || 0) + 1; got = ARMORS[i].name; }
+        bumpStat(p, 'cases', 1); checkMissions(p);
+        logLine(`${p.name} فتح ${c.name} وطلعله ${got}`);
+        mark(); save();
+        return json(res, 200, { ok: true, got });
+    }
     if (P === '/api/country' && req.method === 'POST') {
         const cid = body.country || body.id;
         if (need(!p.country, 'اخترت دولتك بالفعل')) return;
@@ -678,8 +781,8 @@ const server = http.createServer(async (req, res) => {
         const { kind, id } = body;
         if (kind === 'food' && FOODS[id]) { if (need(p.money >= FOODS[id].price, 'فلوس غير كافية')) return; p.money -= FOODS[id].price; p.foods[id]++; }
         else if (kind === 'ammo' && AMMOS[id]) { if (need(p.money >= AMMOS[id].price, 'فلوس غير كافية')) return; p.money -= AMMOS[id].price; p.ammo[id]++; }
-        else if (kind === 'weapon') { const w = WEAPONS[id]; if (need(w && p.money >= w.price, 'فلوس غير كافية')) return; p.money -= w.price; p.weapon = id; }
-        else if (kind === 'armor') { const g = ARMORS[id]; if (need(g && p.money >= g.price, 'فلوس غير كافية')) return; p.money -= g.price; p.armorGear = id; }
+        else if (kind === 'weapon') { const w = WEAPONS[id]; if (need(w && p.money >= w.price, 'فلوس غير كافية')) return; p.money -= w.price; p.inv.weapons[id] = (p.inv.weapons[id] || 0) + 1; p.weapon = id; }
+        else if (kind === 'armor') { const g = ARMORS[id]; if (need(g && p.money >= g.price, 'فلوس غير كافية')) return; p.money -= g.price; p.inv.armors[id] = (p.inv.armors[id] || 0) + 1; p.armorGear = id; }
         else if (kind === 'company') {
             if (need(p.companiesOwned < 1 + p.skills.companies, 'وصلت لحد الشركات — طوّر مهارة شركات')) return;
             if (need(p.money >= COMPANY.price, 'فلوس غير كافية')) return;
@@ -823,7 +926,7 @@ const server = http.createServer(async (req, res) => {
             if (need(w && i > p.weapon, 'سلاح غير متاح')) return;
             const cost = weaponIronCost(i);
             if (need(p.goods.iron >= cost, `محتاج ${cost} حديد`)) return;
-            p.goods.iron -= cost; p.weapon = i;
+            p.goods.iron -= cost; p.inv.weapons[i] = (p.inv.weapons[i] || 0) + 1; p.weapon = i;
         } else return json(res, 400, { error: 'غير معروف' });
         bumpStat(p, 'crafts', 1);
         if (what.startsWith('weapon:')) bumpStat(p, 'weaponsCrafted', 1);

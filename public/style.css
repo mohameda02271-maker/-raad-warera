@@ -348,3 +348,14 @@ button.mini{font-size:9px;padding:3px 8px}
 .rt-check{color:var(--green);font-weight:700}
 .mistoggle{margin-bottom:6px}
 .misrow.done{opacity:.55}
+
+/* market tab */
+.card.mini{background:#12102a;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:5px;align-items:center}
+.card.mini small{color:var(--mut)}
+.casecard .cicon{font-size:34px;filter:drop-shadow(0 0 10px #ffb30066)}
+.casecard button{width:100%;padding:8px;font-size:12px}
+.invacts{display:flex;flex-direction:column;gap:5px;align-items:end}
+.invacts button{flex:0 0 auto;padding:6px 12px;font-size:12px}
+.sellbox{display:flex;gap:4px;align-items:center}
+.sellbox input{width:74px;padding:6px 8px;font-size:12px;background:#0c0a1a;border:1px solid var(--line);border-radius:8px;color:var(--txt)}
+.sellbox button{padding:6px 10px;font-size:12px}

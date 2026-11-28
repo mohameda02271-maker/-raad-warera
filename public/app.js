@@ -4,7 +4,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 let token = localStorage.getItem('raad_token') || '';
-const CLIENT_VERSION = '1.5.0';
+const CLIENT_VERSION = '1.6.0';
 let S = null, MAP = null;
 let selCountry = null;
 let battle = { warId: null, ammo: 'none' };
@@ -14,7 +14,7 @@ let govCid = null;       // viewed country (null = own)
 let govTab = 'home';     // home|eco|pop|mil|gov|dip
 let govSearch = '', govSort = 'pop';
 let mapMode = 'pol'; // pol | ally | war | dev
-let ranksOpen = false, misTab = 'daily';
+let ranksOpen = false, misTab = 'daily', mktTab = 'inv';
 let prevOwners = {};
 
 async function api(path, body) {
@@ -353,6 +353,7 @@ function tabDataKey() {
     case 'home': return JSON.stringify([y.money, y.skillPoints, y.skills, y.weapon, y.armorGear, y.ammo, y.foods, y.companiesOwned, y.goods, y.factories, S.missions]);
     case 'war': return JSON.stringify([S.wars, y.ammo, y.goods, battle, battleView]);
     case 'gov': { const c = S.countries[y.country] || {}; return JSON.stringify([c.president, c.election, c.treasury, S.alliances]); }
+    case 'market': return JSON.stringify([S.market, y.inv, y.money, mktTab]);
     case 'map': return JSON.stringify([S.countries, S.wars, selCountry]);
     case 'admin': return JSON.stringify([S.speed]);
     default: return '';
@@ -392,7 +393,7 @@ function render(force) {
   [...$('#dock').children].forEach(x => x.classList.toggle('on', x.dataset.tab === curTab));
   const sheetOpen = curTab !== 'map' || !!selCountry;
   $('#sheet').classList.toggle('hidden', !sheetOpen);
-  ['map', 'home', 'war', 'gov', 'admin'].forEach(t => $('#tab-' + t).classList.toggle('hidden', t !== curTab));
+  ['map', 'home', 'war', 'gov', 'market', 'admin'].forEach(t => $('#tab-' + t).classList.toggle('hidden', t !== curTab));
 
   /* map colors */
   updateMapColors($('#stage'));
@@ -407,6 +408,7 @@ function render(force) {
         else if (curTab === 'home') renderHome();
         else if (curTab === 'war') renderWar();
         else if (curTab === 'gov') renderGov();
+        else if (curTab === 'market') renderMarket();
         else if (curTab === 'admin') renderAdmin();
       }
     } else pendingTabRender = true;
@@ -809,6 +811,75 @@ function relationTo(cid) {
 }
 function cname(cid) { return MAP.defs[cid] ? MAP.defs[cid].name : cid; }
 
+function renderMarket() {
+  const el = $('#tab-market'), y = S.you, sh = S.shop;
+  const inv = y.inv || { weapons: {}, armors: {} };
+  let h = `<div class="rtoggle mistoggle">
+    <button data-mkt="inv" class="${mktTab === 'inv' ? 'on' : ''}" type="button">🎒 مخزونك</button>
+    <button data-mkt="mkt" class="${mktTab === 'mkt' ? 'on' : ''}" type="button">🛒 السوق <b>${(S.market || []).length}</b></button>
+    <button data-mkt="cases" class="${mktTab === 'cases' ? 'on' : ''}" type="button">📦 صناديق</button>
+  </div>`;
+  if (mktTab === 'inv') {
+    h += `<h3>المجهّز حاليًا</h3><div class="grid2">
+      <div class="card mini"><b>⚔ ${esc(sh.weapons[y.weapon].name)}</b><small>${sh.weapons[y.weapon].atk} ضرر · كريت ${sh.weapons[y.weapon].crit}%</small></div>
+      <div class="card mini"><b>🛡 ${esc(sh.armors[y.armorGear].name)}</b><small>${sh.armors[y.armorGear].armor}% درع</small></div>
+    </div>
+    <h3>مخزونك <span class="pill">بيع أي قطعة مش لابسها في السوق بسعرك</span></h3>`;
+    const rows = [];
+    for (const [i, n] of Object.entries(inv.weapons)) {
+      if (!n) continue;
+      const d = sh.weapons[i], eq = y.weapon === Number(i);
+      rows.push(`<div class="skillrow"><span>${eq ? '⚔ ' : ''}${esc(d.name)} <span class="lvl">×${n}</span><br><small class="have">${d.atk} ضرر · كريت ${d.crit}%</small></span>
+        <div class="invacts">${eq ? '<span class="pill">لابسه</span>' : `<button class="cyan" data-equip="weapon:${i}" type="button">جهّز</button>`}
+        ${n > (eq ? 1 : 0) ? `<span class="sellbox"><input type="number" min="1" placeholder="السعر" data-price="weapon:${i}"><button data-sell="weapon:${i}" type="button">بيع</button></span>` : ''}</div></div>`);
+    }
+    for (const [i, n] of Object.entries(inv.armors)) {
+      if (!n) continue;
+      const d = sh.armors[i], eq = y.armorGear === Number(i);
+      rows.push(`<div class="skillrow"><span>${eq ? '🛡 ' : ''}${esc(d.name)} <span class="lvl">×${n}</span><br><small class="have">${d.armor}% درع</small></span>
+        <div class="invacts">${eq ? '<span class="pill">لابسه</span>' : `<button class="cyan" data-equip="armor:${i}" type="button">جهّز</button>`}
+        ${n > (eq ? 1 : 0) ? `<span class="sellbox"><input type="number" min="1" placeholder="السعر" data-price="armor:${i}"><button data-sell="armor:${i}" type="button">بيع</button></span>` : ''}</div></div>`);
+    }
+    h += rows.join('') || '<p class="hint">مخزونك فاضي — اشترِ سلاح أو افتح صندوق</p>';
+  } else if (mktTab === 'mkt') {
+    const mine = (S.market || []).filter(l => l.seller === y.name);
+    const others = (S.market || []).filter(l => l.seller !== y.name);
+    h += `<h3>عروض اللاعبين</h3>`;
+    h += others.length ? others.map(l => `<div class="skillrow"><span>${l.kind === 'weapon' ? '⚔' : '🛡'} ${esc(l.name)}<br><small class="have">${l.stat} — البائع: <b>${esc(l.seller)}</b></small></span>
+      <button class="cyan" data-mbuy="${l.id}" type="button" ${y.money < l.price ? 'disabled' : ''}>اشتري ${fmt(l.price)} ج</button></div>`).join('') : '<p class="hint">مفيش عروض دلوقتي — كن أول واحد يبيع</p>';
+    if (mine.length) h += `<h3>عروضك</h3>` + mine.map(l => `<div class="skillrow"><span>${esc(l.name)}<br><small class="have">${l.stat}</small></span>
+      <button class="ghost" data-mcancel="${l.id}" type="button">إلغاء (${fmt(l.price)} ج)</button></div>`).join('');
+  } else {
+    h += `<h3>الصناديق <span class="pill">حظك ممكن يجيب سلاح نادر ببلاش تقريبًا</span></h3>
+    <div class="grid2">${(S.cases || []).map(c => `<div class="card mini casecard"><span class="cicon">${c.icon}</span><b>${esc(c.name)}</b>
+      <button class="cyan" data-case="${c.id}" type="button" ${y.money < c.price ? 'disabled' : ''}>افتح بـ ${fmt(c.price)} ج</button></div>`).join('')}</div>
+    <p class="hint">صندوق الحرب: فلوس أو ذخيرة أو أسلحة ودروع لحد الدرع الأسطوري. الذهبي: فرص أعلى للأسلحة النادرة ونقاط مهارة.</p>
+    <div id="case-result"></div>`;
+  }
+  el.innerHTML = h;
+  el.querySelectorAll('[data-mkt]').forEach(b => b.onclick = () => { mktTab = b.dataset.mkt; renderMarket(); });
+  el.querySelectorAll('[data-equip]').forEach(b => b.onclick = async () => {
+    const [kind, idx] = b.dataset.equip.split(':');
+    try { await api('/api/equip', { kind, idx: Number(idx) }); flash('اتجهّز', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-sell]').forEach(b => b.onclick = async () => {
+    const [kind, idx] = b.dataset.sell.split(':');
+    const inp = el.querySelector(`[data-price="${kind}:${idx}"]`);
+    const price = Number(inp && inp.value);
+    if (!price || price < 1) { flash('حط سعر الأول', 'miss'); return; }
+    try { await api('/api/market/sell', { kind, idx: Number(idx), price }); flash('اتعرض في السوق', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-mbuy]').forEach(b => b.onclick = async () => {
+    try { await api('/api/market/buy', { id: Number(b.dataset.mbuy) }); flash('اتشتري!', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-mcancel]').forEach(b => b.onclick = async () => {
+    try { await api('/api/market/cancel', { id: Number(b.dataset.mcancel) }); flash('اتلغى العرض', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-case]').forEach(b => b.onclick = async () => {
+    try { const r = await api('/api/case', { caseId: b.dataset.case }); flash('طلعلك: ' + r.got + '!', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+}
+
 function renderGov() {
   const el = $('#tab-gov'), y = S.you;
   let h = `<div class="govswitch">
@@ -1209,6 +1280,7 @@ if (qp.get('token')) { token = qp.get('token'); localStorage.setItem('raad_token
 if (qp.get('tab')) curTab = qp.get('tab');
 if (qp.get('battle')) battleView = Number(qp.get('battle'));
 if (qp.get('ranks')) ranksOpen = true;
+if (qp.get('mk')) mktTab = qp.get('mk');
 if (qp.get('gmode')) govMode = qp.get('gmode');
 if (qp.get('gcountry')) { govMode = 'country'; govCid = qp.get('gcountry'); }
 if (qp.get('gtab')) govTab = qp.get('gtab');
