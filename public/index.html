@@ -6,7 +6,7 @@
 <title>رعد — حرب العالم</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1.6.0">
+<link rel="stylesheet" href="style.css?v=1.7.0">
 </head>
 <body>
 <div id="app">
@@ -49,6 +49,7 @@
       <div id="bars"></div>
     </header>
 
+    <div id="ticker"><button id="hud-chat" type="button" title="الشات">💬</button><button id="hud-bell" type="button" title="التنبيهات">🔔<b class="hidden">0</b></button><span>أهلًا بيك في رعد وار</span></div>
     <div id="feed"></div>
 
     <div id="sheet" class="hidden">
@@ -63,6 +64,7 @@
       </div>
     </div>
 
+    <div id="panel" class="hidden"></div>
     <nav id="dock">
       <button data-tab="map" class="on" type="button"><i>🗺</i>الخريطة</button>
       <button data-tab="home" type="button"><i>🏠</i>الوطن</button>
@@ -73,6 +75,6 @@
     </nav>
   </div>
 </div>
-<script src="app.js?v=1.6.0"></script>
+<script src="app.js?v=1.7.0"></script>
 </body>
 </html>

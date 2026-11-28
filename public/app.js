@@ -4,7 +4,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 let token = localStorage.getItem('raad_token') || '';
-const CLIENT_VERSION = '1.6.0';
+const CLIENT_VERSION = '1.7.0';
 let S = null, MAP = null;
 let selCountry = null;
 let battle = { warId: null, ammo: 'none' };
@@ -15,6 +15,8 @@ let govTab = 'home';     // home|eco|pop|mil|gov|dip
 let govSearch = '', govSort = 'pop';
 let mapMode = 'pol'; // pol | ally | war | dev
 let ranksOpen = false, misTab = 'daily', mktTab = 'inv';
+let lastPanelKey = '';
+let panelKind = null, newsTab = 'news', chatChan = 'global', profileName = null, profileData = null;
 let prevOwners = {};
 
 async function api(path, body) {
@@ -29,6 +31,13 @@ async function api(path, body) {
   return d;
 }
 const apiGet = async p => (await fetch(p)).json();
+function ago(ts) {
+  const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return s + ' ث';
+  const m = Math.floor(s / 60); if (m < 60) return m + ' د';
+  const h = Math.floor(m / 60); if (h < 24) return h + ' س';
+  return Math.floor(h / 24) + ' يوم';
+}
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(n);
 const pct = (c, m) => Math.max(0, Math.min(100, c / m * 100));
 
@@ -318,6 +327,8 @@ async function boot() {
   $('#btn-tab-admin').classList.toggle('hidden', !S.you.admin);
   show('game');
   render(true);
+  const pp = qp.get('panel');
+  if (pp) { if (pp === 'profile') openPanel('profile', qp.get('pname') || undefined); else openPanel(pp); }
 }
 
 /* ---------- pick screen ---------- */
@@ -347,6 +358,7 @@ $('#sheet-grip').onclick = () => { curTab = 'map'; selCountry = null; render(tru
 
 /* ---------- render discipline: never clobber typing ---------- */
 let lastTabKey = null, pendingTabRender = false;
+function panelDataKey() { return panelKind ? JSON.stringify([S.notifs, S.chat, S.log, profileData]) : ''; }
 function tabDataKey() {
   const y = S.you;
   switch (curTab) {
@@ -384,6 +396,20 @@ function render(force) {
   $('#me-level').textContent = y.level;
   $('#me-rank').textContent = '+' + Math.round(y.rankBonus * 100) + '%';
   const rkChip = $('#me-rank'); if (rkChip && !rkChip.dataset.bound) { rkChip.dataset.bound = 1; rkChip.style.cursor = 'pointer'; rkChip.title = 'الرتب العسكرية'; rkChip.onclick = () => { ranksOpen = true; curTab = 'war'; render(true); }; }
+  const unread = (S.notifs || []).filter(n => !n.read).length;
+  const bell = $('#hud-bell');
+  if (bell) {
+    bell.querySelector('b').textContent = unread > 9 ? '9+' : unread;
+    bell.querySelector('b').classList.toggle('hidden', !unread);
+    if (!bell.dataset.bound) { bell.dataset.bound = 1; bell.onclick = () => openPanel('notifs'); }
+  }
+  const cb = $('#hud-chat'); if (cb && !cb.dataset.bound) { cb.dataset.bound = 1; cb.onclick = () => openPanel('chat'); }
+  const meName = $('#me-name'); if (meName && !meName.dataset.bound) { meName.dataset.bound = 1; meName.style.cursor = 'pointer'; meName.onclick = () => openPanel('profile', S.you.name); }
+  const tick = $('#ticker');
+  if (tick) {
+    const items = (S.log || []).slice(0, 8).map(l => esc(l.msg)).join('  •  ');
+    if (tick.dataset.items !== items) { tick.dataset.items = items; const t2 = items || 'أهلًا بيك في رعد وار'; tick.querySelector('span').textContent = t2 + '  •  ' + t2; }
+  }
   $('#war-dot').classList.toggle('hidden', !S.wars.some(w => w.from === y.country || w.to === y.country));
   $('#bars').innerHTML =
     bar('صحة', y.bars.health, y.barMax.health, 'health') + bar('جوع', y.bars.hunger, y.barMax.hunger, 'hunger') +
@@ -413,6 +439,8 @@ function render(force) {
       }
     } else pendingTabRender = true;
   }
+  const pkey = panelDataKey();
+  if (force || pkey !== lastPanelKey) { lastPanelKey = pkey; if (force || !isTyping()) renderPanel(); }
   $('#feed').classList.toggle('hidden', sheetOpen);
   renderFeed();
 }
@@ -878,6 +906,99 @@ function renderMarket() {
   el.querySelectorAll('[data-case]').forEach(b => b.onclick = async () => {
     try { const r = await api('/api/case', { caseId: b.dataset.case }); flash('طلعلك: ' + r.got + '!', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
   });
+}
+
+/* ---------- overlay panels: notifications / news+events / chat / profile ---------- */
+function openPanel(kind, arg) {
+  panelKind = kind;
+  if (kind === 'profile') { profileName = arg || S.you.name; profileData = null; loadProfile(); }
+  if (kind === 'notifs') { api('/api/notifs/read', {}).then(() => refresh()).catch(() => {}); }
+  renderPanel();
+}
+function closePanel() { panelKind = null; renderPanel(); }
+async function loadProfile() {
+  try { const r = await fetch('/api/profile?name=' + encodeURIComponent(profileName), { headers: { 'x-token': token } }).then(r2 => r2.json()); if (r.ok) { profileData = r.profile; renderPanel(); } } catch (e) {}
+}
+function renderPanel() {
+  const ov = $('#panel');
+  if (!panelKind) { ov.classList.add('hidden'); return; }
+  const y = S.you;
+  let h = '';
+  if (panelKind === 'notifs') {
+    h = `<h3>🔔 التنبيهات</h3>` + ((S.notifs || []).length ? (S.notifs || []).map(n => `
+      <div class="notifline ${n.read ? '' : 'unread'}"><span>${esc(n.text)}</span><small>${ago(n.ts)}</small></div>`).join('')
+      : '<p class="hint">مفيش تنبيهات لسه — لما حد يعيّنك وزير أو يشتري منك أو تتعلن حرب على دولتك هتلاقيه هنا</p>');
+  } else if (panelKind === 'news') {
+    h = `<div class="rtoggle mistoggle">
+      <button data-newstab="news" class="${newsTab === 'news' ? 'on' : ''}" type="button">📰 الأخبار</button>
+      <button data-newstab="events" class="${newsTab === 'events' ? 'on' : ''}" type="button">⏳ الأحداث</button></div>`;
+    if (newsTab === 'news') {
+      h += (S.log || []).length ? (S.log || []).map(l => `<div class="notifline"><span>${esc(l.msg)}</span><small>${ago(l.ts)}</small></div>`).join('') : '<p class="hint">العالم هادي… لسه</p>';
+    } else {
+      const evs = [];
+      for (const w of S.wars) {
+        const mins = Math.max(0, Math.round((w.endsAt - Date.now()) / 60000));
+        evs.push({ icon: '⚔', text: `حرب ${esc(nm(w.from))} × ${esc(nm(w.to))} على ${esc(rn(w.regionId))} — جولة ${Math.min(w.round, 3)}/3`, when: mins > 60 ? Math.floor(mins / 60) + ' س و' + (mins % 60) + ' د' : mins + ' د', urgent: mins < 60 });
+        if (w.peaceOffer) evs.push({ icon: '🕊', text: `عرض سلام معروض في حرب ${esc(rn(w.regionId))} — مستني رد الطرف التاني`, when: 'دلوقتي', urgent: true });
+      }
+      for (const c of Object.values(S.countries)) {
+        if (c.election && c.election.endsAt) {
+          const mins = Math.max(0, Math.round((c.election.endsAt - Date.now()) / 60000));
+          evs.push({ icon: '🗳', text: `انتخابات رئاسة في ${esc(c.name || '')} — التصويت شغال`, when: mins > 60 ? Math.floor(mins / 60) + ' س' : mins + ' د', urgent: mins < 30 });
+        }
+      }
+      h += evs.length ? evs.map(e => `<div class="notifline ${e.urgent ? 'unread' : ''}"><span>${e.icon} ${e.text}</span><small>${e.when}</small></div>`).join('') : '<p class="hint">مفيش أحداث شغالة دلوقتي</p>';
+    }
+  } else if (panelKind === 'chat') {
+    const msgs = (S.chat && S.chat[chatChan]) || [];
+    const myC = S.countries[y.country] || {};
+    const inUnit = myC.unit && myC.unit.members && myC.unit.members.includes(y.name);
+    h = `<div class="rtoggle mistoggle">
+      <button data-chan="global" class="${chatChan === 'global' ? 'on' : ''}" type="button">🌍 عالمي</button>
+      <button data-chan="country" class="${chatChan === 'country' ? 'on' : ''}" type="button">🏠 دولتي</button>
+      <button data-chan="unit" class="${chatChan === 'unit' ? 'on' : ''}" type="button" ${inUnit ? '' : 'disabled'}>🎖 الوحدة</button></div>
+      <div class="chatbox">${msgs.length ? msgs.slice().reverse().map(m => `
+        <div class="chatline ${m.name === y.name ? 'me' : ''}"><button class="chatname" data-prof="${esc(m.name)}" type="button">${esc(m.name)}</button><small>${m.lvl}</small><span>${esc(m.text)}</span></div>`).join('')
+        : '<p class="hint">ابدأ الكلام — الشات ده حي بين اللاعبين</p>'}</div>
+      <div class="chatsend"><input id="chat-in" maxlength="200" placeholder="اكتب رسالتك…" type="text"><button id="chat-go" class="cyan" type="button">ابعت</button></div>`;
+  } else if (panelKind === 'profile') {
+    if (!profileData) h = '<p class="hint">بيجيب البروفايل…</p>';
+    else {
+      const pr = profileData, rk = (S.ranks || [])[pr.rank] || {};
+      const cn = MAP.defs[pr.country] ? MAP.defs[pr.country].name : pr.country;
+      h = `<div class="profhero">
+        <span class="avatar big">${esc(pr.name[0] || '?')}</span>
+        <b>${esc(pr.name)} ${pr.admin ? '★' : ''}</b>
+        <small>${rk.icon || ''} ${esc(rk.name || '')} · لفل ${pr.level} · ${esc(cn)}${pr.president ? ' · 👑 الرئيس' : ''}${pr.office ? ' · ' + esc(pr.office) : ''}</small>
+        ${pr.party ? `<span class="pill">🚩 ${esc(pr.party)}</span>` : ''}
+      </div>
+      <div class="grid2">
+        <div class="card mini"><b dir="ltr">${fmt(pr.totalDamage)}</b><small>⚔ إجمالي الضرر</small></div>
+        <div class="card mini"><b dir="ltr">${fmt(pr.stats.hits)}</b><small>🎯 ضربات مصيبة</small></div>
+        <div class="card mini"><b dir="ltr">${fmt(pr.stats.work)}</b><small>🔨 مرة شغل</small></div>
+        <div class="card mini"><b dir="ltr">${fmt(pr.stats.goods)}</b><small>🏭 خامات منتجة</small></div>
+        <div class="card mini"><b>${pr.factories}</b><small>مصانع</small></div>
+        <div class="card mini"><b>${pr.companies}</b><small>شركات</small></div>
+      </div>`;
+    }
+  }
+  ov.innerHTML = `<div class="panelcard"><div class="panelhead"><button id="panel-x" class="ghost" type="button">✕</button></div>${h}</div>`;
+  ov.classList.remove('hidden');
+  $('#panel-x').onclick = closePanel;
+  ov.onclick = e => { if (e.target === ov) closePanel(); };
+  ov.querySelectorAll('[data-newstab]').forEach(b => b.onclick = () => { newsTab = b.dataset.newstab; renderPanel(); });
+  ov.querySelectorAll('[data-chan]').forEach(b => b.onclick = () => { chatChan = b.dataset.chan; renderPanel(); });
+  ov.querySelectorAll('[data-prof]').forEach(b => b.onclick = () => openPanel('profile', b.dataset.prof));
+  const go = $('#chat-go');
+  if (go) {
+    const send = async () => {
+      const inp = $('#chat-in'); const text = inp.value.trim();
+      if (!text) return;
+      try { await api('/api/chat', { channel: chatChan, text }); inp.value = ''; refresh(); } catch (e) { flash(e.message, 'miss'); }
+    };
+    go.onclick = send;
+    $('#chat-in').onkeydown = e => { if (e.key === 'Enter') send(); };
+  }
 }
 
 function renderGov() {

@@ -10,7 +10,7 @@ import { DEFS, PATHS, NEIGHBORS } from './gamedata.js';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = process.env.DATA_FILE || path.join(ROOT, 'data.json');
 const PORT = Number(process.env.PORT) || 8080; // Railway injects PORT; 8080 is just the local fallback
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 // The world stays locked until the owner claims the admin account with this secret.
 // If the env var is missing, a one-time secret is generated and printed to the log,
 // so a public URL can never hand admin to a stranger.
@@ -23,6 +23,7 @@ try { db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch {}
 if (!db.speed) db.speed = 1;
 if (!db.alliances) { db.alliances = {}; db.allySeq = 0; }
 if (!db.market) { db.market = []; db.marketSeq = 0; }
+if (!db.chat) db.chat = {};
 let dirty = false;
 const save = () => {
     if (!dirty) return;
@@ -273,6 +274,7 @@ function tickPlayer(p) {
     if (!p.goods) p.goods = { iron: 0, wheat: 0 };
     if (!p.factories) { p.factories = []; p.factSeq = 0; }
     // migration + daily reset for missions
+    if (!p.notifs) p.notifs = [];
     if (!p.mStats) p.mStats = {};
     if (p.mStats.dmg === undefined && p.totalDamage) p.mStats.dmg = p.totalDamage; // seed new dmg counter from history
     if (!p.mStoryDone) p.mStoryDone = [];
@@ -340,6 +342,32 @@ function gainXp(p) {
     if (p.level >= LEVEL_MAX) p.xp = Math.min(p.xp, levelXp(LEVEL_MAX) - 1);
 }
 function logLine(s) { db.log.unshift({ ts: Date.now(), msg: s }); db.log = db.log.slice(0, 50); mark(); }
+function notify(name, text) {
+    const u = db.users[name];
+    if (!u) return;
+    if (!u.player.notifs) u.player.notifs = [];
+    u.player.notifs.unshift({ ts: Date.now(), text, read: false });
+    u.player.notifs = u.player.notifs.slice(0, 30);
+    mark();
+}
+function notifyCountry(cid, text, roles) { // roles: null = all citizens, else office keys + 'president'
+    for (const u of Object.values(db.users)) {
+        const q = u.player;
+        if (q.country !== cid) continue;
+        if (roles) {
+            const c = db.countries[cid];
+            const isTarget = (roles.includes('president') && c.president === q.name) || roles.some(r => c.offices[r] === q.name);
+            if (!isTarget) continue;
+        }
+        notify(q.name, text);
+    }
+}
+function chatAdd(chan, p, text) {
+    if (!db.chat[chan]) db.chat[chan] = [];
+    db.chat[chan].unshift({ name: p.name, cid: p.country, lvl: p.level, text: String(text).slice(0, 200), ts: Date.now() });
+    db.chat[chan] = db.chat[chan].slice(0, 40);
+    mark();
+}
 
 function hitDamage(p, ammoKind) {
     const w = WEAPONS[p.weapon];
@@ -645,6 +673,12 @@ const server = http.createServer(async (req, res) => {
                 swornEnemy: db.countries[id] ? db.countries[id].swornEnemy : null,
             })),
             log: db.log.slice(0, 20),
+            notifs: (p.notifs || []).slice(0, 20),
+            chat: {
+                global: (db.chat.global || []).slice(0, 30),
+                country: (db.chat['c:' + p.country] || []).slice(0, 30),
+                unit: (db.chat['u:' + p.country] || []).slice(0, 30),
+            },
             shop: { foods: FOODS, weapons: WEAPONS, armors: ARMORS, ammos: AMMOS, skills: SKILLS, skillMax: SKILL_MAX, company: COMPANY, factories: FACTORIES, factoryMaxLevel: FACTORY_MAX_LEVEL, craftAmmoIron: CRAFT_AMMO_IRON, craftMealWheat: CRAFT_MEAL_WHEAT, weaponIron: WEAPONS.map((_, i) => weaponIronCost(i)), supply: SUPPLY },
             cases: CASES.map(c => ({ id: c.id, name: c.name, icon: c.icon, price: c.price })),
             market: db.market.map(l => ({ id: l.id, seller: l.seller, kind: l.kind, idx: l.idx, price: l.price,
@@ -665,6 +699,43 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify(db, null, 2));
     }
 
+    if (P === '/api/chat' && req.method === 'POST') {
+        const ch = body.channel;
+        const text = String(body.text || '').trim();
+        if (need(text && text.length <= 200, 'رسالة فاضية أو طويلة')) return;
+        const c = db.countries[p.country] || {};
+        if (ch === 'country') chatAdd('c:' + p.country, p, text);
+        else if (ch === 'unit') {
+            const inUnit = c.unit && c.unit.members.includes(p.name);
+            if (need(inUnit, 'مشتركش في وحدة دولتك')) return;
+            chatAdd('u:' + p.country, p, text);
+        } else chatAdd('global', p, text);
+        save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/notifs/read' && req.method === 'POST') {
+        (p.notifs || []).forEach(n => n.read = true);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/profile' && req.method === 'GET') {
+        const q = db.users[url.searchParams.get('name')];
+        if (need(q, 'لاعب غير موجود')) return;
+        const qp2 = q.player;
+        const c = db.countries[qp2.country] || {};
+        const office = Object.entries(c.offices || {}).find(([, n]) => n === qp2.name);
+        const party = (c.parties || []).find(pt => pt.members.includes(qp2.name));
+        return json(res, 200, { ok: true, profile: {
+            name: qp2.name, country: qp2.country, level: qp2.level,
+            rank: rankOf(qp2.totalDamage), totalDamage: Math.floor(qp2.totalDamage),
+            companies: qp2.companiesOwned, factories: qp2.factories.length,
+            president: c.president === qp2.name,
+            office: office ? OFFICES[office[0]] : null,
+            party: party ? party.name : null,
+            admin: !!qp2.admin,
+            stats: { hits: qp2.mStats.hits || 0, dmg: Math.floor(qp2.mStats.dmg || qp2.totalDamage), work: qp2.mStats.work || 0, goods: Math.floor(qp2.mStats.goods || 0) },
+        } });
+    }
     if (P === '/api/equip' && req.method === 'POST') {
         const kind = body.kind === 'armor' ? 'armor' : 'weapon';
         const idx = Number(body.idx);
@@ -711,6 +782,7 @@ const server = http.createServer(async (req, res) => {
         const bag = l.kind === 'weapon' ? p.inv.weapons : p.inv.armors;
         bag[l.idx] = (bag[l.idx] || 0) + 1;
         logLine(`${p.name} اشترى ${l.kind === 'weapon' ? WEAPONS[l.idx].name : ARMORS[l.idx].name} من ${l.seller} بـ ${l.price} ج`);
+        notify(l.seller, `اتباع ${l.kind === 'weapon' ? WEAPONS[l.idx].name : ARMORS[l.idx].name} لـ ${p.name} بـ ${l.price} ج`);
         mark(); save();
         return json(res, 200, { ok: true });
     }
@@ -836,6 +908,7 @@ const server = http.createServer(async (req, res) => {
         if (wall > 0) { w.rounds[0].terrDef = Math.min(60, Math.floor(wall / 50)); db.countries[target.c].defenseBonus[regionId] = 0; }
         db.wars[w.id] = w;
         logLine(`${DEFS[p.country].name} أعلنت الحرب على ${target.r.name} (${DEFS[target.c].name})`);
+        notifyCountry(target.c, `⚔ ${DEFS[p.country].name} أعلنت الحرب على ${target.r.name}!`);
         mark(); save();
         return json(res, 200, { ok: true, war: publicWar(w) });
     }
@@ -1063,6 +1136,7 @@ const server = http.createServer(async (req, res) => {
         if (need(!Object.values(home.offices).includes(t.name), 'اللاعب ده شاغل منصب بالفعل — لاعب واحد = منصب واحد')) return;
         home.offices[office] = t.name;
         clog(p.country, `${p.name} عيّن ${t.name} ${OFFICES[office]}`);
+        notify(t.name, `👑 الرئيس عيّنك ${OFFICES[office]} في ${DEFS[p.country].name}`);
         logLine(`${t.name} أصبح ${OFFICES[office]} في ${DEFS[p.country].name}`);
         mark(); save();
         return json(res, 200, { ok: true });
@@ -1074,6 +1148,7 @@ const server = http.createServer(async (req, res) => {
         const old = home.offices[office];
         delete home.offices[office];
         clog(p.country, `${p.name} أقال ${old} من منصب ${OFFICES[office]}`);
+        notify(old, `الرئيس أقالك من منصب ${OFFICES[office]}`);
         mark(); save();
         return json(res, 200, { ok: true });
     }
@@ -1138,6 +1213,7 @@ const server = http.createServer(async (req, res) => {
         if (!w.peaceOffer) {
             w.peaceOffer = { side: mySide, by: p.name };
             clog(p.country, `${p.name} عرض السلام في حرب ${regionName(w)}`);
+            notifyCountry(mySide === 'att' ? w.to : w.from, `🕊 ${DEFS[p.country].name} عرضت السلام في حرب ${regionName(w)}`, ['president', 'foreign']);
             mark(); save();
             return json(res, 200, { ok: true, offered: true });
         }
