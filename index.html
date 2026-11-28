@@ -2885,94 +2885,108 @@ async function runMuVsMu(){
   }
 }
 
+// ---- Live data helpers: real endpoints (battle.getBattles isActive, war.getById, region.getRegionsObject) ----
+let __liveBattlesCache = { at: 0, items: [] };
+async function getActiveBattlesLive(force){
+  if(!force && Date.now() - __liveBattlesCache.at < 20000 && __liveBattlesCache.items.length) return __liveBattlesCache.items;
+  const res = await trpc('battle.getBattles', { isActive: true, limit: 100 });
+  const items = (Array.isArray(res) ? res : (res?.items || [])).filter(b => b && b.isActive !== false);
+  __liveBattlesCache = { at: Date.now(), items };
+  return items;
+}
+let __regionsCache = null;
+async function getRegionsLive(){
+  if(__regionsCache) return __regionsCache;
+  try{ const r = await trpc('region.getRegionsObject', {}); if(r && typeof r === 'object') __regionsCache = r; }catch(_){}
+  return __regionsCache || {};
+}
+function countryChipHTML(id, cMap){
+  const c = (id && cMap[String(id)]) || null;
+  const name = c?.name || c?.title || '';
+  const flag = c ? resolveCountryFlag(c, name) : '';
+  const img = flag ? `<img src="${escapeHtml(flag)}" alt="" style="height:15px;width:22px;object-fit:cover;border-radius:3px;vertical-align:-2px;margin-inline-end:5px;border:1px solid var(--line2)" onerror="this.style.display='none'">` : '';
+  return `${img}<b>${escapeHtml(name || 'دولة غير معروفة')}</b>`;
+}
+function battleSideDamage(b, side){
+  const r = b.currentRound && b.currentRound[side];
+  const rd = Number(r?.damages);
+  if(Number.isFinite(rd) && rd > 0) return rd;
+  return Number(b[side]?.damages) || 0;
+}
+
 async function runWarsIntelScan(){
   $('spyStatus').textContent = '⚔️ جاري جلب الحروب النشطة من السيرفر...';
   try{
-    let wars = [];
-    for(const proc of ['war.getActiveWars', 'war.getWars', 'war.list', 'war.getAll', 'battle.getActiveBattles', 'battle.getBattles']){
-      try{
-        const res = await trpc(proc, {});
-        const arr = extractListFromResponse(res);
-        if(arr.length){ wars = arr; break; }
-      }catch(e){}
-    }
-    if(!wars.length){
-      $('warsList').innerHTML = `<div class="battle-card"><div class="hint" style="color:var(--gold)">⚠️ لم يتم إرجاع حروب نشطة من السيرفر حالياً (يمكن ضبط WarEra API Key من الإعدادات أو تجربة <b>🔥 المعارك الحية</b> أو <b>⚔️ حرب وحدات</b>).</div></div>`;
+    const battles = await getActiveBattlesLive(true);
+    const byWar = {};
+    battles.forEach(b => { if(b.war){ (byWar[b.war] = byWar[b.war] || []).push(b); } });
+    const warIds = Object.keys(byWar);
+    if(!warIds.length){
+      $('warsList').innerHTML = `<div class="battle-card"><div class="hint" style="color:var(--gold)">⚠️ لا توجد حروب نشطة (لا معارك جارية الآن).</div></div>`;
       $('spyWarsBox').style.display = 'block';
       $('spyStatus').textContent = '⚠️ لا توجد حروب نشطة معروضة حالياً.';
       return;
     }
-
     const cMap = await getCountriesMap();
-    $('warsList').innerHTML = wars.slice(0, 14).map((w, i) => {
-      const attObj = w.attacker || w.aggressor || cMap[w.attackerCountryId || w.aggressorId] || {};
-      const defObj = w.defender || w.target || cMap[w.defenderCountryId || w.defenderId] || {};
-      const attName = attObj.name || w.attackerName || w.aggressorName || 'المهاجم';
-      const defName = defObj.name || w.defenderName || w.targetName || 'المدافع';
-      const statusLabel = w.status || (w.isActive === false ? 'منتهية' : 'نشطة');
-      const battlesCnt = w.battlesCount ?? (Array.isArray(w.battles) ? w.battles.length : '-');
-      const attScore = +(w.attackerScore || w.attackerDamage || w.attackerPoints || 0);
-      const defScore = +(w.defenderScore || w.defenderDamage || w.defenderPoints || 0);
-      const tot = Math.max(1, attScore + defScore);
-      const attPct = Math.min(95, Math.max(5, Math.round((attScore / tot) * 100)));
-      const leader = attScore >= defScore ? attName : defName;
-
+    const wars = [];
+    for(let i = 0; i < warIds.length; i += 6){
+      const part = await Promise.all(warIds.slice(i, i + 6).map(async id => { try{ return await trpc('war.getById', { warId: id }); }catch(_){ return null; } }));
+      part.forEach((w, k) => { const id = warIds[i + k]; if(w && typeof w === 'object') wars.push({ ...w, _id: w._id || id, __battles: byWar[id] }); else { const b0 = byWar[id][0]; wars.push({ _id: id, attacker: { country: b0.attacker?.country, damages: 0 }, defender: { country: b0.defender?.country, damages: 0 }, isActive: true, __battles: byWar[id] }); } });
+    }
+    wars.sort((x, y) => ((y.attacker?.damages || 0) + (y.defender?.damages || 0)) - ((x.attacker?.damages || 0) + (x.defender?.damages || 0)));
+    $('warsList').innerHTML = wars.slice(0, 20).map((w, i) => {
+      const attId = w.attacker?.country, defId = w.defender?.country;
+      const attDmg = +(w.attacker?.damages || 0), defDmg = +(w.defender?.damages || 0);
+      const tot = Math.max(1, attDmg + defDmg);
+      const attPct = Math.min(95, Math.max(5, Math.round((attDmg / tot) * 100)));
+      const attName = cMap[String(attId)]?.name || 'المهاجم', defName = cMap[String(defId)]?.name || 'المدافع';
+      const leader = attDmg >= defDmg ? attName : defName;
       return `
         <div class="battle-card">
           <div class="bar-head">
-            <span>#${i+1} ⚔️ ${escapeHtml(attName)} 🆚 ${escapeHtml(defName)}</span>
-            <span class="badge danger">${escapeHtml(statusLabel)} · معارك: ${escapeHtml(battlesCnt)}</span>
+            <span>#${i + 1} ⚔️ ${countryChipHTML(attId, cMap)} 🆚 ${countryChipHTML(defId, cMap)}</span>
+            <span class="badge danger">نشطة · معارك جارية: ${w.__battles.length}</span>
           </div>
           <div class="vs-bar">
             <div class="vs-me" style="width:${attPct}%"></div>
             <div class="vs-enemy" style="width:${100 - attPct}%"></div>
           </div>
           <div class="seg-sub">
-            <span>${escapeHtml(attName)}: <b>${attScore.toLocaleString()}</b> (${attPct}%)</span>
-            <span>${escapeHtml(defName)}: <b>${defScore.toLocaleString()}</b> (${100 - attPct}%)</span>
+            <span>${escapeHtml(attName)}: <b>${attDmg.toLocaleString()}</b> ضرر (${attPct}%) · معارك فائزة: ${+(w.attacker?.wonBattlesCount || 0)}</span>
+            <span>${escapeHtml(defName)}: <b>${defDmg.toLocaleString()}</b> ضرر (${100 - attPct}%) · معارك فائزة: ${+(w.defender?.wonBattlesCount || 0)}</span>
           </div>
-          <div class="hint" style="margin-top:6px;color:var(--green)">🏆 المتقدم حالياً في الجبهة: <b>${escapeHtml(leader)}</b></div>
+          <div class="hint" style="margin-top:6px;color:var(--green)">🏆 المتقدم حالياً في الحرب: <b>${escapeHtml(leader)}</b></div>
         </div>
       `;
     }).join('');
-
     $('spyWarsBox').style.display = 'block';
-    $('spyStatus').textContent = `✅ تم جلب ${wars.length} حرب نشطة بنجاح.`;
+    $('spyStatus').textContent = `✅ ${wars.length} حرب نشطة من السيرفر (مشتقة من ${battles.length} معركة جارية).`;
   }catch(err){
-    $('spyStatus').textContent = `⚠️ ${err.message}`;
+    $('spyStatus').textContent = `⚠️ تعذّر جلب الحروب: ${err.message}`;
   }
 }
 
 async function runLiveBattlesScan(){
   $('spyStatus').textContent = '🔥 جاري الاتصال برادار المعارك الحية في السيرفر...';
   try{
-    let battles = [];
-    for(const proc of ['battle.getActiveBattles', 'battle.getBattles', 'war.getActiveBattles', 'battle.list']){
-      try{
-        const res = await trpc(proc, {});
-        const arr = extractListFromResponse(res);
-        if(arr.length){ battles = arr; break; }
-      }catch(e){}
-    }
-    if(!battles.length) throw new Error('لا توجد معارك حية مرصودة حالياً أو يتطلب السيرفر مفتاح WarEra API.');
-
+    const battles = await getActiveBattlesLive(true);
+    if(!battles.length) throw new Error('لا توجد معارك جارية حالياً في اللعبة.');
     const cMap = await getCountriesMap();
-    $('liveBattlesList').innerHTML = battles.slice(0, 12).map(b => {
-      const attObj = b.attacker || cMap[b.attackerCountryId] || {};
-      const defObj = b.defender || cMap[b.defenderCountryId] || {};
-      const attName = attObj.name || b.attackerName || 'المهاجم';
-      const defName = defObj.name || b.defenderName || 'المدافع';
-      const regionName = b.region?.name || b.regionName || 'إقليم متنازع عليه';
-      const attDmg = +(b.attackerDamage || b.attackerPoints || 0);
-      const defDmg = +(b.defenderDamage || b.defenderPoints || 0);
+    const regs = await getRegionsLive();
+    battles.sort((x, y) => (battleSideDamage(y, 'attacker') + battleSideDamage(y, 'defender')) - (battleSideDamage(x, 'attacker') + battleSideDamage(x, 'defender')));
+    $('liveBattlesList').innerHTML = battles.slice(0, 20).map(b => {
+      const attId = b.attacker?.country, defId = b.defender?.country;
+      const regionName = regs[b.defender?.region]?.name || regs[b.attacker?.region]?.name || 'إقليم';
+      const attDmg = battleSideDamage(b, 'attacker'), defDmg = battleSideDamage(b, 'defender');
       const tot = Math.max(1, attDmg + defDmg);
       const attPct = Math.min(95, Math.max(5, Math.round((attDmg / tot) * 100)));
-      const topHitters = (b.topHitters || b.topAttackers || []).slice(0, 3).map(h => h.username || h.name).filter(Boolean);
-
+      const rn = b.currentRound?.number || (b.roundsHistory?.length || 0) + 1;
+      const attWon = +(b.attacker?.wonRoundsCount || 0), defWon = +(b.defender?.wonRoundsCount || 0);
+      const created = b.createdAt ? Math.max(0, Math.round((Date.now() - Date.parse(b.createdAt)) / 60000)) : null;
       return `
         <div class="battle-card">
           <div class="bar-head">
-            <span>⚔️ ${escapeHtml(attName)} 🆚 ${escapeHtml(defName)}</span>
+            <span>⚔️ ${countryChipHTML(attId, cMap)} 🆚 ${countryChipHTML(defId, cMap)}</span>
             <span class="badge warn">📍 ${escapeHtml(regionName)}</span>
           </div>
           <div class="vs-bar">
@@ -2983,13 +2997,12 @@ async function runLiveBattlesScan(){
             <span>المهاجم: <b>${attDmg.toLocaleString()}</b> (${attPct}%)</span>
             <span>المدافع: <b>${defDmg.toLocaleString()}</b> (${100 - attPct}%)</span>
           </div>
-          ${topHitters.length ? `<div class="hint" style="margin-top:6px;color:var(--gold)">🏆 أقوى الضاربين الآن: ${topHitters.map(escapeHtml).join(' · ')}</div>` : ''}
+          <div class="hint" style="margin-top:6px">الجولة ${rn} (الفوز بـ ${b.roundsToWin || 2}) · الجولات: ${attWon}–${defWon} · ضربات: ${(+(b.attacker?.hitCount || 0)).toLocaleString()} / ${(+(b.defender?.hitCount || 0)).toLocaleString()}${created !== null ? ` · بدأت منذ ${created} د` : ''}</div>
         </div>
       `;
     }).join('');
-
     $('spyBattlesBox').style.display = 'block';
-    $('spyStatus').textContent = `✅ تم رصد ${battles.length} معركة جارية في الوقت الفعلي.`;
+    $('spyStatus').textContent = `✅ ${battles.length} معركة جارية الآن من السيرفر${battles.length > 20 ? ' (أعلى 20 بالضرر)' : ''}.`;
   }catch(err){
     $('spyStatus').textContent = `⚠️ ${err.message}`;
   }
@@ -3151,17 +3164,11 @@ async function runCountryIntel(){
     // Cross-reference active wars for this country
     let warsArr = Array.isArray(country.wars) ? country.wars : (Array.isArray(country.activeWars) ? country.activeWars : []);
     if(!warsArr.length && cId){
-      const wRes = await trpcTryMany([
-        ['war.getActiveWars', {}],
-        ['war.getWars', {}]
-      ], r => extractListFromResponse(r).length > 0);
-      if(wRes){
-        warsArr = extractListFromResponse(wRes).filter(w => {
-          const attId = w?.attacker?._id || (typeof w?.attacker === 'string' ? w.attacker : '') || w?.attackerCountryId || w?.aggressorId || '';
-          const defId = w?.defender?._id || (typeof w?.defender === 'string' ? w.defender : '') || w?.defenderCountryId || w?.targetId || '';
-          return String(attId) === String(cId) || String(defId) === String(cId);
-        });
-      }
+      try{
+        const lb = await getActiveBattlesLive();
+        const ids = new Set(lb.filter(b => String(b.attacker?.country) === String(cId) || String(b.defender?.country) === String(cId)).map(b => b.war));
+        warsArr = [...ids].map(id => ({ _id: id }));
+      }catch(_){}
     }
     const warsCount = warsArr.length ? warsArr.length : (extractNumericMetric(country.warsCount ?? country.activeWarsCount) || 0);
     const warPopRaw = findDeepValue(country, [/warPop/i, /warCitizen/i, /fighter/i, /warPoint/i, /warDamage/i, /troop/i, /soldier/i, /army/i]);
