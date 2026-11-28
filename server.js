@@ -1,4 +1,4 @@
-// RAAD war server — multiplayer, no bots. Zero deps, Node 18+.
+// RAAD war server — multiplayer, no bots. Zero deps, Node 22.12+.
 // Sleep-tolerant: all time-based state is computed lazily from timestamps.
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -10,6 +10,11 @@ import { DEFS, PATHS, NEIGHBORS } from './gamedata.js';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = process.env.DATA_FILE || path.join(ROOT, 'data.json');
 const PORT = process.env.PORT || 3000;
+// The world stays locked until the owner claims the admin account with this secret.
+// If the env var is missing, a one-time secret is generated and printed to the log,
+// so a public URL can never hand admin to a stranger.
+const ADMIN_SECRET = process.env.ADMIN_SECRET || crypto.randomBytes(4).toString('hex');
+if (!process.env.ADMIN_SECRET) console.log('ADMIN_SECRET not set — one-time owner secret:', ADMIN_SECRET);
 
 let db = { users: {}, sessions: {}, countries: {}, wars: {}, warSeq: 0, log: [], speed: 1 };
 try { db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch {}
@@ -223,8 +228,9 @@ function publicWar(w) {
 
 // ---------- http ----------
 const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)); };
-const auth = (req) => {
-    const name = db.sessions[req.headers['x-token']];
+const auth = (req, url) => {
+    const t = req.headers['x-token'] || (url && url.searchParams.get('token'));
+    const name = db.sessions[t];
     return name && db.users[name] ? db.users[name].player : null;
 };
 
@@ -239,10 +245,14 @@ const server = http.createServer(async (req, res) => {
         const name = String(body.name || '').trim();
         if (!/^[\p{L}\p{N}_-]{3,20}$/u.test(name)) return json(res, 400, { error: 'الاسم 3-20 حرف أو رقم' });
         if (db.users[name]) return json(res, 409, { error: 'الاسم محجوز' });
-        if (Object.keys(db.users).length >= 30) return json(res, 403, { error: 'السيرفر مكتمل العدد' });
+        if (Object.keys(db.users).length >= 20) return json(res, 403, { error: 'السيرفر مكتمل العدد (20 لاعب)' });
+        const adminClaimed = Object.values(db.users).some(u => u.player.admin);
+        if (!adminClaimed) {
+            // the world stays locked until the owner claims admin with the secret
+            if (String(body.secret || '') !== ADMIN_SECRET) return json(res, 403, { error: 'صاحب العالم لسه مفتحوش — التسجيل مقفول لحد ما يدخل بكود المالك' });
+        }
         const salt = crypto.randomBytes(16).toString('hex');
-        const isFirst = Object.keys(db.users).length === 0; // first account is the game admin, permanently
-        db.users[name] = { salt, hash: crypto.scryptSync(String(body.pass || ''), salt, 32).toString('hex'), player: newPlayer(name, isFirst) };
+        db.users[name] = { salt, hash: crypto.scryptSync(String(body.pass || ''), salt, 32).toString('hex'), player: newPlayer(name, !adminClaimed) };
         const token = crypto.randomBytes(24).toString('hex');
         db.sessions[token] = name; mark(); save();
         return json(res, 200, { token, name });
@@ -267,7 +277,7 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
-    const p = auth(req);
+    const p = auth(req, url);
     if (!p) return json(res, 401, { error: 'سجل دخول الأول' });
     tickPlayer(p);
 
@@ -291,6 +301,16 @@ const server = http.createServer(async (req, res) => {
     }
 
     const need = (cond, msg) => { if (!cond) { json(res, 400, { error: msg }); return true; } return false };
+
+    // owner-only: download the whole world state as a JSON file (backup)
+    if (P === '/api/admin/export' && req.method === 'GET') {
+        if (need(p.admin, 'مش ليك')) return;
+        res.writeHead(200, {
+            'content-type': 'application/json; charset=utf-8',
+            'content-disposition': 'attachment; filename="raad-world.json"',
+        });
+        return res.end(JSON.stringify(db, null, 2));
+    }
 
     if (P === '/api/country' && req.method === 'POST') {
         const cid = body.country || body.id;

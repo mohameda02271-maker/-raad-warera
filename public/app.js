@@ -37,7 +37,7 @@ $('#btn-login').onclick = () => auth('login');
 async function auth(kind) {
   $('#auth-err').textContent = '';
   try {
-    const d = await api('/api/' + kind, { name: $('#auth-name').value.trim(), pass: $('#auth-pass').value });
+    const d = await api('/api/' + kind, { name: $('#auth-name').value.trim(), pass: $('#auth-pass').value, secret: $('#auth-secret').value.trim() });
     token = d.token; localStorage.setItem('raad_token', token);
     await boot();
   } catch (e) { $('#auth-err').textContent = e.message; }
@@ -309,6 +309,10 @@ function renderAdmin() {
     <div class="kv"><span>سرعة العالم</span><b>×${S.speed}</b></div>
     <div class="row"><input type="number" id="adm-speed" placeholder="0.1 إلى 100" step="0.5" min="0.1" max="100"><button id="adm-speed-go" type="button">غيّر</button></div>
   </div>
+  <div class="card"><h4>نسخة احتياطية من العالم</h4>
+    <p class="hint">نزّل ملف فيه كل حالة العالم (لاعبين ودول وحروب) — اعملها كل فترة لو السيرفر اتمسح.</p>
+    <button id="adm-export" type="button" style="width:100%">نزّل نسخة من العالم</button>
+  </div>
   <div class="card"><h4>كود الغش السريع</h4>
     <div class="row"><input type="text" id="adm-cheat" placeholder="الكود"><button class="cyan" id="adm-cheat-go" type="button">نفّذ</button></div>
     <p class="hint">يديك 100k فلوس + ذخيرة وأكل وبارات مليانة. الكود: raad raad</p>
@@ -338,6 +342,7 @@ function renderAdmin() {
   </div>`;
   const go = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
   const val = id => $(id).value;
+  go('#adm-export', () => { window.open('/api/admin/export?token=' + encodeURIComponent(token), '_blank'); });
   go('#adm-speed-go', async () => { try { await api('/api/admin/speed', { speed: Number(val('#adm-speed')) }); flash('اتغيّرت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } });
   go('#adm-cheat-go', async () => { try { await api('/api/cheat', { code: val('#adm-cheat') }); flash('اتنفّذ', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } });
   go('#adm-give-go', async () => { try { await api('/api/admin/give', { name: val('#adm-give-name'), money: Number(val('#adm-give-money')) }); flash('اتبعت', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); } });
