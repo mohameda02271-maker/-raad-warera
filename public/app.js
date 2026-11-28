@@ -18,6 +18,7 @@ async function api(path, body) {
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error || 'خطأ');
+  if (Array.isArray(d.missions) && typeof d.missions[0] === 'string') d.missions.forEach(n => flash('مهمة اكتملت: ' + n + '!', 'good'));
   return d;
 }
 const apiGet = async p => (await fetch(p)).json();
@@ -195,7 +196,7 @@ let lastTabKey = null, pendingTabRender = false;
 function tabDataKey() {
   const y = S.you;
   switch (curTab) {
-    case 'home': return JSON.stringify([y.money, y.skillPoints, y.skills, y.weapon, y.armorGear, y.ammo, y.foods, y.companiesOwned, y.goods, y.factories]);
+    case 'home': return JSON.stringify([y.money, y.skillPoints, y.skills, y.weapon, y.armorGear, y.ammo, y.foods, y.companiesOwned, y.goods, y.factories, S.missions]);
     case 'war': return JSON.stringify([S.wars, y.ammo, y.goods, battle]);
     case 'gov': { const c = S.countries[y.country] || {}; return JSON.stringify([c.president, c.election, c.treasury, S.alliances]); }
     case 'map': return JSON.stringify([S.countries, S.wars, selCountry]);
@@ -228,10 +229,9 @@ function render(force) {
   $('#me-level').textContent = y.level;
   $('#me-rank').textContent = '+' + Math.round(y.rankBonus * 100) + '%';
   $('#war-dot').classList.toggle('hidden', !S.wars.some(w => w.from === y.country || w.to === y.country));
-  const xpBase = 50 * y.level * (y.level - 1);
   $('#bars').innerHTML =
     bar('صحة', y.bars.health, y.barMax.health, 'health') + bar('جوع', y.bars.hunger, y.barMax.hunger, 'hunger') +
-    bar('طاقة', y.bars.energy, y.barMax.energy, 'energy') + bar('XP', y.xp - xpBase, y.levelXp, 'xp');
+    bar('طاقة', y.bars.energy, y.barMax.energy, 'energy') + bar('XP', y.xp, y.levelXp, 'xp');
 
   /* dock + sheet visibility */
   [...$('#dock').children].forEach(x => x.classList.toggle('on', x.dataset.tab === curTab));
@@ -326,6 +326,10 @@ function renderHome() {
     <button class="bigbtn" id="btn-work" type="button">اشتغل<br><small>+${Math.round(50 * (1 + y.skills.production * 0.05))} ج — 10 طاقة</small></button>
     <button class="bigbtn cyan" id="btn-company" type="button">شركاتك: ${y.companiesOwned}<br><small>شركة: ${sh.company.price} ج — ${sh.company.income} ج/ساعة</small></button>
   </div>
+  <h3>المهمات <span class="pill">دي أسرع طريق للفلوس واللفل ونقاط المهارة — اليومية بتتصفّر كل يوم</span></h3>
+  ${(S.missions || []).filter(m => m.daily).map(mrow).join('')}
+  <h3 style="border:none;color:var(--cyan);font-size:13px">مهمات طويلة</h3>
+  ${(S.missions || []).filter(m => !m.daily).map(mrow).join('')}
   <h3>المصانع <span class="pill">${y.factories.length}/${y.factoryCap} — مهارة إدارة بتزوّد الحد</span></h3>
   <p class="hint chain">السلسلة: <b>منجم ← حديد ← ذخيرة وسلاح ← الحرب</b> — ومزرعة ← قمح ← أكل. المصنع بيدفع صيانة كل ساعة، ولو الفلوس خلصت بيقف.</p>
   <div class="kv"><span>مخزونك</span><b>حديد: ${fmt(y.goods.iron)} — قمح: ${fmt(y.goods.wheat)}</b></div>
@@ -365,6 +369,11 @@ function renderHome() {
   ${sh.skills.filter(s => s.side === 'eco').map(skillRow).join('')}`;
   $('#tab-home').innerHTML = h;
 
+  function mrow(m) {
+    const pr = Math.min(m.progress, m.target);
+    return `<div class="skillrow"><span>${m.name}${m.daily ? ' <span class="pill">يومية</span>' : ''}<span class="lvl">${pr}/${m.target}</span><br><small class="have">مكافأة: ${m.reward.money} ج + ${m.reward.xp} XP + ${m.reward.sp} نقطة مهارة</small></span>
+      ${m.done ? '<span class="pill" style="color:var(--green)">اتعملت ✓</span>' : `<div class="track" style="min-width:90px;align-self:center"><div class="fill xp" style="width:${pct(m.progress, m.target)}%"></div></div>`}</div>`;
+  }
   function skillRow(s) {
     const lvl = y.skills[s.id] || 0;
     return `<div class="skillrow"><span>${s.name}<span class="lvl">${lvl}/${sh.skillMax}</span></span>

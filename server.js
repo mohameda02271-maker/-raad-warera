@@ -91,7 +91,45 @@ const SKILLS = [
     { id: 'management', name: 'إدارة', side: 'eco' },
 ];
 const SKILL_MAX = 10;
+const LEVEL_MAX = 50;
 const levelXp = (lvl) => lvl * 100;
+// missions: dailies reset on the server day tick; story missions are one-time.
+// stat counters: lifetime in p.mStats, today's in p.mDaily. Rewards auto-grant on completion.
+const MISSIONS = [
+    { id: 'd-work', daily: true, name: 'اشتغل 3 مرات', stat: 'work', target: 3, reward: { money: 50, xp: 30, sp: 1 } },
+    { id: 'd-goods', daily: true, name: 'انتج 20 خامة من مصانعك', stat: 'goods', target: 20, reward: { money: 40, xp: 20, sp: 1 } },
+    { id: 'd-craft', daily: true, name: 'اصنع أي حاجة', stat: 'crafts', target: 1, reward: { money: 30, xp: 20, sp: 1 } },
+    { id: 'd-hits', daily: true, name: 'أصب 10 ضربات في الحرب', stat: 'hits', target: 10, reward: { money: 60, xp: 40, sp: 1 } },
+    { id: 'd-supply', daily: true, name: 'زوّد المجهود الحربي مرة', stat: 'supply', target: 1, reward: { money: 40, xp: 30, sp: 1 } },
+    { id: 's-factory', name: 'ابنِ أول مصنع', stat: 'factoriesBuilt', target: 1, reward: { money: 100, xp: 50, sp: 2 } },
+    { id: 's-skill', name: 'طوّر أي مهارة', stat: 'skillsUp', target: 1, reward: { money: 50, xp: 30, sp: 1 } },
+    { id: 's-weapon', name: 'اصنع سلاح من الحديد', stat: 'weaponsCrafted', target: 1, reward: { money: 150, xp: 100, sp: 2 } },
+    { id: 's-hits', name: 'أصب 100 ضربة في الحروب', stat: 'hits', target: 100, reward: { money: 300, xp: 200, sp: 3 } },
+    { id: 's-goods', name: 'انتج 200 خامة', stat: 'goods', target: 200, reward: { money: 250, xp: 150, sp: 3 } },
+    { id: 's-prez', name: 'ابقى رئيس دولتك', stat: 'pres', target: 1, reward: { money: 200, xp: 150, sp: 2 } },
+];
+const todayStr = () => new Date().toISOString().slice(0, 10);
+function bumpStat(p, stat, n) {
+    p.mStats[stat] = (p.mStats[stat] || 0) + n;
+    p.mDaily[stat] = (p.mDaily[stat] || 0) + n;
+}
+function checkMissions(p) {
+    const done = [];
+    for (const m of MISSIONS) {
+        const list = m.daily ? p.mDailyDone : p.mStoryDone;
+        if (list.includes(m.id)) continue;
+        const cur = m.daily ? (p.mDaily[m.stat] || 0) : (p.mStats[m.stat] || 0);
+        if (cur >= m.target) {
+            list.push(m.id);
+            p.money += m.reward.money; p.xp += m.reward.xp; p.skillPoints += m.reward.sp;
+            gainXp(p);
+            logLine(`${p.name} كمّل مهمة «${m.name}»`);
+            done.push(m.name);
+        }
+    }
+    if (done.length) mark();
+    return done;
+}
 
 // ---------- model ----------
 function newPlayer(name, admin) {
@@ -141,6 +179,11 @@ function tickPlayer(p) {
     // migration for worlds saved before factories existed
     if (!p.goods) p.goods = { iron: 0, wheat: 0 };
     if (!p.factories) { p.factories = []; p.factSeq = 0; }
+    // migration + daily reset for missions
+    if (!p.mStats) p.mStats = {};
+    if (!p.mStoryDone) p.mStoryDone = [];
+    if (!p.mDailyDone) p.mDailyDone = [];
+    if (!p.mDaily || p.mDaily.date !== todayStr()) { p.mDaily = { date: todayStr() }; p.mDailyDone = []; }
     const now = Date.now();
     const hours = (now - p.lastTick) / 3600000 * db.speed;
     if (hours <= 0) return;
@@ -167,9 +210,12 @@ function tickPlayer(p) {
             p.goods.iron -= got;
             p.ammo[def.ammo] += def.out * f.level * hours * boost * (needIron > 0 ? got / needIron : 0);
         } else {
-            p.goods[def.good] += def.out * f.level * hours * boost;
+            const made = def.out * f.level * hours * boost;
+            p.goods[def.good] += made;
+            bumpStat(p, 'goods', made);
         }
     }
+    checkMissions(p);
     mark();
 }
 function tickCountry(c) {
@@ -181,7 +227,8 @@ function tickCountry(c) {
     mark();
 }
 function gainXp(p) {
-    while (p.xp >= levelXp(p.level)) { p.xp -= levelXp(p.level); p.level++; p.skillPoints += 4; }
+    while (p.xp >= levelXp(p.level) && p.level < LEVEL_MAX) { p.xp -= levelXp(p.level); p.level++; p.skillPoints += 4; }
+    if (p.level >= LEVEL_MAX) p.xp = Math.min(p.xp, levelXp(LEVEL_MAX) - 1);
 }
 function logLine(s) { db.log.unshift({ ts: Date.now(), msg: s }); db.log = db.log.slice(0, 50); mark(); }
 
@@ -230,6 +277,8 @@ function runForPresident(p) {
         c.president = p.name;
         c.election = { candidates: [], votes: {}, closesAt: null };
         logLine(`${p.name} أصبح رئيس ${DEFS[c.id].name} بدون منافس`);
+        bumpStat(p, 'pres', 1);
+        checkMissions(p);
         mark();
         return { ok: true, president: true };
     }
@@ -250,6 +299,8 @@ function settleElection(c) {
     if (winner) {
         c.president = winner;
         logLine(`${winner} فاز برئاسة ${DEFS[c.id].name} (${best} صوت)`);
+        const wp = db.users[winner] && db.users[winner].player;
+        if (wp) { bumpStat(wp, 'pres', 1); checkMissions(wp); }
     }
     c.election = { candidates: [], votes: {}, closesAt: null };
     mark();
@@ -351,6 +402,11 @@ const server = http.createServer(async (req, res) => {
                 factoryCap: factoryCap(p),
             },
             speed: db.speed,
+            missions: MISSIONS.map(m => ({
+                id: m.id, name: m.name, daily: !!m.daily, target: m.target, reward: m.reward,
+                progress: Math.floor(m.daily ? (p.mDaily[m.stat] || 0) : (p.mStats[m.stat] || 0)),
+                done: (m.daily ? p.mDailyDone : p.mStoryDone).includes(m.id),
+            })),
             alliances: Object.values(db.alliances).map(a => ({ id: a.id, name: a.name, leader: a.leader, members: a.members, pending: a.pending })),
             countries, wars: Object.values(db.wars).filter(w => !w.over).map(publicWar),
             log: db.log.slice(0, 20),
@@ -401,8 +457,10 @@ const server = http.createServer(async (req, res) => {
         const tax = salary * WORK.tax;
         p.money += salary - tax;
         home.treasury += tax;
-        p.xp += WORK.xp; gainXp(p); mark();
-        return json(res, 200, { ok: true });
+        p.xp += WORK.xp; gainXp(p);
+        bumpStat(p, 'work', 1);
+        const mdw = checkMissions(p); mark();
+        return json(res, 200, { ok: true, missions: mdw });
     }
     if (P === '/api/eat' && req.method === 'POST') {
         const f = FOODS[body.food];
@@ -433,8 +491,10 @@ const server = http.createServer(async (req, res) => {
         const cur = p.skills[s.id];
         if (need(cur < SKILL_MAX, 'وصلت للحد الأقصى')) return;
         if (need(p.skillPoints >= cur + 1, 'نقط غير كافية')) return;
-        p.skillPoints -= cur + 1; p.skills[s.id]++; mark();
-        return json(res, 200, { ok: true });
+        p.skillPoints -= cur + 1; p.skills[s.id]++;
+        bumpStat(p, 'skillsUp', 1);
+        const mds = checkMissions(p); mark();
+        return json(res, 200, { ok: true, missions: mds });
     }
     if (P === '/api/run' && req.method === 'POST') {
         return json(res, 200, runForPresident(p));
@@ -485,8 +545,10 @@ const server = http.createServer(async (req, res) => {
         const { dmg, crit, missed } = hitDamage(p, ammoKind);
         if (hitSide === 'att') w.attDmg += dmg; else w.defDmg += dmg;
         p.totalDamage += dmg; p.xp += HIT.xp; gainXp(p);
+        if (!missed && dmg > 0) bumpStat(p, 'hits', 1);
+        const mdh = checkMissions(p);
         resolveWar(w); mark(); save();
-        return json(res, 200, { ok: true, dmg, crit, missed, cost, dodged, war: publicWar(w) });
+        return json(res, 200, { ok: true, dmg, crit, missed, cost, dodged, war: publicWar(w), missions: mdh });
     }
     if (P === '/api/defense' && req.method === 'POST') { // president funds a region's defense from treasury
         if (need(home.president === p.name, 'الرئيس بس')) return;
@@ -508,9 +570,11 @@ const server = http.createServer(async (req, res) => {
         if (need(p.money >= def.price, 'فلوس غير كافية')) return;
         p.money -= def.price;
         p.factories.push({ id: ++p.factSeq, type: body.type, level: 1 });
+        bumpStat(p, 'factoriesBuilt', 1);
         logLine(`${p.name} بنى ${def.name} في ${DEFS[p.country].name}`);
+        const mdf = checkMissions(p);
         mark(); save();
-        return json(res, 200, { ok: true });
+        return json(res, 200, { ok: true, missions: mdf });
     }
     if (P === '/api/factory/upgrade' && req.method === 'POST') {
         const f = p.factories.find(f => f.id === Number(body.id));
@@ -541,8 +605,11 @@ const server = http.createServer(async (req, res) => {
             if (need(p.goods.iron >= cost, `محتاج ${cost} حديد`)) return;
             p.goods.iron -= cost; p.weapon = i;
         } else return json(res, 400, { error: 'غير معروف' });
+        bumpStat(p, 'crafts', 1);
+        if (what.startsWith('weapon:')) bumpStat(p, 'weaponsCrafted', 1);
+        const mdc = checkMissions(p);
         mark(); save();
-        return json(res, 200, { ok: true });
+        return json(res, 200, { ok: true, missions: mdc });
     }
     if (P === '/api/supply' && req.method === 'POST') { // donate goods to your side's war effort
         const w = db.wars[body.warId];
@@ -562,8 +629,10 @@ const server = http.createServer(async (req, res) => {
         }
         if (supSide === 'att') w.attDmg += s.points; else w.defDmg += s.points;
         logLine(`${p.name} زوّد الحرب بـ${s.amount} ${body.kind === 'iron' ? 'حديد' : 'ذخيرة ثقيلة'} (+${s.points} نقطة)`);
+        bumpStat(p, 'supply', 1);
+        const mdu = checkMissions(p);
         resolveWar(w); mark(); save();
-        return json(res, 200, { ok: true, war: publicWar(w) });
+        return json(res, 200, { ok: true, war: publicWar(w), missions: mdu });
     }
 
     // ---------- alliances: form, invite, leave, call into wars ----------
@@ -644,6 +713,11 @@ const server = http.createServer(async (req, res) => {
         const code = String(body.code || '').trim().toLowerCase().replace(/\s+/g, ' ');
         if (need(code === 'raad raad', 'كود غلط')) return;
         p.money += 100000;
+        // max level + the skill points to max the whole tree
+        const spent = Object.values(p.skills).reduce((a, l) => a + l * (l + 1) / 2, 0);
+        const maxAll = SKILLS.length * (SKILL_MAX * (SKILL_MAX + 1) / 2); // 9 * 55 = 495
+        p.level = LEVEL_MAX; p.xp = 0;
+        p.skillPoints = Math.max(p.skillPoints, maxAll - spent);
         p.bars = { health: barMax(p, 'health'), hunger: barMax(p, 'hunger'), energy: barMax(p, 'energy') };
         for (const k of ['light', 'mid', 'heavy']) p.ammo[k] += 100;
         for (const k of ['bread', 'meal', 'feast']) p.foods[k] += 50;
