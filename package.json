@@ -1,1 +1,13 @@
-{"name": "raad-war", "version": "1.0.0", "private": true, "description": "RAAD — multiplayer world-war strategy game (Arabic RTL)", "scripts": {"start": "node server.js"}, "engines": {"node": ">=22.12"}}
+{
+ "name": "raad-war",
+ "version": "1.0.0",
+ "private": true,
+ "description": "RAAD — multiplayer world-war strategy game (Arabic RTL)",
+ "scripts": {
+  "start": "node server.js"
+ },
+ "engines": {
+  "node": ">=22.12"
+ },
+ "type": "module"
+}

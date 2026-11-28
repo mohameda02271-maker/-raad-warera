@@ -9,13 +9,14 @@ import { DEFS, PATHS, NEIGHBORS } from './gamedata.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = process.env.DATA_FILE || path.join(ROOT, 'data.json');
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 8080; // Railway injects PORT; 8080 is just the local fallback
 // The world stays locked until the owner claims the admin account with this secret.
 // If the env var is missing, a one-time secret is generated and printed to the log,
 // so a public URL can never hand admin to a stranger.
 const ADMIN_SECRET = process.env.ADMIN_SECRET || crypto.randomBytes(4).toString('hex');
 if (!process.env.ADMIN_SECRET) console.log('ADMIN_SECRET not set — one-time owner secret:', ADMIN_SECRET);
 
+try { fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true }); } catch (e) { console.log('data dir not creatable:', e.message); }
 let db = { users: {}, sessions: {}, countries: {}, wars: {}, warSeq: 0, log: [], speed: 1 };
 try { db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch {}
 if (!db.speed) db.speed = 1;
@@ -23,8 +24,13 @@ let dirty = false;
 const save = () => {
     if (!dirty) return;
     dirty = false;
-    fs.writeFileSync(DATA_FILE + '.tmp', JSON.stringify(db));
-    fs.renameSync(DATA_FILE + '.tmp', DATA_FILE);
+    try {
+        fs.writeFileSync(DATA_FILE + '.tmp', JSON.stringify(db));
+        fs.renameSync(DATA_FILE + '.tmp', DATA_FILE);
+    } catch (e) {
+        dirty = true; // keep retrying instead of crashing the world
+        console.log('save failed:', e.message);
+    }
 };
 setInterval(save, 4000).unref();
 process.on('SIGTERM', () => { dirty = true; save(); process.exit(0); });
@@ -528,4 +534,4 @@ const server = http.createServer(async (req, res) => {
     json(res, 404, { error: 'not found' });
 });
 
-server.listen(PORT, () => console.log('raad-war listening on', PORT));
+server.listen(PORT, '0.0.0.0', () => console.log('raad-war listening on', PORT));
