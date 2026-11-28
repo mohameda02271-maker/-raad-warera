@@ -1,5 +1,5 @@
 'use strict';
-/* رعد RAAD — client. Plain JS against the game server. */
+/* رعد RAAD — client. Full-bleed world map, sheets over it, live feed. */
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -8,6 +8,7 @@ let S = null, MAP = null;
 let selCountry = null;
 let battle = { warId: null, ammo: 'none' };
 let curTab = 'map';
+let prevOwners = {};
 
 async function api(path, body) {
   const r = await fetch(path, {
@@ -30,6 +31,15 @@ function flash(txt, cls) {
   document.body.appendChild(d);
   setTimeout(() => d.remove(), 1000);
 }
+function floatDmg(txt, cls, near) {
+  const r = near ? near.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 2, width: 0 };
+  const d = document.createElement('div');
+  d.className = 'dmgfloat ' + cls; d.textContent = txt;
+  d.style.left = (r.left + r.width / 2 - 20 + (Math.random() * 40 - 20)) + 'px';
+  d.style.top = (r.top - 8) + 'px';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 1100);
+}
 
 /* ---------- auth ---------- */
 $('#btn-register').onclick = () => auth('register');
@@ -43,60 +53,139 @@ async function auth(kind) {
   } catch (e) { $('#auth-err').textContent = e.message; }
 }
 
+/* ---------- world map ---------- */
+function mapSVG() {
+  let h = `<svg viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">`;
+  for (const [name, path] of Object.entries(MAP.paths)) h += `<path d="${path}" data-c="${esc(name)}"></path>`;
+  return h + '</svg>';
+}
+function makePannable(stage, onTap) {
+  const st = { x: 0, y: 0, k: 1 };
+  const svg = () => stage.querySelector('svg');
+  const apply = () => { const s = svg(); if (s) s.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.k})`; };
+  const pts = new Map();
+  let pinch = null, moved = 0, downAt = 0;
+  stage.addEventListener('pointerdown', e => {
+    stage.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), k: st.k };
+    }
+    moved = 0; downAt = Date.now();
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    const prev = pts.get(e.pointerId);
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 1) {
+      st.x += e.clientX - prev[0]; st.y += e.clientY - prev[1];
+      moved += Math.abs(e.clientX - prev[0]) + Math.abs(e.clientY - prev[1]);
+      apply();
+    } else if (pts.size === 2 && pinch) {
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
+      const r = stage.getBoundingClientRect();
+      const mx = (a[0] + b[0]) / 2 - r.left, my = (a[1] + b[1]) / 2 - r.top;
+      const nk = Math.min(6, Math.max(1, pinch.k * d / pinch.d));
+      st.x = mx - (mx - st.x) * (nk / st.k);
+      st.y = my - (my - st.y) * (nk / st.k);
+      st.k = nk; moved += 6;
+      apply();
+    }
+  });
+  const up = e => {
+    const wasTap = pts.size === 1 && moved < 9 && Date.now() - downAt < 700;
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (wasTap && onTap) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const p = el && el.closest ? el.closest('path') : null;
+      if (p && p.dataset.c) onTap(p.dataset.c);
+    }
+  };
+  stage.addEventListener('pointerup', up);
+  stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = stage.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    const nk = Math.min(6, Math.max(1, st.k * (e.deltaY < 0 ? 1.15 : 0.87)));
+    st.x = mx - (mx - st.x) * (nk / st.k);
+    st.y = my - (my - st.y) * (nk / st.k);
+    st.k = nk; apply();
+  }, { passive: false });
+}
+
+/* colors: own=violet, at-war=red pulsing, has citizens=cyan-dark, selected=cyan outline */
+function updateMapColors(stageEl) {
+  if (!S || !MAP) return;
+  stageEl.querySelectorAll('path').forEach(p => {
+    const c = p.dataset.c;
+    const pub = S.countries[c];
+    let cl = '';
+    if (S.you && S.you.country === c) cl = 'own';
+    else if (pub && pub.wars && pub.wars.length) cl = 'war';
+    else if (pub && pub.citizens && pub.citizens.length) cl = 'cit';
+    if (selCountry === c) cl += ' sel';
+    if (p.className.baseVal !== cl) p.className.baseVal = cl;
+  });
+}
+function detectFlips() {
+  if (!S) return;
+  const now = {};
+  for (const c of Object.values(S.countries)) for (const r of (c.regions || [])) now[r.id] = r.owner;
+  for (const [rid, owner] of Object.entries(now)) {
+    if (prevOwners[rid] && prevOwners[rid] !== owner) {
+      const cid = rid.split(':')[0];
+      const p = document.querySelector('#stage path[data-c="' + (window.CSS ? CSS.escape(cid) : cid) + '"]');
+      if (p) { p.classList.add('flip'); setTimeout(() => p.classList.remove('flip'), 2300); }
+    }
+  }
+  prevOwners = now;
+}
+
 /* ---------- boot ---------- */
 async function boot() {
   if (!MAP) MAP = await apiGet('/api/mapdata');
   try { S = await api('/api/state'); } catch { token = ''; localStorage.removeItem('raad_token'); show('auth'); return; }
-  if (!S.you.country) { selCountry = null; buildPickMap(); show('pick'); return; }
+  if (!S.you.country) { buildPick(); show('pick'); return; }
+  if (!$('#stage svg')) {
+    $('#stage').innerHTML = mapSVG();
+    makePannable($('#stage'), c => { selCountry = selCountry === c ? null : c; render(true); });
+  }
   $('#btn-tab-admin').classList.toggle('hidden', !S.you.admin);
   show('game');
-  render();
+  render(true);
 }
 
-/* ---------- world map ---------- */
-function mapSVG() {
-  let h = `<svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg">`;
-  for (const [name, path] of Object.entries(MAP.paths)) {
-    const c = S && S.countries && S.countries[name];
-    let cl = '';
-    if (S && S.you && S.you.country === name) cl = 'own';
-    else if (c && c.wars && c.wars.length) cl = 'war';
-    if (selCountry === name) cl = 'sel';
-    h += `<path d="${path}" data-c="${esc(name)}" class="${cl}"></path>`;
-  }
-  return h + '</svg>';
-}
-function wireMap(el, onPick) {
-  el.addEventListener('click', e => {
-    const t = e.target.closest('path'); if (!t) return;
-    onPick(t.dataset.c);
-  });
-}
-function buildPickMap() {
-  $('#pick-map').innerHTML = mapSVG();
-  wireMap($('#pick-map'), async c => {
+/* ---------- pick screen ---------- */
+function buildPick() {
+  selCountry = null;
+  $('#pick-stage').innerHTML = mapSVG();
+  updateMapColors($('#pick-stage'));
+  makePannable($('#pick-stage'), async c => {
     if (selCountry === c) {
       try { await api('/api/country', { country: c }); boot(); } catch (err) { flash(err.message, 'miss'); }
       return;
     }
-    selCountry = c; $('#pick-map').innerHTML = mapSVG();
+    selCountry = c;
+    updateMapColors($('#pick-stage'));
     $('#pick-name').textContent = (MAP.defs[c] ? MAP.defs[c].name : c) + ' — اضغط تاني للتأكيد';
   });
 }
 
-/* ---------- tabs ---------- */
-$('#tabs').onclick = e => {
+/* ---------- dock ---------- */
+$('#dock').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   curTab = b.dataset.tab;
+  if (curTab === 'map') selCountry = null;
   render(true);
 };
+$('#sheet-grip').onclick = () => { curTab = 'map'; selCountry = null; render(true); };
 
-/* ---------- render ---------- */
-/* The 3s poll must never clobber what the user is typing: each tab re-renders
-   only when the data it shows actually changes, and never while an input has focus. */
-let lastTabKey = null;
-let pendingTabRender = false;
-
+/* ---------- render discipline: never clobber typing ---------- */
+let lastTabKey = null, pendingTabRender = false;
 function tabDataKey() {
   const y = S.you;
   switch (curTab) {
@@ -112,71 +201,80 @@ const isTyping = () => {
   const a = document.activeElement;
   return a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
 };
+document.addEventListener('focusout', () => {
+  if (!pendingTabRender) return;
+  setTimeout(() => {
+    if (!pendingTabRender || isTyping()) return;
+    pendingTabRender = false; lastTabKey = null; render();
+  }, 0);
+});
 
 function render(force) {
   if (!S || !S.you.country) return;
-  [...$('#tabs').children].forEach(x => x.classList.toggle('on', x.dataset.tab === curTab));
-  ['map', 'home', 'war', 'gov', 'admin'].forEach(t => $('#tab-' + t).classList.toggle('hidden', t !== curTab));
   const y = S.you;
   const myPub = S.countries[y.country] || {};
   const isPrez = myPub.president === y.name;
 
+  /* HUD */
   $('#me-name').textContent = y.name + (y.admin ? ' ★' : '') + (isPrez ? ' 👑' : '');
   $('#me-country').textContent = myPub.name || y.country;
   $('#me-money').textContent = fmt(y.money);
   $('#me-level').textContent = y.level;
   $('#me-rank').textContent = '+' + Math.round(y.rankBonus * 100) + '%';
   $('#war-dot').classList.toggle('hidden', !S.wars.some(w => w.from === y.country || w.to === y.country));
-
   const xpBase = 50 * y.level * (y.level - 1);
   $('#bars').innerHTML =
     bar('صحة', y.bars.health, y.barMax.health, 'health') + bar('جوع', y.bars.hunger, y.barMax.hunger, 'hunger') +
-    bar('طاقة', y.bars.energy, y.barMax.energy, 'energy') +
-    bar('مستوى ' + y.level, y.xp - xpBase, y.levelXp, 'xp');
+    bar('طاقة', y.bars.energy, y.barMax.energy, 'energy') + bar('XP', y.xp - xpBase, y.levelXp, 'xp');
 
+  /* dock + sheet visibility */
+  [...$('#dock').children].forEach(x => x.classList.toggle('on', x.dataset.tab === curTab));
+  const sheetOpen = curTab !== 'map' || !!selCountry;
+  $('#sheet').classList.toggle('hidden', !sheetOpen);
+  ['map', 'home', 'war', 'gov', 'admin'].forEach(t => $('#tab-' + t).classList.toggle('hidden', t !== curTab));
+
+  /* map colors */
+  updateMapColors($('#stage'));
+
+  /* sheet content, fingerprinted */
   const key = curTab + '|' + tabDataKey();
   if (force || key !== lastTabKey) {
-    if (typingSafeToRender(force)) {
+    if (force || !isTyping()) {
       lastTabKey = key;
-      if (curTab === 'map') renderMap();
-      else if (curTab === 'home') renderHome();
-      else if (curTab === 'war') renderWar();
-      else if (curTab === 'gov') renderGov();
-      else if (curTab === 'admin') renderAdmin();
-    } else {
-      pendingTabRender = true;
-    }
+      if (sheetOpen) {
+        if (curTab === 'map') renderCountry();
+        else if (curTab === 'home') renderHome();
+        else if (curTab === 'war') renderWar();
+        else if (curTab === 'gov') renderGov();
+        else if (curTab === 'admin') renderAdmin();
+      }
+    } else pendingTabRender = true;
   }
-  renderLog();
+  renderFeed();
 }
-function typingSafeToRender(force) {
-  return force || !isTyping();
-}
-document.addEventListener('focusout', () => {
-  if (!pendingTabRender) return;
-  setTimeout(() => {
-    if (!pendingTabRender || isTyping()) return; // moved into another field: keep deferring
-    pendingTabRender = false;
-    lastTabKey = null;
-    render();
-  }, 0);
-});
 function bar(label, c, m, cls) {
   return `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${cls}" style="width:${pct(c, m)}%"></div></div><span class="val">${fmt(c)}/${m}</span></div>`;
 }
 
-/* --- map tab --- */
-function renderMap() {
+/* ---------- live feed ---------- */
+let lastFeedHead = '';
+function renderFeed() {
+  const items = S.log.slice(0, 3);
+  const head = items.length ? items[0].ts + items[0].msg : 'x';
+  if (head === lastFeedHead) return;
+  lastFeedHead = head;
+  $('#feed').innerHTML = items.map((l, i) =>
+    `<div class="feedline${i === 0 ? ' fresh' : ''}"><time>${new Date(l.ts).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</time>${esc(l.msg)}</div>`).join('');
+}
+
+/* --- country panel (map tab sheet) --- */
+function renderCountry() {
   const el = $('#tab-map');
-  el.innerHTML = `<div class="mapwrap">${mapSVG()}</div><div id="cpanel"></div>`;
-  wireMap(el.querySelector('.mapwrap'), c => { selCountry = c; render(); });
-  const cp = $('#cpanel');
   if (!selCountry || !MAP.defs[selCountry]) {
-    cp.innerHTML = `<p class="hint" style="margin-top:10px">اضغط على دولة — البنفسجي دولتك، الأحمر دولة في حرب.</p>`;
+    el.innerHTML = `<p class="hint" style="margin:14px 0">اضغط على أي دولة على الخريطة — البنفسجي دولتك، الأحمر دولة في حرب، الأزرق فيها لاعبين.</p>`;
     return;
   }
-  const iso = selCountry;
-  const def = MAP.defs[iso];
+  const iso = selCountry, def = MAP.defs[iso];
   const pub = S.countries[iso] || null;
   const citizens = pub ? pub.citizens : [];
   const regions = pub ? pub.regions : def.regions.map(r => ({ ...r, owner: iso }));
@@ -199,12 +297,12 @@ function renderMap() {
       ${fundable ? `<button class="cyan" data-def="${esc(r.id)}" type="button">حصّنه</button>` : ''}
     </div>`;
   }
-  cp.innerHTML = h + '</div>';
-  cp.querySelectorAll('[data-war]').forEach(b => b.onclick = async () => {
+  el.innerHTML = h + '</div>';
+  el.querySelectorAll('[data-war]').forEach(b => b.onclick = async () => {
     try { await api('/api/war', { regionId: b.dataset.war }); flash('أُعلنت الحرب!', 'dmg'); refresh(); }
     catch (e) { flash(e.message, 'miss'); }
   });
-  cp.querySelectorAll('[data-def]').forEach(b => b.onclick = async () => {
+  el.querySelectorAll('[data-def]').forEach(b => b.onclick = async () => {
     const amt = Number(prompt('مبلغ من الخزينة للحائط (أقل حاجة 10):', '100'));
     if (!amt) return;
     try { await api('/api/defense', { regionId: b.dataset.def, amount: amt }); flash('الحائط اتبنى', 'good'); refresh(); }
@@ -268,7 +366,7 @@ function renderWar() {
   const myWars = S.wars.filter(w => w.from === y.country || w.to === y.country);
   const otherWars = S.wars.filter(w => !(w.from === y.country || w.to === y.country));
   let h = '';
-  if (!S.wars.length) h = '<p class="hint">لا حروب حاليًا. الرئيس يقدر يعلن حرب على إقليم تابع لدولة جارة من صفحة الخريطة.</p>';
+  if (!S.wars.length) h = '<p class="hint" style="margin-top:14px">لا حروب حاليًا. الرئيس يقدر يعلن حرب على إقليم تابع لدولة جارة — اضغط على الدولة في الخريطة.</p>';
   for (const w of myWars) {
     const atkName = MAP.defs[w.from] ? MAP.defs[w.from].name : w.from;
     const defName = MAP.defs[w.to] ? MAP.defs[w.to].name : w.to;
@@ -277,9 +375,9 @@ function renderWar() {
       <div class="kv"><span>الوقت المتبقي</span><b>${mins >= 60 ? Math.floor(mins / 60) + ' س ' + mins % 60 + ' د' : mins + ' دقيقة'}</b></div>
       <div class="wall">
         <div class="lbl"><span>هجوم ${esc(atkName)}</span><b>${fmt(w.attDmg)} / ${fmt(w.threshold)}</b></div>
-        <div class="track" style="height:14px;background:var(--panel2);border-radius:999px;overflow:hidden;border:1px solid var(--line)"><div class="fill wallA" style="width:${Math.min(100, w.attDmg / w.threshold * 100)}%"></div></div>
+        <div class="track"><div class="fill wallA" style="width:${Math.min(100, w.attDmg / w.threshold * 100)}%"></div></div>
         <div class="lbl" style="margin-top:6px"><span>دفاع ${esc(defName)}</span><b>${fmt(w.defDmg)}</b></div>
-        <div class="track" style="height:14px;background:var(--panel2);border-radius:999px;overflow:hidden;border:1px solid var(--line)"><div class="fill wallB" style="width:${w.attDmg ? Math.min(100, w.defDmg / w.attDmg * 100) : 0}%"></div></div>
+        <div class="track"><div class="fill wallB" style="width:${w.attDmg ? Math.min(100, w.defDmg / w.attDmg * 100) : 0}%"></div></div>
       </div>
       <div class="amnoselect">
         ${['none', 'light', 'mid', 'heavy'].map(k => `<button data-ammo="${k}" data-w="${w.id}" class="${battle.warId === w.id && battle.ammo === k ? 'on' : ''}" type="button">${k === 'none' ? 'بدون' : S.shop.ammos[k].name + ' (' + (y.ammo[k] || 0) + ')'}</button>`).join('')}
@@ -300,8 +398,8 @@ function renderWar() {
       const r = await api('/api/hit', { warId: wid, ammo: battle.warId === wid ? battle.ammo : 'none' });
       if (r.dodged) flash('راوغت!', 'good');
       else if (r.missed) flash('ضايعة!', 'miss');
-      else if (r.crit) flash('كريت! ' + fmt(r.dmg), 'crit');
-      else flash('-' + fmt(r.dmg), 'dmg');
+      else if (r.crit) { flash('كريت!', 'crit'); floatDmg('-' + fmt(r.dmg), 'crit', b); }
+      else floatDmg('-' + fmt(r.dmg), 'dmg', b);
       refresh();
     } catch (e) { flash(e.message, 'miss'); }
   });
@@ -327,11 +425,19 @@ function renderGov() {
     h += `<p class="hint">لو رشّحت نفسك ومفيش حد ضدك، تبقى رئيس فورًا.</p>
       <button class="bigbtn" id="btn-run" type="button">رشّح نفسك للرئاسة</button>`;
   }
-  h += `<h3>صلاحيات الرئيس</h3><p class="hint">يعلن حرب على أقاليم الدول الجارة (من الخريطة) — يحصّن أقاليم دولته بفلوس الخزينة — الخزينة بتتجمع من ضريبة شغل المواطنين.</p></div>`;
+  h += `<h3>صلاحيات الرئيس</h3><p class="hint">يعلن حرب على أقاليم الدول الجارة (من الخريطة) — يحصّن أقاليم دولته بفلوس الخزينة — الخزينة بتتجمع من ضريبة شغل المواطنين.</p></div>
+  <div class="card"><h4>منطقة المالك</h4>
+    <p class="hint">لو انت صاحب اللعبة وحسابك مش واخد الإدارة (حصل لما اتنقلنا لنظام كود المالك): اكتب كود المالك هنا وحسابك يبقى الأدمن — من غير مسح أي حاجة.</p>
+    <div class="row"><input type="text" id="claim-secret" placeholder="كود المالك (ADMIN_SECRET)"><button class="cyan" id="btn-claim" type="button">استلم الملكية</button></div>
+  </div>`;
   el.innerHTML = h;
   const run = $('#btn-run');
   if (run) run.onclick = async () => {
     try { await api('/api/run'); flash('تم', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  };
+  const claim = $('#btn-claim');
+  if (claim) claim.onclick = async () => {
+    try { await api('/api/claim', { secret: $('#claim-secret').value }); flash('انت المالك دلوقتي ★', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
   };
   el.querySelectorAll('[data-vote]').forEach(b => b.onclick = async () => {
     try { await api('/api/vote', { candidate: b.dataset.vote }); flash('صوتك اتحسب', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
@@ -349,7 +455,7 @@ function renderAdmin() {
     <div class="row"><input type="number" id="adm-speed" placeholder="0.1 إلى 100" step="0.5" min="0.1" max="100"><button id="adm-speed-go" type="button">غيّر</button></div>
   </div>
   <div class="card"><h4>نسخة احتياطية من العالم</h4>
-    <p class="hint">نزّل ملف فيه كل حالة العالم (لاعبين ودول وحروب) — اعملها كل فترة لو السيرفر اتمسح.</p>
+    <p class="hint">نزّل ملف فيه كل حالة العالم — اعملها كل فترة لو السيرفر اتمسح.</p>
     <button id="adm-export" type="button" style="width:100%">نزّل نسخة من العالم</button>
   </div>
   <div class="card"><h4>كود الغش السريع</h4>
@@ -396,18 +502,12 @@ function renderAdmin() {
   });
 }
 
-/* --- log --- */
-function renderLog() {
-  $('#log').innerHTML = S.log.slice(0, 8).map(l =>
-    `<div><time>${new Date(l.ts).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</time>${esc(l.msg)}</div>`).join('');
-}
-
 /* ---------- polling ---------- */
 let refreshing = false;
 async function refresh() {
   if (refreshing || $('#game').classList.contains('hidden')) return;
   refreshing = true;
-  try { S = await api('/api/state'); render(); } catch {}
+  try { S = await api('/api/state'); detectFlips(); render(); } catch {}
   refreshing = false;
 }
 setInterval(refresh, 3000);

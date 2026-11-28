@@ -327,6 +327,18 @@ const server = http.createServer(async (req, res) => {
         logLine(`${p.name} انضم لمواطني ${DEFS[cid].name}`);
         return json(res, 200, { ok: true });
     }
+    // one-time owner claim: promotes the logged-in account with the owner secret.
+    // Covers worlds created before ADMIN_SECRET existed, without wiping anything.
+    // Sits above the country gate: the owner can claim before picking a country.
+    if (P === '/api/claim' && req.method === 'POST') {
+        if (need(String(body.secret || '') === ADMIN_SECRET, 'كود المالك غلط')) return;
+        for (const u of Object.values(db.users)) u.player.admin = false;
+        p.admin = true;
+        logLine(`${p.name} استلم ملكية العالم`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+
     if (!p.country) return json(res, 400, { error: 'اختر دولة أولًا' });
     const home = db.countries[p.country];
 
@@ -438,7 +450,8 @@ const server = http.createServer(async (req, res) => {
     // ---------- admin (his account only: the first registered account) ----------
     if (P === '/api/cheat' && req.method === 'POST') {
         if (need(p.admin, 'مش ليك')) return;
-        if (need(String(body.code || '').trim() === 'raad raad', 'كود غلط')) return;
+        const code = String(body.code || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        if (need(code === 'raad raad', 'كود غلط')) return;
         p.money += 100000;
         p.bars = { health: barMax(p, 'health'), hunger: barMax(p, 'hunger'), energy: barMax(p, 'energy') };
         for (const k of ['light', 'mid', 'heavy']) p.ammo[k] += 100;

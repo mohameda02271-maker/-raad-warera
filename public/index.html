@@ -2,58 +2,73 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>رعد — حرب العالم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
   <div id="auth" class="screen hidden">
+    <div class="auth-glow"></div>
     <h1 class="logo">رعد <span>RAAD</span></h1>
     <p class="tag">حرب عالمية حقيقية — كل جندي لاعب حقيقي</p>
     <input id="auth-name" placeholder="اسم اللاعب" maxlength="20" autocomplete="username">
     <input id="auth-pass" type="password" placeholder="الباسورد" autocomplete="current-password">
     <input id="auth-secret" placeholder="كود المالك — لصاحب اللعبة بس، أول مرة">
-    <p class="hint">لو اللعبة لسه متفتحتش، التسجيل مقفول لحد ما صاحبها يدخل بكود المالك.</p>
     <div class="row">
       <button id="btn-login" type="button">دخول</button>
       <button id="btn-register" type="button" class="alt">حساب جديد</button>
     </div>
     <p id="auth-err" class="err"></p>
+    <p class="hint center">لو اللعبة لسه متفتحتش، التسجيل مقفول لحد ما صاحبها يدخل بكود المالك.</p>
   </div>
 
   <div id="pick" class="screen hidden">
-    <h2>اختر دولتك</h2>
-    <p class="hint">دولة واحدة بس — اختيارك نهائي. اضغط على أي دولة على الخريطة.</p>
-    <div id="pick-map" class="mapwrap"></div>
-    <p id="pick-name" class="bigname"></p>
+    <div id="pick-stage" class="stage"></div>
+    <div class="pick-hud">
+      <h2>اختر دولتك</h2>
+      <p class="hint">اسحب وقرّب الخريطة — اضغط على دولة مرتين للتأكيد. اختيارك نهائي.</p>
+      <p id="pick-name" class="bigname"></p>
+    </div>
   </div>
 
   <div id="game" class="screen hidden">
-    <header id="topbar">
-      <div class="me"><b id="me-name"></b><span id="me-country"></span></div>
-      <div class="chips">
-        <span class="chip">مال <b id="me-money"></b></span>
-        <span class="chip">مستوى <b id="me-level"></b></span>
-        <span class="chip">رتبة <b id="me-rank"></b></span>
+    <div id="stage" class="stage"></div>
+
+    <header id="hud">
+      <div class="hud-row">
+        <div class="me"><b id="me-name"></b><span id="me-country"></span></div>
+        <div class="chips">
+          <span class="chip gold">مال <b id="me-money"></b></span>
+          <span class="chip">لفل <b id="me-level"></b></span>
+          <span class="chip">رتبة <b id="me-rank"></b></span>
+        </div>
       </div>
+      <div id="bars"></div>
     </header>
-    <div id="bars"></div>
-    <nav id="tabs">
-      <button data-tab="map" class="on" type="button">الخريطة</button>
-      <button data-tab="home" type="button">الوطن</button>
-      <button data-tab="war" type="button">الحرب <span id="war-dot" class="dot hidden"></span></button>
-      <button data-tab="gov" type="button">الرئاسة</button>
-      <button data-tab="admin" id="btn-tab-admin" class="hidden" type="button">الإدارة</button>
+
+    <div id="feed"></div>
+
+    <div id="sheet" class="hidden">
+      <div id="sheet-grip"><span></span></div>
+      <div id="sheet-scroll">
+        <section id="tab-map" class="tabpage hidden"></section>
+        <section id="tab-home" class="tabpage hidden"></section>
+        <section id="tab-war" class="tabpage hidden"></section>
+        <section id="tab-gov" class="tabpage hidden"></section>
+        <section id="tab-admin" class="tabpage hidden"></section>
+      </div>
+    </div>
+
+    <nav id="dock">
+      <button data-tab="map" class="on" type="button"><i>🗺</i>الخريطة</button>
+      <button data-tab="home" type="button"><i>🏠</i>الوطن</button>
+      <button data-tab="war" type="button"><i>⚔️</i>الحرب<span id="war-dot" class="dot hidden"></span></button>
+      <button data-tab="gov" type="button"><i>👑</i>الرئاسة</button>
+      <button data-tab="admin" id="btn-tab-admin" class="hidden" type="button"><i>★</i>الإدارة</button>
     </nav>
-    <main>
-      <section id="tab-map" class="tabpage"></section>
-      <section id="tab-home" class="tabpage hidden"></section>
-      <section id="tab-war" class="tabpage hidden"></section>
-      <section id="tab-gov" class="tabpage hidden"></section>
-      <section id="tab-admin" class="tabpage hidden"></section>
-    </main>
-    <div id="log"></div>
   </div>
 </div>
 <script src="app.js"></script>
