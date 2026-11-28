@@ -2905,7 +2905,7 @@ function countryChipHTML(id, cMap){
   const name = c?.name || c?.title || '';
   const flag = c ? resolveCountryFlag(c, name) : '';
   const img = flag ? `<img src="${escapeHtml(flag)}" alt="" style="height:15px;width:22px;object-fit:cover;border-radius:3px;vertical-align:-2px;margin-inline-end:5px;border:1px solid var(--line2)" onerror="this.style.display='none'">` : '';
-  return `${img}<b>${escapeHtml(name || 'دولة غير معروفة')}</b>`;
+  return `<span style="unicode-bidi:isolate;display:inline-block;white-space:nowrap">${img}<b>${escapeHtml(name || 'دولة غير معروفة')}</b></span>`;
 }
 function battleSideDamage(b, side){
   const r = b.currentRound && b.currentRound[side];
