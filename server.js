@@ -42,6 +42,20 @@ const WORK = { energy: 10, salary: 50, tax: 0.10, xp: 10 };
 const HIT = { health: 10, xp: 2 };
 const WAR_BASE_THRESHOLD = 5000;
 const COMPANY = { price: 500, income: 5 }; // per hour
+// factories: the player builds these on his land; upkeep per hour, goods per hour.
+// chain: mine -> iron -> (craft weapons/ammo, ammo plant, war supply); farm -> wheat -> meals
+const FACTORIES = {
+    mine: { name: 'منجم حديد', price: 300, out: 5, upkeep: 3, good: 'iron', desc: 'ينتج 5 حديد/ساعة لكل مستوى' },
+    farm: { name: 'مزرعة قمح', price: 200, out: 8, upkeep: 2, good: 'wheat', desc: 'ينتج 8 قمح/ساعة لكل مستوى' },
+    ammolab: { name: 'معمل ذخيرة', price: 800, out: 3, upkeep: 5, ammo: 'mid', consumesIron: 4, desc: 'يحوّل 4 حديد لـ 3 ذخيرة متوسطة/ساعة لكل مستوى' },
+};
+const FACTORY_MAX_LEVEL = 5;
+const factoryCap = (p) => 2 + (p.skills.management || 0);
+const factoryUpgradeCost = (f) => FACTORIES[f.type].price * f.level;
+const CRAFT_AMMO_IRON = { light: 2, mid: 3, heavy: 5 };
+const CRAFT_MEAL_WHEAT = 3;
+const weaponIronCost = (i) => Math.ceil(WEAPONS[i].price / 20);
+const SUPPLY = { iron: { amount: 10, points: 60 }, heavy: { amount: 5, points: 150 } }; // war supply donations
 const FOODS = {
     bread: { name: 'عيش', price: 10, heal: 10 },
     meal: { name: 'وجبة', price: 25, heal: 20 },
@@ -86,6 +100,7 @@ function newPlayer(name, admin) {
         bars: { health: 100, hunger: 100, energy: 100 },
         weapon: 0, armorGear: 0, ammo: { light: 0, mid: 0, heavy: 0 },
         foods: { bread: 1, meal: 0, feast: 0 }, companiesOwned: 0,
+        goods: { iron: 0, wheat: 0 }, factories: [], factSeq: 0,
         totalDamage: 0, lastTick: Date.now(),
     };
 }
@@ -110,6 +125,9 @@ function rankBonus(p) {
 const barMax = (p, b) => 100 + (p.skills[b] || 0) * 10;
 
 function tickPlayer(p) {
+    // migration for worlds saved before factories existed
+    if (!p.goods) p.goods = { iron: 0, wheat: 0 };
+    if (!p.factories) { p.factories = []; p.factSeq = 0; }
     const now = Date.now();
     const hours = (now - p.lastTick) / 3600000 * db.speed;
     if (hours <= 0) return;
@@ -121,6 +139,23 @@ function tickPlayer(p) {
     // companies pay out
     if (p.companiesOwned > 0) {
         p.money += p.companiesOwned * COMPANY.income * (1 + p.skills.management * 0.10) * hours;
+    }
+    // factories: pay upkeep, then produce. Can't cover upkeep -> the plant sits idle.
+    for (const f of p.factories) {
+        const def = FACTORIES[f.type];
+        if (!def) continue;
+        const up = def.upkeep * f.level * hours;
+        if (p.money < up) continue;
+        p.money -= up;
+        const boost = 1 + (p.skills.production || 0) * 0.10;
+        if (def.ammo) {
+            const needIron = def.consumesIron * f.level * hours;
+            const got = Math.min(p.goods.iron, needIron);
+            p.goods.iron -= got;
+            p.ammo[def.ammo] += def.out * f.level * hours * boost * (needIron > 0 ? got / needIron : 0);
+        } else {
+            p.goods[def.good] += def.out * f.level * hours * boost;
+        }
     }
     mark();
 }
@@ -298,11 +333,14 @@ const server = http.createServer(async (req, res) => {
                 bars: p.bars, barMax: { health: barMax(p, 'health'), hunger: barMax(p, 'hunger'), energy: barMax(p, 'energy') },
                 weapon: p.weapon, armorGear: p.armorGear, ammo: p.ammo, foods: p.foods,
                 companiesOwned: p.companiesOwned, totalDamage: p.totalDamage, rankBonus: rankBonus(p), admin: !!p.admin,
+                goods: { iron: Math.floor(p.goods.iron), wheat: Math.floor(p.goods.wheat) },
+                factories: p.factories.map(f => ({ ...f, upNext: factoryUpgradeCost(f) })),
+                factoryCap: factoryCap(p),
             },
             speed: db.speed,
             countries, wars: Object.values(db.wars).filter(w => !w.over).map(publicWar),
             log: db.log.slice(0, 20),
-            shop: { foods: FOODS, weapons: WEAPONS, armors: ARMORS, ammos: AMMOS, skills: SKILLS, skillMax: SKILL_MAX, company: COMPANY },
+            shop: { foods: FOODS, weapons: WEAPONS, armors: ARMORS, ammos: AMMOS, skills: SKILLS, skillMax: SKILL_MAX, company: COMPANY, factories: FACTORIES, factoryMaxLevel: FACTORY_MAX_LEVEL, craftAmmoIron: CRAFT_AMMO_IRON, craftMealWheat: CRAFT_MEAL_WHEAT, weaponIron: WEAPONS.map((_, i) => weaponIronCost(i)), supply: SUPPLY },
         });
     }
 
@@ -447,6 +485,71 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true });
     }
 
+    // ---------- factories: build, upgrade, craft, supply the war ----------
+    if (P === '/api/factory' && req.method === 'POST') {
+        const def = FACTORIES[body.type];
+        if (need(def, 'نوع مصنع غير معروف')) return;
+        if (need(p.factories.length < factoryCap(p), 'وصلت لحد المصانع — طوّر مهارة إدارة')) return;
+        if (need(p.money >= def.price, 'فلوس غير كافية')) return;
+        p.money -= def.price;
+        p.factories.push({ id: ++p.factSeq, type: body.type, level: 1 });
+        logLine(`${p.name} بنى ${def.name} في ${DEFS[p.country].name}`);
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/factory/upgrade' && req.method === 'POST') {
+        const f = p.factories.find(f => f.id === Number(body.id));
+        if (need(f, 'مصنع غير موجود')) return;
+        if (need(f.level < FACTORY_MAX_LEVEL, 'وصل لأقصى مستوى')) return;
+        const cost = factoryUpgradeCost(f);
+        if (need(p.money >= cost, 'فلوس غير كافية')) return;
+        p.money -= cost; f.level++;
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/craft' && req.method === 'POST') {
+        const what = String(body.what || '');
+        if (what === 'meal') {
+            if (need(p.goods.wheat >= CRAFT_MEAL_WHEAT, 'قمح غير كافي')) return;
+            p.goods.wheat -= CRAFT_MEAL_WHEAT; p.foods.meal++;
+        } else if (what.startsWith('ammo:')) {
+            const k = what.slice(5);
+            const cost = CRAFT_AMMO_IRON[k];
+            if (need(cost && AMMOS[k], 'نوع غير معروف')) return;
+            if (need(p.goods.iron >= cost, 'حديد غير كافي')) return;
+            p.goods.iron -= cost; p.ammo[k]++;
+        } else if (what.startsWith('weapon:')) {
+            const i = Number(what.slice(7));
+            const w = WEAPONS[i];
+            if (need(w && i > p.weapon, 'سلاح غير متاح')) return;
+            const cost = weaponIronCost(i);
+            if (need(p.goods.iron >= cost, `محتاج ${cost} حديد`)) return;
+            p.goods.iron -= cost; p.weapon = i;
+        } else return json(res, 400, { error: 'غير معروف' });
+        mark(); save();
+        return json(res, 200, { ok: true });
+    }
+    if (P === '/api/supply' && req.method === 'POST') { // donate goods to your side's war effort
+        const w = db.wars[body.warId];
+        if (need(w, 'معركة غير موجودة')) return;
+        resolveWar(w);
+        if (need(!w.over, 'المعركة خلصت')) return;
+        if (need(p.country === w.from || p.country === w.to, 'مش طرف في المعركة دي')) return;
+        const s = SUPPLY[body.kind];
+        if (need(s, 'نوع تموين غير معروف')) return;
+        if (body.kind === 'iron') {
+            if (need(p.goods.iron >= s.amount, 'حديد غير كافي')) return;
+            p.goods.iron -= s.amount;
+        } else {
+            if (need(p.ammo.heavy >= s.amount, 'ذخيرة ثقيلة غير كافية')) return;
+            p.ammo.heavy -= s.amount;
+        }
+        if (p.country === w.from) w.attDmg += s.points; else w.defDmg += s.points;
+        logLine(`${p.name} زوّد الحرب بـ${s.amount} ${body.kind === 'iron' ? 'حديد' : 'ذخيرة ثقيلة'} (+${s.points} نقطة)`);
+        resolveWar(w); mark(); save();
+        return json(res, 200, { ok: true, war: publicWar(w) });
+    }
+
     // ---------- admin (his account only: the first registered account) ----------
     if (P === '/api/cheat' && req.method === 'POST') {
         if (need(p.admin, 'مش ليك')) return;
@@ -456,6 +559,7 @@ const server = http.createServer(async (req, res) => {
         p.bars = { health: barMax(p, 'health'), hunger: barMax(p, 'hunger'), energy: barMax(p, 'energy') };
         for (const k of ['light', 'mid', 'heavy']) p.ammo[k] += 100;
         for (const k of ['bread', 'meal', 'feast']) p.foods[k] += 50;
+        p.goods.iron += 500; p.goods.wheat += 500;
         mark(); save();
         return json(res, 200, { ok: true });
     }

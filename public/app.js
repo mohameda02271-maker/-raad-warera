@@ -189,8 +189,8 @@ let lastTabKey = null, pendingTabRender = false;
 function tabDataKey() {
   const y = S.you;
   switch (curTab) {
-    case 'home': return JSON.stringify([y.money, y.skillPoints, y.skills, y.weapon, y.armorGear, y.ammo, y.foods, y.companiesOwned]);
-    case 'war': return JSON.stringify([S.wars, y.ammo, battle]);
+    case 'home': return JSON.stringify([y.money, y.skillPoints, y.skills, y.weapon, y.armorGear, y.ammo, y.foods, y.companiesOwned, y.goods, y.factories]);
+    case 'war': return JSON.stringify([S.wars, y.ammo, y.goods, battle]);
     case 'gov': { const c = S.countries[y.country] || {}; return JSON.stringify([c.president, c.election, c.treasury]); }
     case 'map': return JSON.stringify([S.countries, S.wars, selCountry]);
     case 'admin': return JSON.stringify([S.speed]);
@@ -250,6 +250,7 @@ function render(force) {
       }
     } else pendingTabRender = true;
   }
+  $('#feed').classList.toggle('hidden', sheetOpen);
   renderFeed();
 }
 function bar(label, c, m, cls) {
@@ -319,6 +320,24 @@ function renderHome() {
     <button class="bigbtn" id="btn-work" type="button">اشتغل<br><small>+${Math.round(50 * (1 + y.skills.production * 0.05))} ج — 10 طاقة</small></button>
     <button class="bigbtn cyan" id="btn-company" type="button">شركاتك: ${y.companiesOwned}<br><small>شركة: ${sh.company.price} ج — ${sh.company.income} ج/ساعة</small></button>
   </div>
+  <h3>المصانع <span class="pill">${y.factories.length}/${y.factoryCap} — مهارة إدارة بتزوّد الحد</span></h3>
+  <p class="hint chain">السلسلة: <b>منجم ← حديد ← ذخيرة وسلاح ← الحرب</b> — ومزرعة ← قمح ← أكل. المصنع بيدفع صيانة كل ساعة، ولو الفلوس خلصت بيقف.</p>
+  <div class="kv"><span>مخزونك</span><b>حديد: ${fmt(y.goods.iron)} — قمح: ${fmt(y.goods.wheat)}</b></div>
+  <div class="grid3">${Object.entries(sh.factories).map(([k, f]) =>
+    `<div class="shopitem">${f.name}<span class="have">${f.desc} — صيانة ${f.upkeep} ج/ساعة</span><b>${f.price} ج</b><button data-fbuild="${k}" type="button">ابنِ</button></div>`).join('')}</div>
+  ${y.factories.map(f => {
+    const def = sh.factories[f.type];
+    const out = def.ammo ? `${Math.round(def.out * f.level * (1 + y.skills.production * 0.10) * 10) / 10} ذخيرة/ساعة (بيستهلك ${def.consumesIron * f.level} حديد/ساعة)` : `${Math.round(def.out * f.level * (1 + y.skills.production * 0.10) * 10) / 10} ${def.good === 'iron' ? 'حديد' : 'قمح'}/ساعة`;
+    const idle = y.money < def.upkeep * f.level;
+    return `<div class="regionrow"><span>${def.name} <span class="lvl">مستوى ${f.level}/${sh.factoryMaxLevel}</span><br><small class="have">${out} — صيانة ${def.upkeep * f.level} ج/ساعة${idle ? ' — <b style="color:var(--red)">هيقف: فلوس الصيانة مش كافية</b>' : ''}</small></span>
+      ${f.level < sh.factoryMaxLevel ? `<button class="cyan" data-fup="${f.id}" type="button">طوّر (${fmt(f.upNext)} ج)</button>` : '<span class="pill">ماكس</span>'}</div>`;
+  }).join('')}
+  <h3>التصنيع <span class="pill">من غير فلوس — بخامات مصانعك</span></h3>
+  <div class="grid3">
+    <div class="shopitem">وجبة (+20 صحة)<span class="have">${sh.craftMealWheat} قمح — عندك: ${fmt(y.goods.wheat)}</span><button data-craft="meal" type="button">اصنع</button></div>
+    ${Object.entries(sh.craftAmmoIron).map(([k, c]) =>
+      `<div class="shopitem">${sh.ammos[k].name}<span class="have">${c} حديد — عندك: ${y.ammo[k] || 0}</span><button data-craft="ammo:${k}" type="button">اصنع</button></div>`).join('')}
+  </div>
   <h3>الأكل <span class="pill">الأكل بيعالج الصحة وبياخد 1 جوع</span></h3>
   <div class="grid3">${Object.entries(sh.foods).map(([k, f]) =>
     `<div class="shopitem">${f.name} <span class="have">(+${f.heal} صحة)</span><b>${f.price} ج</b><span class="have">عندك: ${y.foods[k] || 0}</span>
@@ -326,10 +345,10 @@ function renderHome() {
      <button class="cyan" data-eat="${k}" type="button">كل</button></div>`).join('')}</div>
   <h3>الذخيرة</h3>
   <div class="grid3">${Object.entries(sh.ammos).map(([k, a]) =>
-    `<div class="shopitem">${a.name}<b>${a.price} ج</b><span class="have">عندك: ${y.ammo[k] || 0}</span><button data-buy="ammo:${k}" type="button">اشتري</button></div>`).join('')}</div>
+    `<div class="shopitem">${a.name}<b>${a.price} ج</b><span class="have">عندك: ${fmt(y.ammo[k] || 0)}</span><button data-buy="ammo:${k}" type="button">اشتري</button></div>`).join('')}</div>
   <h3>السلاح <span class="pill">الحالي: ${esc(wName)}</span></h3>
   <div class="grid3">${sh.weapons.map((w, i) => i <= y.weapon ? '' :
-    `<div class="shopitem">${w.name} <span class="have">(هجوم ${w.atk} — كريت ${w.crit}%)</span><b>${w.price} ج</b><button data-buy="weapon:${i}" type="button">اشتري</button></div>`).join('')}</div>
+    `<div class="shopitem">${w.name} <span class="have">(هجوم ${w.atk} — كريت ${w.crit}%)</span><b>${w.price} ج أو ${sh.weaponIron[i]} حديد</b><button data-buy="weapon:${i}" type="button">اشتري</button><button class="cyan" data-craft="weapon:${i}" type="button">اصنع</button></div>`).join('')}</div>
   <h3>الدرع <span class="pill">الحالي: ${esc(aName)}</span></h3>
   <div class="grid3">${sh.armors.map((a, i) => i <= y.armorGear ? '' :
     `<div class="shopitem">${a.name} <span class="have">(امتصاص ${a.armor}%)</span><b>${a.price} ج</b><button data-buy="armor:${i}" type="button">اشتري</button></div>`).join('')}</div>
@@ -358,11 +377,20 @@ function renderHome() {
   el.querySelectorAll('[data-skill]').forEach(b => b.onclick = async () => {
     try { await api('/api/skill', { id: b.dataset.skill }); refresh(); } catch (e) { flash(e.message, 'miss'); }
   });
+  el.querySelectorAll('[data-fbuild]').forEach(b => b.onclick = async () => {
+    try { await api('/api/factory', { type: b.dataset.fbuild }); flash('اتبنى!', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-fup]').forEach(b => b.onclick = async () => {
+    try { await api('/api/factory/upgrade', { id: b.dataset.fup }); flash('اتطوّر', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
+  el.querySelectorAll('[data-craft]').forEach(b => b.onclick = async () => {
+    try { await api('/api/craft', { what: b.dataset.craft }); flash('اتصنع', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
 }
 
 /* --- war tab --- */
 function renderWar() {
-  const el = $('#tab-war'), y = S.you;
+  const el = $('#tab-war'), y = S.you, sh = S.shop;
   const myWars = S.wars.filter(w => w.from === y.country || w.to === y.country);
   const otherWars = S.wars.filter(w => !(w.from === y.country || w.to === y.country));
   let h = '';
@@ -380,9 +408,13 @@ function renderWar() {
         <div class="track"><div class="fill wallB" style="width:${w.attDmg ? Math.min(100, w.defDmg / w.attDmg * 100) : 0}%"></div></div>
       </div>
       <div class="amnoselect">
-        ${['none', 'light', 'mid', 'heavy'].map(k => `<button data-ammo="${k}" data-w="${w.id}" class="${battle.warId === w.id && battle.ammo === k ? 'on' : ''}" type="button">${k === 'none' ? 'بدون' : S.shop.ammos[k].name + ' (' + (y.ammo[k] || 0) + ')'}</button>`).join('')}
+        ${['none', 'light', 'mid', 'heavy'].map(k => `<button data-ammo="${k}" data-w="${w.id}" class="${battle.warId === w.id && battle.ammo === k ? 'on' : ''}" type="button">${k === 'none' ? 'بدون' : S.shop.ammos[k].name + ' (' + fmt(y.ammo[k] || 0) + ')'}</button>`).join('')}
       </div>
       <button class="bigbtn hitbtn" data-hit="${w.id}" type="button">اضرب!</button>
+      <div class="amnoselect" style="margin-top:8px">
+        <button data-supply="iron:${w.id}" type="button">زوّد بـ${sh.supply.iron.amount} حديد (+${sh.supply.iron.points}) — عندك ${fmt(y.goods.iron)}</button>
+        <button data-supply="heavy:${w.id}" type="button">زوّد بـ${sh.supply.heavy.amount} ثقيلة (+${sh.supply.heavy.points}) — عندك ${fmt(y.ammo.heavy || 0)}</button>
+      </div>
     </div>`;
   }
   for (const w of otherWars) {
@@ -392,6 +424,10 @@ function renderWar() {
   el.innerHTML = h;
   if (!myWars.find(w => w.id === battle.warId)) battle = { warId: myWars[0] ? myWars[0].id : null, ammo: battle.ammo };
   el.querySelectorAll('[data-ammo]').forEach(b => b.onclick = () => { battle = { warId: Number(b.dataset.w), ammo: b.dataset.ammo }; renderWar(); });
+  el.querySelectorAll('[data-supply]').forEach(b => b.onclick = async () => {
+    const [kind, wid] = b.dataset.supply.split(':');
+    try { await api('/api/supply', { warId: Number(wid), kind }); flash('التموين وصل', 'good'); refresh(); } catch (e) { flash(e.message, 'miss'); }
+  });
   el.querySelectorAll('[data-hit]').forEach(b => b.onclick = async () => {
     const wid = Number(b.dataset.hit);
     try {
