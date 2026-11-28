@@ -3116,14 +3116,18 @@ async function runCountryIntel(){
       return undefined;
     };
 
-    let allianceRaw = findDeepValue(country, [/^alliance/i, /^pact$/i, /^coalition$/i, /^bloc$/i]);
+    let allianceRaw = null;
+    if(country.allianceId){
+      try{ const al = await trpc('alliance.getById', { allianceId: country.allianceId }); if(al && al.name){ allianceRaw = { name: al.name, members: Array.isArray(al.memberCountries) ? al.memberCountries.length : 0 }; } }catch(_){}
+    }
+    if(!allianceRaw && !country.allianceId) allianceRaw = findDeepValue(country, [/^alliance(?!Id)/i, /^pact$/i, /^coalition$/i, /^bloc$/i]);
     if(!allianceRaw && cId){
       allianceRaw = await trpcTryMany([
         ['alliance.getByCountryId', { countryId: cId }],
         ['alliance.getCountryAlliance', { countryId: cId }]
       ]);
     }
-    const allianceName = resolveCountryLabel(allianceRaw) || 'مستقل / بدون حلف';
+    const allianceName = (allianceRaw && allianceRaw.members !== undefined ? `${allianceRaw.name} (${allianceRaw.members} دولة)` : resolveCountryLabel(allianceRaw)) || 'مستقل / بدون حلف';
     $('cIntelAlliance').textContent = `🤝 الحلف: ${allianceName}`;
 
     // Fetch regions for this country (supports both array responses and region.getRegionsObject dictionary)
@@ -3147,7 +3151,7 @@ async function runCountryIntel(){
       }
     }
 
-    let popRaw = findDeepValue(country, [/^citizensCount$/i, /^population$/i, /^usersCount$/i, /^membersCount$/i, /^totalCitizens$/i, /^citizenCount$/i, /^citizens$/i, /pop/i]);
+    let popRaw = country.currentPopulation ?? findDeepValue(country, [/^citizensCount$/i, /^population$/i, /^usersCount$/i, /^membersCount$/i, /^totalCitizens$/i, /^citizenCount$/i, /^citizens$/i, /pop/i]);
     let popNum = extractNumericMetric(popRaw);
     if((popNum === null || popNum === 0) && regionsArr.length){
       const sumRegPop = regionsArr.reduce((s, r) => s + (extractNumericMetric(r.population ?? r.citizensCount ?? r.usersCount) || 0), 0);
@@ -3170,15 +3174,18 @@ async function runCountryIntel(){
         warsArr = [...ids].map(id => ({ _id: id }));
       }catch(_){}
     }
-    const warsCount = warsArr.length ? warsArr.length : (extractNumericMetric(country.warsCount ?? country.activeWarsCount) || 0);
+    const warsWithNames = (Array.isArray(country.warsWith) ? country.warsWith : []).map(resolveCountryLabel).filter(Boolean);
+    const liveWarsN = warsArr.length;
+    const warsCount = warsWithNames.length || liveWarsN || (extractNumericMetric(country.warsCount ?? country.activeWarsCount) || 0);
     const warPopRaw = findDeepValue(country, [/warPop/i, /warCitizen/i, /fighter/i, /warPoint/i, /warDamage/i, /troop/i, /soldier/i, /army/i]);
     const warPopNum = extractNumericMetric(warPopRaw);
+    const wkDmg = country.rankings?.weeklyCountryDamages?.value;
     const warPopText = warPopNum !== null && warPopNum > 0 ? Math.round(warPopNum).toLocaleString() : `${warsCount} حرب نشطة`;
     const warPopRatio = (popNum !== null && popNum > 0 && warPopNum !== null && warPopNum > 0)
       ? ` · نسبة السكان في الحرب: ${Math.min(100, ((warPopNum / popNum) * 100)).toFixed(1)}%`
       : '';
     $('cIntelWars').textContent = warPopText;
-    $('cIntelWarPopSub').textContent = `حروب نشطة: ${warsCount}${warPopRatio}`;
+    $('cIntelWarPopSub').textContent = `حروب مع ${warsWithNames.length} دولة · معارك جارية الآن: ${liveWarsN}${wkDmg ? ' · ضرر أسبوعي: ' + Math.round(wkDmg).toLocaleString() : ''}${warPopRatio}`;
 
     const moneyNum = extractNumericMetric(country.money ?? country.treasury ?? country.bank ?? country.balance ?? country.funds ?? country.resources?.money, ['money','usd','cash','balance','amount','value']);
     const goldNum = extractNumericMetric(country.gold ?? country.goldTreasury ?? country.treasury?.gold ?? country.resources?.gold, ['gold','amount','value']);
@@ -3191,6 +3198,7 @@ async function runCountryIntel(){
     if(moneyNum !== null) ecoParts.push(`الخزينة: $${moneyNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
     if(goldNum !== null) ecoParts.push(`الذهب: ${goldNum.toLocaleString()}`);
     if(ecoNum !== null) ecoParts.push(`الاقتصاد: ${ecoNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
+    if(country.income && Number(country.income.total) > 0) ecoParts.push(`دخل الدولة اليومي: $${Number(country.income.total).toLocaleString(undefined, { maximumFractionDigits: 1 })}`);
     $('cIntelGold').textContent = ecoHeadline;
     $('cIntelEcoSub').textContent = ecoParts.length ? ecoParts.join(' · ') : 'بيانات الاقتصاد من السيرفر';
 
@@ -3200,7 +3208,7 @@ async function runCountryIntel(){
     $('cIntelAllies').textContent = `${alliesCount} حليف`;
     $('cIntelAlliesSub').textContent = allyNames.length ? allyNames.slice(0, 6).join('، ') : `الحلف: ${allianceName}`;
 
-    const taxVal = extractNumericMetric(country.tax ?? country.workTax ?? country.productionTax);
+    const taxVal = extractNumericMetric(country.taxes?.income ?? country.tax ?? country.workTax ?? country.productionTax);
     const currVal = country.currency || country.currencyCode || country.code || '-';
     const extraCards = [
       { label: '🏛️ التحالف / الكتلة', val: allianceName },
@@ -3208,7 +3216,8 @@ async function runCountryIntel(){
       { label: '⚔️ الوار / الحروب', val: warPopText },
       { label: '📈 الاقتصاد / الخزينة', val: ecoHeadline },
       { label: '💱 العملة / الرمز', val: String(currVal) },
-      { label: '🧾 ضريبة العمل/الإنتاج', val: taxVal === null ? '-' : `${taxVal}%` }
+      { label: '🧾 ضريبة الدخل', val: taxVal === null ? '-' : `${taxVal}%` },
+      { label: '🏛️ نظام الحكم', val: country.govType ? String(country.govType) : '-' }
     ];
     $('cIntelExtraGrid').innerHTML = extraCards.map(item => `
       <div class="gear-slot"><small>${item.label}</small><strong style="color:var(--ink)">${escapeHtml(item.val)}</strong></div>
@@ -3217,6 +3226,7 @@ async function runCountryIntel(){
     const regionNamesLine = regionsArr.length
       ? `<div style="margin-top:6px">• <b>الأقاليم (${regionsArr.length}):</b> ${regionsArr.slice(0, 14).map(r => r.name || r.title || r._id).filter(Boolean).map(escapeHtml).join('، ')}</div>`
       : '';
+    const warNamesLine = warsWithNames.length ? `<div style="margin-top:6px">• <b>في حرب مع (${warsWithNames.length}):</b> ${warsWithNames.map(escapeHtml).join('، ')}</div>` : '';
     const allyNamesLine = allyNames.length ? `<div style="margin-top:6px">• <b>أسماء الحلفاء:</b> ${allyNames.map(escapeHtml).join('، ')}</div>` : '';
     const rawKeysPreview = Object.entries(country)
       .filter(([k, v]) => v !== null && v !== undefined && typeof v !== 'object' && !/^(name|_id|id|flag|flagUrl|image|icon|banner|allies|mpps)$/i.test(k))
@@ -3231,6 +3241,7 @@ async function runCountryIntel(){
       <div>• <b>الاقتصاد:</b> ${ecoParts.length ? ecoParts.join(' · ') : ecoHeadline} &nbsp;|&nbsp; <b>العملة/الرمز:</b> ${escapeHtml(currVal)} &nbsp;|&nbsp; <b>الضريبة:</b> ${taxVal === null ? '-' : taxVal + '%'}</div>
       ${regionNamesLine}
       ${allyNamesLine}
+      ${warNamesLine}
       ${rawKeysPreview ? `<div style="margin-top:8px">${rawKeysPreview}</div>` : ''}
       <div style="margin-top:6px;color:var(--green)">🕒 تم التحديث اللحظي من السيرفر الساعة: <b>${fetchedTime}</b> (${escapeHtml(lastApiDiagnostic)})</div>
     `;
